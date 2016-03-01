@@ -1,0 +1,93 @@
+set(
+    libqhullr_HEADERS
+        libqhull_r/libqhull_r.h
+        libqhull_r/geom_r.h
+        libqhull_r/io_r.h
+        libqhull_r/mem_r.h
+        libqhull_r/merge_r.h
+        libqhull_r/poly_r.h
+        libqhull_r/qhull_ra.h
+        libqhull_r/qset_r.h
+        libqhull_r/random_r.h
+        libqhull_r/stat_r.h
+        libqhull_r/user_r.h
+)
+set(
+    libqhullr_SOURCES
+        libqhull_r/global_r.c
+        libqhull_r/stat_r.c
+        libqhull_r/geom2_r.c
+        libqhull_r/poly2_r.c
+        libqhull_r/merge_r.c
+        libqhull_r/libqhull_r.c
+        libqhull_r/geom_r.c
+        libqhull_r/poly_r.c
+        libqhull_r/qset_r.c
+        libqhull_r/mem_r.c
+        libqhull_r/random_r.c
+        libqhull_r/usermem_r.c
+        libqhull_r/userprintf_r.c
+        libqhull_r/io_r.c
+        libqhull_r/user_r.c
+        libqhull_r/rboxlib_r.c
+        libqhull_r/userprintf_rbox_r.c
+        ${libqhullr_HEADERS}
+)
+
+# C++ interface to reentrant Qhull
+
+set(
+    libqhullcpp_HEADERS
+        libqhullcpp/Coordinates.h
+        libqhullcpp/functionObjects.h
+        libqhullcpp/PointCoordinates.h
+        libqhullcpp/Qhull.h
+        libqhullcpp/QhullError.h
+        libqhullcpp/QhullFacet.h
+        libqhullcpp/QhullFacetList.h
+        libqhullcpp/QhullFacetSet.h
+        libqhullcpp/QhullHyperplane.h
+        libqhullcpp/QhullIterator.h
+        libqhullcpp/QhullLinkedList.h
+        libqhullcpp/QhullPoint.h
+        libqhullcpp/QhullPoints.h
+        libqhullcpp/QhullPointSet.h
+        libqhullcpp/QhullQh.h
+        libqhullcpp/QhullRidge.h
+        libqhullcpp/QhullSet.h
+        libqhullcpp/QhullSets.h
+        libqhullcpp/QhullStat.h
+        libqhullcpp/QhullVertex.h
+        libqhullcpp/QhullVertexSet.h
+        libqhullcpp/RboxPoints.h
+        libqhullcpp/RoadError.h
+        libqhullcpp/RoadLogEvent.h
+        #qhulltest/RoadTest.h
+)
+
+set(
+    libqhullcpp_SOURCES
+        libqhullcpp/Coordinates.cpp
+        libqhullcpp/PointCoordinates.cpp
+        libqhullcpp/Qhull.cpp
+        libqhullcpp/QhullFacet.cpp
+        libqhullcpp/QhullFacetList.cpp
+        libqhullcpp/QhullFacetSet.cpp
+        libqhullcpp/QhullHyperplane.cpp
+        libqhullcpp/QhullPoint.cpp
+        libqhullcpp/QhullPointSet.cpp
+        libqhullcpp/QhullPoints.cpp
+        libqhullcpp/QhullQh.cpp
+        libqhullcpp/QhullRidge.cpp
+        libqhullcpp/QhullSet.cpp
+        libqhullcpp/QhullStat.cpp
+        libqhullcpp/QhullVertex.cpp
+        libqhullcpp/QhullVertexSet.cpp
+        libqhullcpp/RboxPoints.cpp
+        libqhullcpp/RoadError.cpp
+        libqhullcpp/RoadLogEvent.cpp
+        ${libqhullcpp_HEADERS}
+)
+
+add_library(libqhullr STATIC ${libqhullr_SOURCES})
+add_library(libqhullcpp STATIC ${libqhullcpp_SOURCES})
