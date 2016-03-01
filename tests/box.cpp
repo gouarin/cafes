@@ -24,8 +24,8 @@ int main()
     std::cout << b3.upper_right[0] << ", " << b3.upper_right[1] << "\n";
 
     cafes::geometry::box<2, int> bi1{{0, 0}, {2, 2}}, bi2{{1, 1}, {3, 3}}, bi3{{-2, -2}, {-1, -1}};
-    assert(cafes::geometry::intersection(bi1, bi2));
-    assert(!cafes::geometry::intersection(bi1, bi3));
+    assert(cafes::geometry::intersect(bi1, bi2));
+    assert(!cafes::geometry::intersect(bi1, bi3));
 
     //assert( se.is_outside({1. ,1.}) );
   }

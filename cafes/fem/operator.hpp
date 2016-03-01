@@ -37,8 +37,8 @@ namespace cafes
       ierr = DMDAVecGetArrayDOFRead(dm, x, &px);CHKERRQ(ierr);
       ierr = DMDAVecGetArrayDOF(dm, y, &py);CHKERRQ(ierr);
 
-      for (std::size_t j=box[1][0]; j<box[1][1]; ++j){
-        for (std::size_t i=box[0][0]; i<box[0][1]; ++i){
+      for (std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j){
+        for (std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i){
           for(std::size_t k1=0; k1<4; k1++){
             std::size_t l1 = i + ind2d[k1][0];
             std::size_t p1 = j + ind2d[k1][1];
@@ -87,8 +87,8 @@ namespace cafes
 
       ierr = DMDAVecGetArrayDOF(dm, x, &px);CHKERRQ(ierr);
 
-      for (std::size_t j=box[1][0]; j<box[1][1]; ++j){
-        for (std::size_t i=box[0][0]; i<box[0][1]; ++i){
+      for (std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j){
+        for (std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i){
           for(std::size_t k1=0; k1<4; k1++){
             std::size_t l1 = i + ind2d[k1][0];
             std::size_t p1 = j + ind2d[k1][1];
@@ -177,8 +177,8 @@ namespace cafes
       ierr = DMDAVecGetArrayDOFRead(dm, x, &px);CHKERRQ(ierr);
       ierr = DMDAVecGetArrayDOF(dm, y, &py);CHKERRQ(ierr);
 
-      for (std::size_t j=box[1][0]; j<box[1][1]; ++j){
-        for (std::size_t i=box[0][0]; i<box[0][1]; ++i){
+      for (std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j){
+        for (std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i){
           for(std::size_t k1=0; k1<4; k1++){
             std::size_t l1 = i + ind2d[k1][0];
             std::size_t p1 = j + ind2d[k1][1];
@@ -236,8 +236,8 @@ namespace cafes
 
       ierr = getMatElemPressure2d(MatElemOnu, MatElemOnv, h);
 
-      for (std::size_t j=box[1][0]; j<box[1][1]; ++j){
-        for (std::size_t i=box[0][0]; i<box[0][1]; ++i){
+      for (std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j){
+        for (std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i){
           for(std::size_t k1=0; k1<4; ++k1){
             std::size_t l1 = i + ind2d[k1][0];
             std::size_t p1 = j + ind2d[k1][1];
@@ -310,9 +310,9 @@ namespace cafes
       ierr = DMDAVecGetArrayDOFRead(dm, x, &px);CHKERRQ(ierr);
       ierr = DMDAVecGetArrayDOF(dm, y, &py);CHKERRQ(ierr);
 
-      for (std::size_t k=box[2][0]; k<box[2][1]; ++k){
-          for (std::size_t j=box[1][0]; j<box[1][1]; ++j){
-            for (std::size_t i=box[0][0]; i<box[0][1]; ++i){
+      for (std::size_t k=box.bottom_left[2]; k<box.upper_right[2]; ++k){
+          for (std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j){
+            for (std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i){
               for(std::size_t k1=0; k1<nbasis; k1++){
                 std::size_t l1 = i + ind3d[k1][0];
                 std::size_t p1 = j + ind3d[k1][1];
@@ -365,9 +365,9 @@ namespace cafes
 
       ierr = DMDAVecGetArrayDOF(dm, x, &px);CHKERRQ(ierr);
 
-      for (std::size_t k=box[2][0]; k<box[2][1]; ++k){
-          for (std::size_t j=box[1][0]; j<box[1][1]; ++j){
-            for (std::size_t i=box[0][0]; i<box[0][1]; ++i){
+      for (std::size_t k=box.bottom_left[2]; k<box.upper_right[2]; ++k){
+          for (std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j){
+            for (std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i){
               for(std::size_t k1=0; k1<nbasis; k1++){
                 std::size_t l1 = i + ind3d[k1][0];
                 std::size_t p1 = j + ind3d[k1][1];
@@ -460,9 +460,9 @@ namespace cafes
       ierr = DMDAVecGetArrayDOFRead(dm, x, &px);CHKERRQ(ierr);
       ierr = DMDAVecGetArrayDOF(dm, y, &py);CHKERRQ(ierr);
 
-      for (std::size_t k=box[2][0]; k<box[2][1]; ++k){
-        for (std::size_t j=box[1][0]; j<box[1][1]; ++j){
-          for (std::size_t i=box[0][0]; i<box[0][1]; ++i){
+      for (std::size_t k=box.bottom_left[2]; k<box.upper_right[2]; ++k){
+        for (std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j){
+          for (std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i){
             for(std::size_t k1=0; k1<nbasisfunc; ++k1){
               std::size_t l1 = i + ind3d[k1][0];
               std::size_t p1 = j + ind3d[k1][1];
@@ -531,9 +531,9 @@ namespace cafes
       ierr = DMDAVecGetArrayRead(dap, xp, &pxp);CHKERRQ(ierr);
       ierr = DMDAVecGetArray(dap, yp, &pyp);CHKERRQ(ierr);
 
-      for (std::size_t k=box[2][0]; k<box[2][1]; ++k){
-        for (std::size_t j=box[1][0]; j<box[1][1]; ++j){
-          for (std::size_t i=box[0][0]; i<box[0][1]; ++i){
+      for (std::size_t k=box.bottom_left[2]; k<box.upper_right[2]; ++k){
+        for (std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j){
+          for (std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i){
             for(std::size_t k1=0; k1<27; ++k1){
               std::size_t l1 = 2*i + indpu3d[k1][0];
               std::size_t p1 = 2*j + indpu3d[k1][1];

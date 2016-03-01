@@ -3,11 +3,13 @@
 
 #include <particle/geometry/position.hpp>
 #include <particle/geometry/box.hpp>
+#include <particle/geometry/uniform_sampling.hpp>
 #include <algorithm>
 #include <cassert>
 #include <vector>
 #include <array>
 #include <cmath>
+#include <iostream>
 
 namespace cafes
 {
@@ -22,9 +24,10 @@ namespace cafes
         using position_type = position<Dimensions, T>;
         using shapes_type   = std::array<double, Dimensions>;
 
-        private:
         position_type  center_;
         shapes_type    shape_factors_;
+
+        private:
         double         e_, n_;
 
         public:
@@ -63,7 +66,7 @@ namespace cafes
         box<Dimensions, int> bounding_box(std::array<double, Dimensions> const& h) const
         {
             box<Dimensions, double> b = bounding_box();
-            return {b.bottom_left/h, b.upper_right/h};
+            return {(b.bottom_left/h - 1.), b.upper_right/h + 1.};
         }
 
         std::vector<position_type> surface(std::vector<double> const& u_samples) const
@@ -76,6 +79,29 @@ namespace cafes
                           );
 
             return that;
+        }
+
+        // std::vector<position_type>
+        // surface(double const& k, double tol=1e-2)
+        // {
+        //   std::vector<position_type> that;
+        //   auto radius = shape_factors_[0];
+        //   int n = 6*shape_factors_[0]/k;
+
+        //   for(std::size_t i=0; i<n; ++i){
+        //     auto c = radius*std::cos(2*i*M_PI/n);
+        //     auto s = radius*std::sin(2*i*M_PI/n);
+        //     that.push_back({center_[0] + c, center_[1] + s});
+        //   }
+        //   return that;
+        // }
+
+        std::vector<position_type>
+        surface(double const& k, double tol=1e-2)
+        {
+          auto that = uniform_sampling(shape_factors_, 2./n_, k, tol);
+          std::for_each(that.begin(), that.end(),[&](auto& p){p[0] += center_[0];p[1] += center_[1];});
+          return that;
         }
 
         std::vector<position_type> radial_vector(std::vector<double> const& u_samples) const
@@ -107,6 +133,38 @@ namespace cafes
                           , [&](double u, double v) { return at(u,v); }
                           );
 
+            return that;
+        }
+
+        std::vector<position_type>
+        surface(std::array<double, 2> const& k, double tol=1e-2)
+        {
+            std::vector<position_type> that;
+            double omega1 = 0., omega2 = 0.;
+            double eps1 = 2./n_;
+            double eps2 = 2./e_;
+
+            while (omega1 < M_PI/4){
+              auto z1 = shape_factors_[2]*std::pow(std::sin(omega1), eps2);
+              auto phi1 = std::pow(std::cos(omega1), eps2);
+
+              auto z2 = shape_factors_[2]*std::pow(std::cos(omega2), eps2);
+              auto phi2 = std::pow(std::sin(omega2), eps2);
+
+              auto update_omega = theta(1, 1, omega1, eps2, k[1], tol);
+              omega1 += update_omega;
+              update_omega = theta(1, 1, omega2, eps2, k[1], tol);
+              omega2 += update_omega;
+
+              auto temp1 = uniform_sampling(shape_factors_, eps1, k[0], z1, phi1, tol);
+      
+              auto temp2 = uniform_sampling(shape_factors_, eps1, k[0], z2, phi2, tol);
+              that.insert(that.end(), temp1.cbegin(), temp1.cend());
+              that.insert(that.end(), temp2.cbegin(), temp2.cend());
+
+            }
+            std::for_each(that.begin(), that.end(),[&](auto& p){that.push_back({p[0], p[1], -p[2]});});
+            std::for_each(that.begin(), that.end(),[&](auto& p){p[0] += center_[0];p[1] += center_[1];p[2] += center_[2];});
             return that;
         }
 
@@ -213,6 +271,18 @@ namespace cafes
         }
       };
   }
+  template<std::size_t N>
+  geometry::super_ellipsoid<N> make_ellipsoid(geometry::position<N,double> const& a, std::array<double, N> const& b, double d)
+  {
+    return {a,b,d};
+  }
+
+  template<std::size_t N>
+  geometry::super_ellipsoid<N> make_ellipsoid(geometry::position<N,double> const& a, std::array<double, N> const& b, double d, double e)
+  {
+    return {a, b, d, e};
+  }
+
 }
 
 #endif

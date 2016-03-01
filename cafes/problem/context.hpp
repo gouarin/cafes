@@ -1,9 +1,13 @@
 #ifndef PARTICLE_PROBLEM_CONTEXT_HPP_INCLUDED
 #define PARTICLE_PROBLEM_CONTEXT_HPP_INCLUDED
 
-#include<fem/bc.hpp>
+#include <fem/bc.hpp>
+#include <particle/particle.hpp>
+#include <problem/problem.hpp>
+#include <particle/geometry/position.hpp>
 #include <array>
 #include <iostream>
+#include <vector>
 #include <type_traits>
 #include <petsc.h>
 
@@ -11,6 +15,7 @@ namespace cafes
 {
   namespace problem
   {
+
     template<std::size_t Dimensions, std::size_t Ndm=1>
     struct context{
       template<std::size_t N> using int_ = std::integral_constant<std::size_t, N>;
@@ -37,6 +42,21 @@ namespace cafes
       }
     };
 
+    template<std::size_t Dimensions, typename Shape, typename Problem_type>
+    struct SEM_context{
+      using position_type   = geometry::position<Dimensions, double>;
+      using position_type_i = geometry::position<Dimensions, int>;
+
+      Problem_type& problem;
+      std::vector<particle<Shape>> const& particles;
+      std::vector<std::vector<std::pair<position_type_i, position_type>>> const& surf_points;
+      std::vector<std::vector<position_type>> const& radial_vec;
+      std::vector<int> const& nb_surf_points;
+      std::vector<int> const& num;
+      std::size_t scale;
+      bool compute_rhs;
+      bool compute_sol;
+    };
   }
 }
 

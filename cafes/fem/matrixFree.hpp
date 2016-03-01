@@ -240,6 +240,28 @@ namespace cafes
 
       return A;
     }
+
+    #undef __FUNCT__
+    #define __FUNCT__ "apply_mass_matrix"
+    template<std::size_t Dimensions>
+    PetscErrorCode apply_mass_matrix(DM dm, Vec x, Vec y, std::array<double, Dimensions> const& h)
+    {
+      PetscErrorCode ierr;
+      PetscFunctionBeginUser;
+
+      auto hp{h};
+      std::for_each(hp.begin(), hp.end(), [](auto x){x*=2;});
+
+      using ctx = problem::context<Dimensions, 2>;
+      ctx s{dm, {{h, hp }}, mass_mult};
+      Mat mass = make_matrix<ctx>(&s, diag_block_matrix<ctx>);
+
+      ierr = MatMult(mass, x, y);CHKERRQ(ierr);
+      ierr = MatDestroy(&mass);CHKERRQ(ierr);
+
+      PetscFunctionReturn(0);
+    }
+
   }
 }
 #endif

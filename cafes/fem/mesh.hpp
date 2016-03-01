@@ -1,6 +1,7 @@
 #ifndef CAFES_FEM_MESH_HPP_INCLUDED
 #define CAFES_FEM_MESH_HPP_INCLUDED
 
+#include <particle/geometry/box.hpp>
 #include <petsc.h>
 #include <iostream>
 #include <array>
@@ -11,41 +12,40 @@ namespace cafes
     namespace fem
     {
 
-        auto get_DM_bounds(DM const& dm, std::integral_constant<int, 2>)
+        auto get_DM_bounds_(DM const& dm, std::integral_constant<int, 2>)
         {
           DMDALocalInfo info;
           DMDAGetLocalInfo(dm, &info);
           
-          std::array<std::array<int, 2>, 2> box{{ {{ info.xs, info.xs + info.xm}},
-                                                  {{ info.ys, info.ys + info.ym}}
-                                                }};
+          geometry::box<2, int> box{ { info.xs          , info.ys           },
+                                     { info.xs + info.xm, info.ys + info.ym }
+                                    };
 
           // For the not periodic boundary condition.
-          if(box[1][1] == info.my && info.by != DM_BOUNDARY_PERIODIC)
-            --box[1][1];
-          if(box[0][1] == info.mx && info.bx != DM_BOUNDARY_PERIODIC)
-            --box[0][1];
+          if(box.upper_right[1] == info.my && info.by != DM_BOUNDARY_PERIODIC)
+            --box.upper_right[1];
+          if(box.upper_right[0] == info.mx && info.bx != DM_BOUNDARY_PERIODIC)
+            --box.upper_right[0];
 
           return box;
         }
 
-        auto get_DM_bounds(DM const& dm, std::integral_constant<int, 3>)
+        auto get_DM_bounds_(DM const& dm, std::integral_constant<int, 3>)
         {
           DMDALocalInfo info;
           DMDAGetLocalInfo(dm, &info);
-          
-          std::array<std::array<int, 2>, 3> box{{ {{ info.xs, info.xs + info.xm}},
-                                                  {{ info.ys, info.ys + info.ym}},
-                                                  {{ info.zs, info.zs + info.zm}}
-                                                }};
 
+          geometry::box<3, int> box{ { info.xs          , info.ys          , info.zs           },
+                                     { info.xs + info.xm, info.ys + info.ym, info.zs + info.zm }
+                                    };
+          
           // For the not periodic boundary condition.
-          if(box[2][1] == info.mz && info.bz != DM_BOUNDARY_PERIODIC)
-            --box[2][1];
-          if(box[1][1] == info.my && info.by != DM_BOUNDARY_PERIODIC)
-            --box[1][1];
-          if(box[0][1] == info.mx && info.bx != DM_BOUNDARY_PERIODIC)
-            --box[0][1];
+          if(box.upper_right[2] == info.mz && info.bz != DM_BOUNDARY_PERIODIC)
+            --box.upper_right[2];
+          if(box.upper_right[1] == info.my && info.by != DM_BOUNDARY_PERIODIC)
+            --box.upper_right[1];
+          if(box.upper_right[0] == info.mx && info.bx != DM_BOUNDARY_PERIODIC)
+            --box.upper_right[0];
 
           return box;
         }
@@ -53,7 +53,17 @@ namespace cafes
         template<int Dimensions>
         auto get_DM_bounds(DM const& dm)
         {
-          return get_DM_bounds(dm, std::integral_constant<int, Dimensions>{});
+          return get_DM_bounds_(dm, std::integral_constant<int, Dimensions>{});
+        }
+
+        template<int Dimensions>
+        auto get_DM_bounds(DM const& dm, int i)
+        {
+          int ndm;
+          DMCompositeGetNumberDM(dm, &ndm);
+          DM dmc[ndm];
+          DMCompositeGetEntriesArray(dm, dmc);
+          return get_DM_bounds_(dmc[i], std::integral_constant<int, Dimensions>{});
         }
 
         #undef __FUNCT__

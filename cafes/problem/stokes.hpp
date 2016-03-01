@@ -1,6 +1,7 @@
 #ifndef PARTICLE_PROBLEM_STOKES_HPP_INCLUDED
 #define PARTICLE_PROBLEM_STOKES_HPP_INCLUDED
 
+#include <problem/problem.hpp>
 #include <problem/context.hpp>
 #include <problem/options.hpp>
 #include <fem/matrixFree.hpp>
@@ -100,10 +101,12 @@ namespace cafes
     }
 
     template<std::size_t Dimensions>
-    struct stokes{
+    struct stokes : public Problem<Dimensions>{
+      //using parent = Problem<Dimensions>::Problem;
       using Ctx = context<Dimensions>;
       fem::rhs_conditions<Dimensions> rhsc_;
       options<Dimensions> opt{};
+
       Ctx *ctx;
       Vec sol;
       Vec rhs;
@@ -111,11 +114,13 @@ namespace cafes
       Mat P;
       KSP ksp;
 
-      stokes(fem::dirichlet_conditions<Dimensions> bc, fem::rhs_conditions<Dimensions> rhsc={nullptr}){
+      stokes(fem::dirichlet_conditions<Dimensions> bc, fem::rhs_conditions<Dimensions> rhsc={nullptr})
+      {
         opt.process_options();
 
         DM mesh;
         fem::createMesh<Dimensions>(mesh, opt.mx, opt.xperiod);
+
         DMCreateGlobalVector(mesh, &sol);
         VecDuplicate(sol, &rhs);
         VecSet(rhs, 0.);
@@ -166,7 +171,8 @@ namespace cafes
 
       #undef __FUNCT__
       #define __FUNCT__ "setup_RHS"
-      PetscErrorCode setup_RHS(){
+      virtual PetscErrorCode setup_RHS() override 
+      {
         PetscErrorCode ierr;
         PetscFunctionBeginUser;
 
@@ -186,7 +192,7 @@ namespace cafes
 
       #undef __FUNCT__
       #define __FUNCT__ "setup_KSP"
-      PetscErrorCode setup_KSP()
+      virtual PetscErrorCode setup_KSP() override
       {
         PetscErrorCode ierr;
         PC pc;
@@ -252,7 +258,7 @@ namespace cafes
 
       #undef __FUNCT__
       #define __FUNCT__ "solve"
-      PetscErrorCode solve()
+      virtual PetscErrorCode solve() override
       {
         PetscErrorCode ierr;
         PC pc;
@@ -263,8 +269,13 @@ namespace cafes
         PetscFunctionReturn(0);
       }
     };
-
   } 
+  template<std::size_t Dimensions, std::size_t Ndof>
+  problem::stokes<Dimensions> make_stokes(fem::dirichlet_conditions<Dimensions> const& dc, fem::rhs_conditions<Ndof> const& rhs)
+  {
+    return {dc, rhs}; 
+  }
+
 }
 
 #endif

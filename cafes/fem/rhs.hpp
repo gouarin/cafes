@@ -8,10 +8,9 @@
 
 namespace cafes
 {
+  using condition_fn = void(*)(const PetscReal*, PetscScalar*);
   namespace fem
   {
-    using condition_fn = void(*)(const PetscReal*, PetscScalar*);
-
     template<std::size_t Ndof>
     struct rhs_conditions
     {
@@ -125,6 +124,11 @@ namespace cafes
 
       PetscFunctionReturn(0);
     }
+  }
+  template<std::size_t Ndof>
+  fem::rhs_conditions<Ndof> make_rhs(std::array<condition_fn, Ndof> conditions)
+  {
+    return {conditions};
   }
 }
 

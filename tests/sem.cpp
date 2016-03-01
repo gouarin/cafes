@@ -1,90 +1,48 @@
-#include <particle/particle.hpp>
-#include <problem/sem.hpp>
-#include <particle/geometry/super_ellipsoid.hpp>
-#include <particle/geometry/linspace.hpp>
-#include <cassert>
-#include <iostream>
-#include <algorithm>
+#include <cafes.hpp>
 #include <petsc.h>
 
 void zeros(const PetscReal x[], PetscScalar *u){
   *u = 0.;
 }
 
-void haut(const PetscReal x[], PetscScalar *u){
-  *u = 0.;
+void ones(const PetscReal x[], PetscScalar *u){
+  *u = 1.;
 }
-
-void bas(const PetscReal x[], PetscScalar *u){
-  *u = 0.;
-}
-
-void left(const PetscReal x[], PetscScalar *u){
-  *u = 0.;
-}
-
-void right(const PetscReal x[], PetscScalar *u){
-  *u = 0.;
-}
-
-template<std::size_t Dimensions>
-struct dirichlet_conditions
-{
-  using conditon_fn = void(*)(const PetscReal*, PetscScalar*);
-
-  dirichlet_conditions( std::initializer_list<std::array<conditon_fn, Dimensions>> il )
-  {
-    std::copy(il.begin(), il.end(), conditions_.begin());
-  }
-
-  std::array<std::array<conditon_fn, Dimensions>, (1<<Dimensions)> conditions_;
-};
-
-template<typename ST>
-cafes::particle<ST> make_particle(ST const& se, cafes::physics::force<ST::dimension_type::value> const& a, double d)
-{
-  return {se,a,d};
-}
-
-template<std::size_t N>
-cafes::geometry::super_ellipsoid<N> make_ellipsoid(cafes::geometry::position<N,double> const& a, std::array<double, N> const& b, double d)
-{
-  return {a,b,d};
-}
-
-template<typename PL> auto make_SEM(PL const& pt)
-{
-  using s_t = typename PL::value_type::shape_type;
-  return cafes::problem::SEM<s_t>{pt};
-}
-
-/*
-template<typename P> auto make_SEM(P* const pt)
-{
-  using s_t = typename P::shape_type;
-  return cafes::problem::SEM<s_t>{pt};
-}
-*/
 
 int main(int argc, char **argv)
 {
-  {
     PetscErrorCode ierr;
+    std::size_t const dim = 2;
+
     ierr = PetscInitialize(&argc, &argv,  (char *)0, (char *)0);CHKERRQ(ierr);
 
+    auto bc = cafes::make_bc<dim>({ {{zeros , zeros}} 
+                                  , {{zeros , zeros}}
+                                  , {{zeros, zeros}}
+                                  , {{zeros, zeros}}
+                                  });
+    auto rhs = cafes::make_rhs<dim>({{ zeros, zeros }});
+    auto st = cafes::make_stokes<dim>(bc, rhs);
 
-    dirichlet_conditions<2> dc = {  {{haut , zeros}} 
-                                 ,  {{bas  , zeros}}
-                                 ,  {{zeros, left }}
-                                 ,  {{zeros, right}}
-                                 };
-    auto se = make_ellipsoid<2>( {1.,1.}, {.5,.5}, 1. );
-    std::vector<cafes::particle<decltype(se)>> pt{ make_particle(se, {0.,150.}, 0.25)
-                                                 , make_particle(se, {0.,150.}, 0.25)
+    auto se1 = cafes::make_ellipsoid<2>( {.3,.5}, {.1,.2}, 1. );
+    auto se2 = cafes::make_ellipsoid<2>( {.7,.5}, {.1,.1}, 2. );
+    std::vector<cafes::particle<decltype(se1)>> pt{ cafes::make_particle(se1, {1000.,0.}, 1.),
+                                                   cafes::make_particle(se2, {1000.,0.}, 1.)
                                                  };
 
-    auto s = make_SEM(pt);
+    auto s = cafes::make_SEM(pt, st, .1);
+    ierr = s.create_Mat_and_Vec();CHKERRQ(ierr);
+    ierr = st.setup_KSP();CHKERRQ(ierr);
+    ierr = s.setup_RHS();CHKERRQ(ierr);
+    ierr = s.setup_KSP();CHKERRQ(ierr);
+    ierr = s.solve();CHKERRQ(ierr);
+
+    ierr = cafes::io::save_VTK("Resultats", "test", st.sol, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
+    // PetscViewer      viewer;
+    // ierr = PetscViewerHDF5Open(PETSC_COMM_WORLD, "solution.h5", FILE_MODE_WRITE, &viewer);CHKERRQ(ierr);
+    // ierr = VecView(st.sol, viewer);CHKERRQ(ierr);
+    // ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
+    ierr = PetscFinalize();CHKERRQ(ierr);
 
     return 0;
-  }
 }

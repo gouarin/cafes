@@ -2,6 +2,7 @@
 #define PARTICLE_GEOMETRY_BOX_HPP_INCLUDED
 
 #include <particle/geometry/position.hpp>
+#include <iostream>
 
 namespace cafes
 {
@@ -21,6 +22,24 @@ namespace cafes
             for(std::size_t i=0; i<Dimensions; ++i)
                 result *= length(i);
             return result;
+        }
+
+        friend std::ostream &operator<<( std::ostream &output, 
+                                         box const& b )
+        { 
+          output << "box : ( ";
+
+          for(std::size_t i=0; i<Dimensions; ++i)
+            output << b.bottom_left[i] << " ";
+
+          output << "), ( ";
+
+          for(std::size_t i=0; i<Dimensions; ++i)
+            output << b.upper_right[i] << " ";
+
+          output << ")";
+
+          return output;            
         }
 
       };
@@ -49,9 +68,23 @@ namespace cafes
       }
 
       template<std::size_t Dimensions, typename T>
+      box<Dimensions, T> box_inside(box<Dimensions, T> const& b1, box<Dimensions, T> const& b2)
+      {
+
+          box<Dimensions, T> bout{b1};
+          for(std::size_t i=0; i<Dimensions; ++i){
+            if (b2.bottom_left[i] > b1.bottom_left[i])
+              bout.bottom_left[i] = b2.bottom_left[i];
+            if (b2.upper_right[i] < b1.upper_right[i])
+              bout.upper_right[i] = b2.upper_right[i];
+          }
+          return bout;
+      }
+
+      template<std::size_t Dimensions, typename T>
       bool point_inside(box<Dimensions, T> const& b, position<Dimensions, T> p){
         for(std::size_t i=0; i<Dimensions; ++i)
-          if (p[i] < b.bottom_left[i] || p[i] > b.upper_right[i])
+          if (p[i] < b.bottom_left[i] || p[i] >= b.upper_right[i]) // don't take the last point (fix for the border domain)
             return false;
         return true;
       }
