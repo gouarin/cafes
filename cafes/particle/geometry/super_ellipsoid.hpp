@@ -41,14 +41,12 @@ namespace cafes
              : center_{c}, shape_factors_{s}, e_{0}, n_{2./n}, q_{q}
         {
           static_assert(Dimensions == 2, "Constructor mismatch for 3D super ellipsoid");
-          surface_perimeter();
         }
 
         super_ellipsoid(position_type const& c, shapes_type const& s, double n, double e, quaternion q={})
              : center_{c}, shape_factors_{s}, e_{2./e}, n_{2./n}, q_{q}
         {
           static_assert(Dimensions == 3, "Constructor mismatch for 2D super ellipsoid");
-          surface_perimeter();
         }
 
         super_ellipsoid(super_ellipsoid const&) = default;
@@ -112,16 +110,20 @@ namespace cafes
             return that;
         }
 
-        void surface_perimeter()
+        double surface_area() const
         {
-          auto pts = surface(.01);
+          return 1.;
+          // if (perimeter == 0){
+          //   auto pts = surface(.01);
 
-          for(std::size_t i=0; i<pts.size()-1; ++i){
-            auto tmp = pts[i]-pts[i+1];
-            perimeter += std::sqrt(std::inner_product(tmp.begin(), tmp.end(), tmp.begin(), 0.));
-          }
-          auto tmp = pts[0]-pts[pts.size()-1];
-          perimeter += std::sqrt(std::inner_product(tmp.begin(), tmp.end(), tmp.begin(), 0.));
+          //   for(std::size_t i=0; i<pts.size()-1; ++i){
+          //     auto tmp = pts[i]-pts[i+1];
+          //     perimeter += std::sqrt(std::inner_product(tmp.begin(), tmp.end(), tmp.begin(), 0.));
+          //   }
+          //   auto tmp = pts[0]-pts[pts.size()-1];
+          //   perimeter += std::sqrt(std::inner_product(tmp.begin(), tmp.end(), tmp.begin(), 0.));
+          // }
+          // return perimeter;
         }
         
         std::vector<position_type>

@@ -23,9 +23,9 @@ namespace cafes
       {
       }
       
-      void surface_perimeter()
+      double surface_area() const
       {
-        perimeter = 2*M_PI*shape_factors_[0];
+        return 4*M_PI*shape_factors_[0]*shape_factors_[0];
       }
     };
   }

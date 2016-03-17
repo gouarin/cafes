@@ -330,7 +330,7 @@ namespace cafes
         auto& radius = ctx.particles[ipart].shape_factors_[0];
         //auto gammak = ctx.particles[ipart].perimeter/ctx.nb_surf_points[ipart];  
         // remove this line !!
-        auto gammak = 2*M_PI*radius/ctx.nb_surf_points[ipart];  
+        auto gammak = ctx.particles[ipart].surface_area()/ctx.nb_surf_points[ipart];  
         for(std::size_t isurf=0; isurf<ctx.surf_points[ipart].size(); ++isurf){
           auto bfunc = fem::P1_integration(get_position(ctx.surf_points[ipart][isurf]), ctx.problem.ctx->h);
           auto ielem = fem::get_element(get_index(ctx.surf_points[ipart][isurf]));

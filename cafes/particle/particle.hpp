@@ -34,7 +34,7 @@ namespace cafes
       using Shape::bounding_box;
       using Shape::center_;
       using Shape::shape_factors_;
-      using Shape::perimeter;
+      using Shape::surface_area;
 
       velocity_type velocity_;
       physics::velocity<3> angular_velocity_;
