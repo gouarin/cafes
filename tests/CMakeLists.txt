@@ -1,23 +1,38 @@
-ADD_EXECUTABLE(force force.cpp)
-#ADD_EXECUTABLE(velocity velocity.cpp)
-ADD_EXECUTABLE(ellipsoid ellipsoid.cpp)
-ADD_EXECUTABLE(particle particle.cpp)
-ADD_EXECUTABLE(box box.cpp)
+#ADD_EXECUTABLE(force force.cpp)
+##ADD_EXECUTABLE(velocity velocity.cpp)
+#ADD_EXECUTABLE(ellipsoid ellipsoid.cpp)
+#ADD_EXECUTABLE(particle particle.cpp)
+#ADD_EXECUTABLE(box box.cpp)
+ADD_EXECUTABLE(quaternion quaternion.cpp)
 
-ADD_EXECUTABLE(superellipsoid superellipsoid_uniform.cpp)
-TARGET_LINK_LIBRARIES(superellipsoid libqhullcpp libqhullr ${HDF5_hdf5_LIBRARY_RELEASE})
+#ADD_EXECUTABLE(superellipsoid superellipsoid_uniform.cpp)
+#TARGET_LINK_LIBRARIES(superellipsoid libqhullcpp libqhullr ${HDF5_hdf5_LIBRARY_RELEASE})
 
 ADD_EXECUTABLE(sem sem.cpp)
 TARGET_LINK_LIBRARIES(sem ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
 
-ADD_EXECUTABLE(sem3d sem3d.cpp)
-TARGET_LINK_LIBRARIES(sem3d ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
+ADD_EXECUTABLE(dton dton.cpp)
+TARGET_LINK_LIBRARIES(dton ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
+
+ADD_EXECUTABLE(dton_sphere dton_sphere.cpp)
+TARGET_LINK_LIBRARIES(dton_sphere ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
+
+#ADD_EXECUTABLE(sem3d sem3d.cpp)
+#TARGET_LINK_LIBRARIES(sem3d ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
 
 #ADD_EXECUTABLE(matMult matMult.cpp)
 #TARGET_LINK_LIBRARIES(matMult ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
 
-ADD_EXECUTABLE(stokes stokes.cpp)
-TARGET_LINK_LIBRARIES(stokes ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
+#ADD_EXECUTABLE(stokes stokes.cpp)
+#TARGET_LINK_LIBRARIES(stokes ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
 
+ADD_EXECUTABLE(cavity3d cavity3d.cpp)
+TARGET_LINK_LIBRARIES(cavity3d ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
+
+ADD_EXECUTABLE(stokes_analytic_3d stokes_analytic_3d.cpp)
+TARGET_LINK_LIBRARIES(stokes_analytic_3d ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
+
+ADD_EXECUTABLE(stokes_analytic_2d stokes_analytic_2d.cpp)
+TARGET_LINK_LIBRARIES(stokes_analytic_2d ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
 
 

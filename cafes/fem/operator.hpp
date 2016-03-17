@@ -291,7 +291,7 @@ namespace cafes
     /////////////////////////////////////////////////////////////////////////////
     #undef __FUNCT__
     #define __FUNCT__ "diag_block_mult"
-    PetscErrorCode diag_block_mult(DM dm, Vec x, Vec y, std::array<double, 3> const& h, int dof,
+    PetscErrorCode diag_block_mult(DM dm, Vec x, Vec y, std::array<double, 3> const& h, int ndof,
                                    PetscErrorCode(*matelem)(PetscReal*, std::array<double, 3> const&))
     {
       PetscErrorCode ierr;
@@ -313,20 +313,20 @@ namespace cafes
       for (std::size_t k=box.bottom_left[2]; k<box.upper_right[2]; ++k){
           for (std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j){
             for (std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i){
-              for(std::size_t k1=0; k1<nbasis; k1++){
+              for(std::size_t k1=0; k1<nbasis; ++k1){
                 std::size_t l1 = i + ind3d[k1][0];
                 std::size_t p1 = j + ind3d[k1][1];
                 std::size_t r1 = k + ind3d[k1][2];
-                for(std::size_t k2=0; k2<dof; ++k2){
-                  tmp[k1][k2] = px[r1][p1][l1][k2];
-                  val[k1][k2] = 0.;
+                for(std::size_t dof=0; dof<ndof; ++dof){
+                  tmp[k1][dof] = px[r1][p1][l1][dof];
+                  val[k1][dof] = 0.;
                 }
               }
 
               for(std::size_t k1=0; k1<nbasis; ++k1){
                 for(std::size_t k2=0; k2<nbasis; ++k2){
-                    for(std::size_t k3=0; k3<dof; ++k3){
-                        val[k1][k3] += tmp[k2][k3]*MatElem[k1*nbasis+k2];
+                    for(std::size_t dof=0; dof<ndof; ++dof){
+                        val[k1][dof] += tmp[k2][dof]*MatElem[k1*nbasis+k2];
                     }
                 }
               }
@@ -335,8 +335,11 @@ namespace cafes
                 std::size_t l1 = i + ind3d[k1][0];
                 std::size_t p1 = j + ind3d[k1][1];
                 std::size_t r1 = k + ind3d[k1][2];
-                for(std::size_t k2=0; k2<dof; ++k2)
-                  py[r1][p1][l1][k2] += val[k1][k2];
+                for(std::size_t dof=0; dof<ndof; ++dof)
+                  py[r1][p1][l1][dof] += val[k1][dof];
+
+                //std::cout << i << " " << j << " " << k << " " << py[r1][p1][l1][0] <<"\n";
+
               }
             }
           }
@@ -554,9 +557,9 @@ namespace cafes
               std::size_t l1 = 2*i + indpu3d[k1][0];
               std::size_t p1 = 2*j + indpu3d[k1][1];
               std::size_t r1 = 2*k + indpu3d[k1][2];
-              auto val1 = 0;
-              auto val2 = 0;
-              auto val3 = 0;
+              auto val1 = 0.;
+              auto val2 = 0.;
+              auto val3 = 0.;
 
               for(std::size_t k2=0; k2<8; k2++){
                 val1 -= tmpp[k2]*MatElemOnu[k2*27+k1];

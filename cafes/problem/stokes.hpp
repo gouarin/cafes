@@ -24,12 +24,12 @@ namespace cafes
       PC pc, pc_i;
       KSP *sub_ksp;
       PetscInt MGlevels;
-      DM dav;
+      DM dav, dap;
       DMDALocalInfo  info;
 
       PetscFunctionBeginUser;
 
-      ierr = DMCompositeGetEntries(dm, &dav, nullptr);CHKERRQ(ierr);
+      ierr = DMCompositeGetEntries(dm, &dav, &dap);CHKERRQ(ierr);
       ierr = DMDAGetLocalInfo(dav, &info);CHKERRQ(ierr);
 
       ierr = KSPSetType(ksp, KSPGCR);CHKERRQ(ierr);
@@ -49,6 +49,7 @@ namespace cafes
       // ierr = KSPSetDMActive(sub_ksp[0], PETSC_FALSE);CHKERRQ(ierr);
 
       ierr = KSPSetType(sub_ksp[0], KSPCG);CHKERRQ(ierr);
+      //ierr = KSPSetType(sub_ksp[0], KSPFGMRES);CHKERRQ(ierr);
       ierr = KSPSetTolerances(sub_ksp[0], 1e-2, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);CHKERRQ(ierr);
       ierr = PCSetType(pc_i, PCMG);CHKERRQ(ierr);
 
@@ -63,13 +64,32 @@ namespace cafes
 
       ierr = PCMGSetLevels(pc_i, MGlevels, PETSC_NULL);CHKERRQ(ierr);
 
-      /* Set Jacobi preconditionner on pressure field*/
+      // /* Set Jacobi preconditionner on pressure field*/
       ierr = KSPSetType(sub_ksp[1], KSPPREONLY);CHKERRQ(ierr);
       ierr = KSPSetTolerances(sub_ksp[1], 1e-1, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);CHKERRQ(ierr);
       ierr = KSPGetPC(sub_ksp[1], &pc_i);CHKERRQ(ierr);
       ierr = PCSetType(pc_i, PCJACOBI);CHKERRQ(ierr);
 
+      /* Set MG solver on pressure field*/
+      // ierr = KSPGetPC(sub_ksp[1], &pc_i);CHKERRQ(ierr);
+      // ierr = KSPSetDM(sub_ksp[0], dav);CHKERRQ(ierr);
+      // ierr = KSPSetDMActive(sub_ksp[0], PETSC_FALSE);CHKERRQ(ierr);
 
+      // ierr = KSPSetType(sub_ksp[1], KSPFGMRES);CHKERRQ(ierr);
+      // ierr = KSPSetTolerances(sub_ksp[1], 1e-1, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);CHKERRQ(ierr);
+      // ierr = PCSetType(pc_i, PCMG);CHKERRQ(ierr);
+
+      // ierr = DMDAGetLocalInfo(dap, &info);CHKERRQ(ierr);
+      // i = (info.mx<info.my)? info.mx: info.my;
+      // i = (info.mz == 1 || i<info.mz)? i: info.mz;
+
+      // MGlevels = 1;
+      // while(i > 8){
+      //   i >>= 1;
+      //   MGlevels++;
+      // }
+
+      // ierr = PCMGSetLevels(pc_i, MGlevels, PETSC_NULL);CHKERRQ(ierr);
       PetscFunctionReturn(0);
     }
 
@@ -134,8 +154,9 @@ namespace cafes
 
         // set Stokes matrix
         PetscErrorCode(*method)(DM, Vec, Vec, std::array<double, Dimensions> const&);
-        if (opt.strain_tensor)
+        if (opt.strain_tensor){
           method = fem::strain_tensor_mult;
+        }
         else
           method = fem::laplacian_mult;
 
@@ -153,7 +174,7 @@ namespace cafes
         DMSetMatType(dav, MATSHELL);
         DMSetMatType(dap, MATSHELL);
 
-        Ctx *slap = new Ctx{dav, hu, fem::laplacian_mult, fem::laplacian_mult_diag};
+        Ctx *slap = new Ctx{dav, hu, method, fem::laplacian_mult_diag};
         slap->set_dirichlet_bc(bc);
         auto A11 = fem::make_matrix<Ctx>(slap);
 
@@ -224,12 +245,20 @@ namespace cafes
           ierr = DMCompositeGetEntries(ctx->dm, &dav, &dap);CHKERRQ(ierr);
 
           ierr = KSPGetPC(subksp[0], &pc);CHKERRQ(ierr);
+          ierr = KSPSetType(subksp[0], KSPCG);CHKERRQ(ierr);
           ierr = KSPSetDM(subksp[0], dav);CHKERRQ(ierr);
           ierr = KSPSetDMActive(subksp[0], PETSC_FALSE);CHKERRQ(ierr);
           ierr = PetscObjectTypeCompare((PetscObject)pc, PCMG, &same);CHKERRQ(ierr);
 
           // if MG is set for fieldsplit_0
           if (same) {
+            PetscErrorCode(*method)(DM, Vec, Vec, std::array<double, Dimensions> const&);
+            if (opt.strain_tensor){
+              method = fem::strain_tensor_mult;
+            }
+            else
+              method = fem::laplacian_mult;
+
             PetscInt MGlevels;
             KSP smoother;
             ierr = PCMGGetLevels(pc, &MGlevels);CHKERRQ(ierr);
@@ -238,13 +267,14 @@ namespace cafes
               auto mg_h{ctx->h};
               std::for_each(mg_h.begin(), mg_h.end(), [&](auto& x){x*=(1<<(MGlevels-1-i));});
 
-              auto *mg_ctx = new Ctx{dav, mg_h, fem::laplacian_mult, fem::laplacian_mult_diag};
+              auto *mg_ctx = new Ctx{dav, mg_h, method, fem::laplacian_mult_diag};
               mg_ctx->set_dirichlet_bc(ctx->bc_);
 
               PC pcsmoother;
               ierr = PCMGGetSmoother(pc, i, &smoother);CHKERRQ(ierr);
 
               ierr = KSPSetComputeOperators(smoother, createLevelMatrices<Ctx>, (void *) mg_ctx);CHKERRQ(ierr);
+              //ierr = KSPSetType(smoother, KSPCG);CHKERRQ(ierr);
               ierr = KSPSetType(smoother, KSPCG);CHKERRQ(ierr);
               ierr = KSPGetPC(smoother, &pcsmoother);CHKERRQ(ierr);
               ierr = PCSetType(pcsmoother, PCJACOBI);CHKERRQ(ierr);
@@ -252,6 +282,39 @@ namespace cafes
   
             ierr = PCSetUp(pc);CHKERRQ(ierr);
           }
+
+          // ierr = KSPGetPC(subksp[1], &pc);CHKERRQ(ierr);
+          // ierr = KSPSetType(subksp[1], KSPFGMRES);CHKERRQ(ierr);
+          // ierr = KSPSetDM(subksp[1], dap);CHKERRQ(ierr);
+          // ierr = KSPSetDMActive(subksp[1], PETSC_FALSE);CHKERRQ(ierr);
+          // ierr = PetscObjectTypeCompare((PetscObject)pc, PCMG, &same);CHKERRQ(ierr);
+
+          // // if MG is set for fieldsplit_1
+          // if (same) {
+          //   PetscInt MGlevels;
+          //   KSP smoother;
+          //   ierr = PCMGGetLevels(pc, &MGlevels);CHKERRQ(ierr);
+
+          //   for(std::size_t i=0; i<MGlevels; ++i){
+          //     auto mg_h{ctx->h};
+          //     std::for_each(mg_h.begin(), mg_h.end(), [&](auto& x){x*=2;});
+
+          //     std::for_each(mg_h.begin(), mg_h.end(), [&](auto& x){x*=(1<<(MGlevels-1-i));});
+
+          //     auto *mg_ctx = new Ctx{dap, mg_h, fem::mass_mult, fem::mass_mult_diag};
+          //     //mg_ctx->set_dirichlet_bc(ctx->bc_);
+
+          //     PC pcsmoother;
+          //     ierr = PCMGGetSmoother(pc, i, &smoother);CHKERRQ(ierr);
+
+          //     ierr = KSPSetComputeOperators(smoother, createLevelMatrices<Ctx>, (void *) mg_ctx);CHKERRQ(ierr);
+          //     ierr = KSPSetType(smoother, KSPFGMRES);CHKERRQ(ierr);
+          //     ierr = KSPGetPC(smoother, &pcsmoother);CHKERRQ(ierr);
+          //     ierr = PCSetType(pcsmoother, PCJACOBI);CHKERRQ(ierr);
+          //   }
+  
+          //   ierr = PCSetUp(pc);CHKERRQ(ierr);
+          // }
         }
         PetscFunctionReturn(0);
       }

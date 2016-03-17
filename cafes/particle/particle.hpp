@@ -25,14 +25,19 @@ namespace cafes
       : Shape(s), force_(f), rho_(r)
       {}
 
+      particle( Shape const& s, velocity_type const& v, physics::velocity<3> const& ang_v)
+      : Shape(s), velocity_(v), angular_velocity_(ang_v)
+      {}
+
       using Shape::surface;
       using Shape::contains;
       using Shape::bounding_box;
       using Shape::center_;
       using Shape::shape_factors_;
+      using Shape::perimeter;
 
-  private:
-      velocity_type velocity_, angular_velocity_;
+      velocity_type velocity_;
+      physics::velocity<3> angular_velocity_;
       
   };
 
@@ -110,6 +115,12 @@ namespace cafes
   particle<ST> make_particle(ST const& se, physics::force<ST::dimension_type::value> const& a, double d)
   {
     return {se,a,d};
+  }
+
+  template<typename ST>
+  particle<ST> make_particle(ST const& se, physics::velocity<ST::dimension_type::value> const& v, physics::velocity<3> const& ang_v)
+  {
+    return {se, v, ang_v};
   }
 }
 

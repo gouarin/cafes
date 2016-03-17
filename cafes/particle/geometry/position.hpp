@@ -2,8 +2,8 @@
 #define PARTICLE_GEOMETRY_POSITION_HPP_INCLUDED
 
 #include <particle/physics/velocity.hpp>
-#include <particle/geometry/quaternion.hpp>
 #include <array>
+#include <iostream>
 #include <type_traits>
 
 namespace cafes
@@ -15,6 +15,8 @@ namespace cafes
       {
         using parent = std::array<T, Dimensions>;
         using parent::operator[];
+        using parent::begin;
+        using parent::end;
 
         position() = default;
         position(position const&) = default;
@@ -33,11 +35,24 @@ namespace cafes
                         );
         }
 
-        position& operator*=(quaternion const& q)
-        {
-            //todo: MATH!
-            return *this;
+        friend std::ostream &operator<<( std::ostream &output, 
+                                         position const& pos )
+        { 
+          output << "position( ";
+
+          for(std::size_t i=0; i<Dimensions; ++i)
+            output << pos[i] << " ";
+
+          output << ")";
+
+          return output;            
         }
+
+        // position& operator*=(quaternion const& q)
+        // {
+        //     //todo: MATH!
+        //     return *this;
+        // }
 
         position& operator*=(position<Dimensions, T> const& p)
         {
@@ -54,6 +69,12 @@ namespace cafes
         position& operator-=(position<Dimensions, T> const& p)
         {
             for(std::size_t i=0;i<Dimensions;++i) (*this)[i] -= p[i];
+            return *this;
+        }
+
+        position& operator+=(position<Dimensions, T> const& p)
+        {
+            for(std::size_t i=0;i<Dimensions;++i) (*this)[i] += p[i];
             return *this;
         }
 
@@ -103,6 +124,15 @@ namespace cafes
       }
 
       template<std::size_t Dimensions, typename T>
+      position<Dimensions, T> operator+( position<Dimensions, T> const& p1
+                                       , position<Dimensions, T> const& p2
+                                       )
+      {
+          position<Dimensions, T> that{p1};
+          return that += p2;
+      }
+
+      template<std::size_t Dimensions, typename T>
       position<Dimensions, T> operator-( position<Dimensions, T> const& p
                                     , T const& v
                                     )
@@ -111,14 +141,14 @@ namespace cafes
           return that -= v;
       }
 
-      template<std::size_t Dimensions, typename T>
-      position<Dimensions, T> operator*( position<Dimensions, T> const& p
-                                    , quaternion const& q
-                                    )
-      {
-          position<Dimensions, T> that{p};
-          return that *= q;
-      }
+      // template<std::size_t Dimensions, typename T>
+      // position<Dimensions, T> operator*( position<Dimensions, T> const& p
+      //                               , quaternion const& q
+      //                               )
+      // {
+      //     position<Dimensions, T> that{p};
+      //     return that *= q;
+      // }
 
       template<std::size_t Dimensions, typename T, typename U>
       position<Dimensions, double> operator*( position<Dimensions, T> const& p1

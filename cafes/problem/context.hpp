@@ -43,7 +43,7 @@ namespace cafes
     };
 
     template<std::size_t Dimensions, typename Shape, typename Problem_type>
-    struct SEM_context{
+    struct particle_context{
       using position_type   = geometry::position<Dimensions, double>;
       using position_type_i = geometry::position<Dimensions, int>;
 

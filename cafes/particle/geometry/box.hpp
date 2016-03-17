@@ -42,6 +42,38 @@ namespace cafes
           return output;            
         }
 
+        auto get_box_points(std::integral_constant<int, 2> const&) const
+        {
+          std::vector<position_type> p;
+          position_type x{bottom_left[0], upper_right[0]};
+          position_type y{bottom_left[1], upper_right[1]};
+
+          for(std::size_t d2=0; d2<2; ++d2)
+            for(std::size_t d1=0; d1<2; ++d1)
+              p.push_back({x[d1], y[d2]});
+          return p;
+        }
+
+        auto get_box_points(std::integral_constant<int, 3> const&) const
+        {
+          std::vector<position_type> p;
+          position_type x{bottom_left[0], upper_right[0]};
+          position_type y{bottom_left[1], upper_right[1]};
+          position_type z{bottom_left[2], upper_right[2]};
+
+          for(std::size_t d3=0; d3<2; ++d3)
+            for(std::size_t d2=0; d2<2; ++d2)
+              for(std::size_t d1=0; d1<2; ++d1)
+                p.push_back({x[d1], y[d2], z[d3]});
+
+          return p;
+        }
+
+        auto get_box_points() const
+        {
+          return get_box_points(std::integral_constant<int, Dimensions>{});
+        }
+
       };
 
 
