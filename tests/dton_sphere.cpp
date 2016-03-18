@@ -39,20 +39,22 @@ int main(int argc, char **argv)
     auto se = cafes::make_sphere( { .5, .5, .5}, radius, 0);
     std::vector<cafes::particle<decltype(se)>> pt;
     while(z<.9){
+      y = 4*radius;
       while(y<.9){
+        x = 4*radius;
         while(x<.9){
           se = cafes::make_sphere( { x, y, z}, radius, 0);
           pt.push_back(cafes::make_particle(se, {1., 0.}, {0.,0.,0.}));
-          x += 3*radius;
+          x += 4*radius;
         }
-        y += 3*radius;
+        y += 4*radius;
       }
-      z += 3*radius;
+      z += 4*radius;
     }
 
     std::cout << pt.size() << "\n";
-    // std::vector<cafes::particle<decltype(se)>> pt{ cafes::make_particle(se, {1., 0.}, {0.,0.,0.})
-    //                                              };
+    //std::vector<cafes::particle<decltype(se)>> pt{ cafes::make_particle(se, {1., 0.}, {0.,0.,0.})
+                                                  };
 
     auto s = cafes::make_DtoN(pt, st, {.1, .1});
     
@@ -62,7 +64,7 @@ int main(int argc, char **argv)
     ierr = s.solve();CHKERRQ(ierr);
 
     ierr = cafes::io::save_VTK("Resultats", "test", st.sol, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
-
+    ierr = cafes::io::saveParticles("Resultats", "test_particles", pt);CHKERRQ(ierr);
     ierr = PetscFinalize();CHKERRQ(ierr);
 
     return 0;

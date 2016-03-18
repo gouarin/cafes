@@ -276,21 +276,21 @@ PetscErrorCode getMatElemLaplacian3d(PetscReal *MatElem, std::array<double, 3> c
 #define __FUNCT__ "getMatElemStrainTensor3d" 
 PetscErrorCode getMatElemStrainTensor3d(PetscReal MatElem[][9], std::array<double, 3> const& h){
   PetscErrorCode ierr;
-  PetscReal hxy = h[0]*h[1], hxz = h[0]*h[2], hyz = h[1]*h[3];
+  PetscReal hxy = h[0]*h[1], hxz = h[0]*h[2], hyz = h[1]*h[2];
   PetscInt i, j;
 
   PetscFunctionBeginUser;
 
-  for(i=0;i<64;i++){
+  for(i=0;i<64;++i){
     MatElem[i][0] = 2*hyz/h[0]*matElem3d_dxudxu[i] + hxz/h[1]*matElem3d_dyudyu[i] + hxy/h[2]*matElem3d_dzudzu[i];
     MatElem[i][4] = hyz/h[0]*matElem3d_dxudxu[i] + 2*hxz/h[1]*matElem3d_dyudyu[i] + hxy/h[2]*matElem3d_dzudzu[i];
-    MatElem[i][7] = hyz/h[0]*matElem3d_dxudxu[i] + hxz/h[1]*matElem3d_dyudyu[i] + 2*hxy/h[2]*matElem3d_dzudzu[i];
+    MatElem[i][8] = hyz/h[0]*matElem3d_dxudxu[i] + hxz/h[1]*matElem3d_dyudyu[i] + 2*hxy/h[2]*matElem3d_dzudzu[i];
     MatElem[i][1] = h[2]*matElem3d_dxudyu[i];
     MatElem[i][2] = h[1]*matElem3d_dxudzu[i];
     MatElem[i][5] = h[0]*matElem3d_dyudzu[i];
   }
   
-  for(i=0;i<8;i++)
+  for(i=0;i<8;++i)
     for(j=0;j<8;++j){
       MatElem[j*8+i][3] = MatElem[i*8+j][1];
       MatElem[j*8+i][6] = MatElem[i*8+j][2];

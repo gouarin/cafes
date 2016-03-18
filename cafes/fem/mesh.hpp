@@ -105,7 +105,7 @@ namespace cafes
         PetscInt* set_lxu(bool period, int nx, const PetscInt* lx)
         {
             PetscInt *lxu;
-            PetscMalloc(nx, &lxu);
+            PetscMalloc1(nx, &lxu);
             for(std::size_t i=0; i<nx; ++i) lxu[i] = 2*lx[i];
             if (!period)
               lxu[nx-1]--;

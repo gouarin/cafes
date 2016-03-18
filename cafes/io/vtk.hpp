@@ -35,6 +35,9 @@
 #include "vtkShrinkFilter.h"
 #include "vtkAssignAttribute.h"
 #include "vtkMaskPoints.h"
+#include "vtkXMLPolyDataWriter.h"
+#include "vtkXMLPolyDataReader.h"
+#include "vtkPolyData.h"
 
 #include <array>
 
@@ -580,6 +583,59 @@ namespace cafes
       ierr = DMCompositeRestoreAccess(dm,sol,&solu,&solp);CHKERRQ(ierr);
       PetscFunctionReturn(0);
     }
+
+    #undef __FUNCT__
+    #define __FUNCT__ "saveParticles"
+    template<typename Shape>
+    PetscErrorCode saveParticles(const char* path, const char* filename,
+                                 std::vector<particle<Shape>>const& particles)
+    {
+      PetscErrorCode ierr;
+      int rank;
+      ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
+
+      if (rank == 0){
+
+        vtkPoints* spheresPoints = vtkPoints::New();
+        vtkDoubleArray* shperesRadius = vtkDoubleArray::New();
+        vtkPolyData* data = vtkPolyData::New();
+        PetscFunctionBeginUser;
+
+        data->Allocate(1, 1);
+
+        spheresPoints->SetDataTypeToDouble();
+        spheresPoints->SetNumberOfPoints(particles.size());
+        data->SetPoints(spheresPoints);
+        shperesRadius->SetName("radius");
+        shperesRadius->SetNumberOfComponents(1);
+        shperesRadius->SetNumberOfTuples(particles.size());
+        data->GetPointData()->AddArray(shperesRadius);
+
+
+        std::size_t i = 0;
+        for(auto& p: particles){
+          spheresPoints->SetPoint(i, p.center_[0], p.center_[1], p.center_[2]);
+          shperesRadius->SetValue(i, p.shape_factors_[0]);
+          i++;
+        }
+
+        //data->Update();
+
+        std::stringstream output;
+        output << path << "/" << filename << ".vtp";
+        vtkXMLPolyDataWriter* writer = vtkXMLPolyDataWriter::New();
+        writer->SetFileName(output.str().data());
+      #if VTK_MAJOR_VERSION <= 5
+        writer->SetInput(data);
+      #else
+        writer->SetInputData(data);
+      #endif
+
+        writer->Write();
+      }
+      PetscFunctionReturn(0);
+    }
+
   }
 }
 #endif
