@@ -32,29 +32,30 @@ int main(int argc, char **argv)
     
     auto st = cafes::make_stokes<dim>(bc, rhs);
 
-    double radius = .01;
+    double radius = .1;
     double z = 4*radius;
     double y = 4*radius;
     double x = 4*radius;
-    auto se = cafes::make_sphere( { .5, .5, .5}, radius, 0);
-    std::vector<cafes::particle<decltype(se)>> pt;
-    while(z<.9){
-      y = 4*radius;
-      while(y<.9){
-        x = 4*radius;
-        while(x<.9){
-          se = cafes::make_sphere( { x, y, z}, radius, 0);
-          pt.push_back(cafes::make_particle(se, {1., 0.}, {0.,0.,0.}));
-          x += 4*radius;
-        }
-        y += 4*radius;
-      }
-      z += 4*radius;
-    }
+    auto se1 = cafes::make_sphere( { .3, .5, .5}, radius, 0);
+    auto se2 = cafes::make_sphere( { .7, .5, .5}, radius, 0);
+    // std::vector<cafes::particle<decltype(se)>> pt;
+    // while(z<.9){
+    //   y = 4*radius;
+    //   while(y<.9){
+    //     x = 4*radius;
+    //     while(x<.9){
+    //       se = cafes::make_sphere( { x, y, z}, radius, 0);
+    //       pt.push_back(cafes::make_particle(se, {1., 0.}, {0.,0.,0.}));
+    //       x += 4*radius;
+    //     }
+    //     y += 4*radius;
+    //   }
+    //   z += 4*radius;
+    // }
 
-    std::cout << pt.size() << "\n";
-    //std::vector<cafes::particle<decltype(se)>> pt{ cafes::make_particle(se, {1., 0.}, {0.,0.,0.})
-                                                  };
+    // std::cout << pt.size() << "\n";
+    std::vector<cafes::particle<decltype(se1)>> pt{ cafes::make_particle(se1, {0., 0., 0.}, {0.,0.,0.}),
+                                                    cafes::make_particle(se2, {0., 0., 0.}, {0.,0.,0.})};
 
     auto s = cafes::make_DtoN(pt, st, {.1, .1});
     

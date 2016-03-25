@@ -111,6 +111,37 @@ namespace cafes
     return that;
   }
 
+  template<typename Shape, std::size_t Dimensions>
+  auto position_diff(particle<Shape> const& p1, particle<Shape> const& p2)
+  {
+    geometry::position<Dimensions, double> pos_diff;
+    auto diff = [](double x, double y){return x-y;};
+    std::transform(p2.center_.begin(), p2.center_.end(), p1.center_.begin(), pos_diff.begin(), diff);
+    return pos_diff;
+  }
+
+
+  template<typename Shape, std::size_t Dimensions>
+  auto velocity_diff(particle<Shape> const& p1, particle<Shape> const& p2)
+  {
+    physics::velocity<Dimensions> vel_diff;
+    auto diff = [](double x, double y){return x-y;};
+    std::transform(p2.velocity_.begin(), p2.velocity_.end(), p1.velocity_.begin(), vel_diff.begin(), diff);
+    return vel_diff;
+  }
+
+  template<typename Shape, std::size_t Dimensions>
+  auto distance(particle<Shape> const& p1, particle<Shape> const& p2)
+  {
+    double dist = 0.;
+    auto pos_diff = position_diff<Shape, Dimensions>(p1, p2);
+    
+    dist = std::inner_product(pos_diff.begin(), pos_diff.end(), pos_diff.begin(), 0.);
+    return std::sqrt(dist);
+  }
+
+
+
   template<typename ST>
   particle<ST> make_particle(ST const& se, physics::force<ST::dimension_type::value> const& a, double d)
   {

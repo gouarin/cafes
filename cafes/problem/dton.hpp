@@ -7,6 +7,7 @@
 #include <fem/mesh.hpp>
 #include <fem/quadrature.hpp>
 #include <particle/particle.hpp>
+#include <particle/singularity/add_singularity.hpp>
 #include <particle/geometry/box.hpp>
 #include <particle/geometry/position.hpp>
 
@@ -33,6 +34,7 @@ namespace cafes
       ierr = VecSet(ctx->problem.rhs, 0.);CHKERRQ(ierr);
 
       ierr = init_problem_1<Dimensions, Ctx>(*ctx, x);CHKERRQ(ierr);
+
       ierr = ctx->problem.solve();CHKERRQ(ierr);
 
       std::vector<std::vector<std::array<double, Dimensions>>> g;

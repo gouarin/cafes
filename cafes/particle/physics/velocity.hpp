@@ -13,6 +13,8 @@ namespace cafes
       {
         using parent = std::array<double,Dimensions>;
         using parent::operator[];
+        using parent::begin;
+        using parent::end;
 
         velocity() = default;
         velocity(velocity const&) = default;

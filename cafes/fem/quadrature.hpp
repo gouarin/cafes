@@ -18,6 +18,17 @@ namespace cafes
             return that;
         }
 
+        auto P1_integration_grad(geometry::position<2, double> const& x, std::array<double, 2> const& h)
+        {
+            std::array< std::array<double, 2>, 4> that;
+            //double c = 1./(h[0]*h[1]);
+            that[0] = {{ x[1]-h[1], x[0]-h[0] }};
+            that[1] = {{ h[1]-x[1],     -x[0] }};
+            that[2] = {{     -x[1], h[0]-x[0] }};
+            that[3] = {{      x[1],      x[0] }};
+            return that;
+        }
+
         auto P1_integration(geometry::position<3, double> const& x, std::array<double, 3> const& h)
         {
             std::array<double, 8> that; 
@@ -31,6 +42,21 @@ namespace cafes
             that[5] = c*x[0]*(h[1]-x[1])*x[2];
             that[6] = c*(h[0]-x[0])*x[1]*x[2];
             that[7] = c*x[0]*x[1]*x[2];
+            return that;
+        }
+
+        auto P1_integration_grad(geometry::position<3, double> const& x, std::array<double, 3> const& h)
+        {
+            std::array<std::array<double, 3>, 8> that; 
+
+            that[0] = {{ -(h[1]-x[1])*(h[2]-x[2]), -(h[0]-x[0])*(h[2]-x[2]), -(h[0]-x[0])*(h[1]-x[1]) }};
+            that[1] = {{  (h[1]-x[1])*(h[2]-x[2]),        -x[0]*(h[2]-x[2]),        -x[0]*(h[1]-x[1]) }};
+            that[2] = {{        -x[1]*(h[2]-x[2]),  (h[0]-x[0])*(h[2]-x[2]),        -(h[0]-x[0])*x[1] }};
+            that[3] = {{         x[1]*(h[2]-x[2]),         x[0]*(h[2]-x[2]),               -x[0]*x[1] }};
+            that[4] = {{        -(h[1]-x[1])*x[2],        -(h[0]-x[0])*x[2],  (h[0]-x[0])*(h[1]-x[1]) }};
+            that[5] = {{         (h[1]-x[1])*x[2],               -x[0]*x[2],         x[0]*(h[1]-x[1]) }};
+            that[6] = {{               -x[1]*x[2],         (h[0]-x[0])*x[2],         (h[0]-x[0])*x[1] }};
+            that[7] = {{                x[1]*x[2],                x[0]*x[2],                x[0]*x[1] }};
             return that;
         }
 

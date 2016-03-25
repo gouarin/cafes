@@ -50,7 +50,7 @@ namespace cafes
 
       ierr = KSPSetType(sub_ksp[0], KSPCG);CHKERRQ(ierr);
       //ierr = KSPSetType(sub_ksp[0], KSPFGMRES);CHKERRQ(ierr);
-      ierr = KSPSetTolerances(sub_ksp[0], 1e-3, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);CHKERRQ(ierr);
+      ierr = KSPSetTolerances(sub_ksp[0], 1e-2, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);CHKERRQ(ierr);
       ierr = PCSetType(pc_i, PCMG);CHKERRQ(ierr);
 
       auto i = (info.mx<info.my)? info.mx: info.my;
@@ -64,19 +64,19 @@ namespace cafes
 
       ierr = PCMGSetLevels(pc_i, MGlevels, PETSC_NULL);CHKERRQ(ierr);
 
-      // /* Set Jacobi preconditionner on pressure field*/
+      /* Set Jacobi preconditionner on pressure field*/
       ierr = KSPSetType(sub_ksp[1], KSPPREONLY);CHKERRQ(ierr);
-      ierr = KSPSetTolerances(sub_ksp[1], 1e-2, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);CHKERRQ(ierr);
+      ierr = KSPSetTolerances(sub_ksp[1], 1e-1, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);CHKERRQ(ierr);
       ierr = KSPGetPC(sub_ksp[1], &pc_i);CHKERRQ(ierr);
       ierr = PCSetType(pc_i, PCJACOBI);CHKERRQ(ierr);
 
-      /* Set MG solver on pressure field*/
+      // /* Set MG solver on pressure field*/
       // ierr = KSPGetPC(sub_ksp[1], &pc_i);CHKERRQ(ierr);
       // ierr = KSPSetDM(sub_ksp[0], dav);CHKERRQ(ierr);
       // ierr = KSPSetDMActive(sub_ksp[0], PETSC_FALSE);CHKERRQ(ierr);
 
       // ierr = KSPSetType(sub_ksp[1], KSPFGMRES);CHKERRQ(ierr);
-      // ierr = KSPSetTolerances(sub_ksp[1], 1e-1, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);CHKERRQ(ierr);
+      // ierr = KSPSetTolerances(sub_ksp[1], 1e-10, 1e-14, PETSC_DEFAULT, PETSC_DEFAULT);CHKERRQ(ierr);
       // ierr = PCSetType(pc_i, PCMG);CHKERRQ(ierr);
 
       // ierr = DMDAGetLocalInfo(dap, &info);CHKERRQ(ierr);

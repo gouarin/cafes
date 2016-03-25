@@ -9,6 +9,7 @@
 #include <particle/geometry/box.hpp>
 #include <particle/geometry/cross_product.hpp>
 #include <particle/geometry/position.hpp>
+#include <particle/singularity/add_singularity.hpp>
 #include <petsc/vec.hpp>
 
 #include <petsc.h>
@@ -216,7 +217,7 @@ namespace cafes
       ierr = sol.global_to_local(INSERT_VALUES);CHKERRQ(ierr);
 
       std::size_t ipart=0;
-      for(auto& spts: ctx.surf_points){       
+      for(auto& spts: ctx.surf_points){
         for(std::size_t i=0; i<spts.size(); ++i){
           auto bfunc = fem::P1_integration(get_position(spts[i]), ctx.problem.ctx->h);
           auto ielem = fem::get_element(get_index(spts[i]));
@@ -363,6 +364,7 @@ namespace cafes
 
       if (ctx.compute_rhs){
         ierr = ctx.problem.setup_RHS();CHKERRQ(ierr);
+        //ierr = singularity::add_singularity<Dimensions, Ctx>(ctx, true, false, false);CHKERRQ(ierr);
       }
       
       ierr = set_rhs_problem<Dimensions, Ctx>(ctx, x, apply_forces);CHKERRQ(ierr);
