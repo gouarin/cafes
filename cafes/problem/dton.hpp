@@ -11,6 +11,8 @@
 #include <particle/geometry/box.hpp>
 #include <particle/geometry/position.hpp>
 
+#include <io/vtk.hpp>
+
 #include <petsc.h>
 #include <iostream>
 #include <memory>

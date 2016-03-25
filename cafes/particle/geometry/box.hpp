@@ -100,6 +100,18 @@ namespace cafes
       }
 
       template<std::size_t Dimensions, typename T>
+      box<Dimensions, T> union_box(box<Dimensions, T> const& b1, box<Dimensions, T> const& b2)
+      {
+
+          box<Dimensions, T> bout{};
+          for(std::size_t i=0; i<Dimensions; ++i){
+              bout.bottom_left[i] = std::min( b1.bottom_left[i], b2.bottom_left[i]);
+              bout.upper_right[i] = std::max( b1.upper_right[i], b2.upper_right[i]);
+          }
+          return bout;
+      }
+
+      template<std::size_t Dimensions, typename T>
       box<Dimensions, T> box_inside(box<Dimensions, T> const& b1, box<Dimensions, T> const& b2)
       {
 

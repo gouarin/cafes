@@ -12,6 +12,9 @@
 #include <particle/singularity/add_singularity.hpp>
 #include <petsc/vec.hpp>
 
+#include <io/vtk.hpp>
+
+
 #include <petsc.h>
 #include <iostream>
 #include <memory>
@@ -235,6 +238,7 @@ namespace cafes
 
       if (rigid_motion){
         ierr = interp_rigid_motion_(ctx.particles, ctx.radial_vec, g);CHKERRQ(ierr);
+        //ierr = singularity::add_singularity_to_surf<Dimensions, Ctx>(ctx, g);CHKERRQ(ierr);
       }
 
       PetscFunctionReturn(0);
@@ -364,9 +368,14 @@ namespace cafes
 
       if (ctx.compute_rhs){
         ierr = ctx.problem.setup_RHS();CHKERRQ(ierr);
-        //ierr = singularity::add_singularity<Dimensions, Ctx>(ctx, true, false, false);CHKERRQ(ierr);
+        ierr = io::save_VTK("Resultats", "rhs_before_sing", ctx.problem.rhs, ctx.problem.ctx->dm, ctx.problem.ctx->h);CHKERRQ(ierr);
+
+        //ierr = singularity::add_singularity_in_fluid<Dimensions, Ctx>(ctx);CHKERRQ(ierr);
+
+        ierr = io::save_VTK("Resultats", "rhs_after_sing", ctx.problem.rhs, ctx.problem.ctx->dm, ctx.problem.ctx->h);CHKERRQ(ierr);
+
       }
-      
+
       ierr = set_rhs_problem<Dimensions, Ctx>(ctx, x, apply_forces);CHKERRQ(ierr);
       
       DM dav;

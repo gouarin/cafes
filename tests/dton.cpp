@@ -30,9 +30,10 @@ int main(int argc, char **argv)
     
     auto st = cafes::make_stokes<dim>(bc, rhs);
 
-    auto se = cafes::make_ellipsoid<2>( { .5, .5}, {.1, .1}, 2., 0);
-    std::vector<cafes::particle<decltype(se)>> pt{ cafes::make_particle(se, {1., 0.}, {0.,0.,0.})
-                                                 };
+    auto se1 = cafes::make_circle( { .3, .5}, .19, 0);
+    auto se2 = cafes::make_circle( { .7, .5}, .19, 0);
+    std::vector<cafes::particle<decltype(se1)>> pt{ cafes::make_particle(se1, {1., 0.}, {0.,0.,0.}),
+                                                    cafes::make_particle(se2, {-1., 0.}, {0.,0.,0.})};
 
     auto s = cafes::make_DtoN(pt, st, st.ctx->h[0]);
     

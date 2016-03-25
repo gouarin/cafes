@@ -10,6 +10,7 @@
 #include "particle/singularity/UandPTang.hpp"
 
 #include <cmath>
+#include <iostream>
 
 namespace cafes
 {
@@ -41,7 +42,7 @@ namespace cafes
       
       physics::velocity<Dimensions> vector_space_;
 
-      singularity(particle<Shape> const& p1, particle<Shape> const& p2, double alpha=4, double treshold=1./5)
+      singularity(particle<Shape> const& p1, particle<Shape> const& p2, double h, double alpha=1, double treshold=1./5)
       : alpha_{alpha}, threshold_{treshold}
       {
         double dist = distance<Shape, Dimensions>(p1, p2);
@@ -59,6 +60,8 @@ namespace cafes
         auto tmp = alpha*std::sqrt(contact_length_/K_);
         cutoff_dist_ = (tmp < minr)? tmp : minr;
 
+        cutoff_dist_ = (cutoff_dist_ <= std::sqrt(2)*h)? std::sqrt(2)*h : cutoff_dist_; 
+
         param_ = .5*cutoff_dist_*cutoff_dist_;
         //is_singularity_ = contact_length_<threshold_*cutoff_dist_;
         is_singularity_ = contact_length_<threshold_*minr;
@@ -66,9 +69,12 @@ namespace cafes
         if (is_singularity_)
         {
           construct_base(p1, p2);
+          std::cout << "singularity base " << base_[0] << " " << base_[1] << "\n";
 
           auto origin_comp = [r1](double x, double y){return x + r1*y;};
           std::transform(p1.center_.begin(), p1.center_.end(), base_[0].begin(), origin_.begin(), origin_comp);
+
+          std::cout << "singularity origin " << origin_ << "\n";
         }
       }
 
@@ -127,7 +133,7 @@ namespace cafes
         construct_base(p1, p2, std::integral_constant<int, Dimensions>{});
       }
 
-      auto get_pos_in_part_ref(position_type& pos)
+      auto get_pos_in_part_ref(position_type const& pos)
       {
         position_type pos_dec, pos_ref_part;
 
@@ -145,16 +151,16 @@ namespace cafes
       // U_SING
       //
       /////////////////////////////////////////////////////////////////////////////
-      auto get_u_sing(position_type pos, std::integral_constant<int, 2>)
+      auto get_u_sing(position_type const& pos, std::integral_constant<int, 2>)
       {
         auto pos_ref_part = get_pos_in_part_ref(pos);
         std::array< double, 2 > Using;
         std::array< double, 2 > UsingRefPart;
 
         UsingRefPart[0] = ux_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL)
-                        + ux_sing_TanglMvt2D(pos_ref_part, H1_, H2_, contact_length_, UT_, param_, param_, NULL);
+                        + ux_sing_tangMvt2D(pos_ref_part, H1_, H2_, contact_length_, UT_, param_, param_, NULL);
         UsingRefPart[1] = uz_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL)
-                        + uz_sing_TangMvt2D(pos_ref_part, H1_, H2_, contact_length_, UT_, param_, param_, NULL);
+                        + uz_sing_tangMvt2D(pos_ref_part, H1_, H2_, contact_length_, UT_, param_, param_, NULL);
 
         for(std::size_t k=0; k<2; ++k){
           Using[0] += base_[k][0]*UsingRefPart[k];
@@ -164,26 +170,29 @@ namespace cafes
         return Using;
       }
 
-      auto get_u_sing(position_type pos, std::integral_constant<int, 3>)
+      auto get_u_sing(position_type const& pos, std::integral_constant<int, 3>)
       {
         auto pos_ref_part = get_pos_in_part_ref(pos);
-        std::array< double, 2 > Using;
-        std::array< double, 2 > UsingRefPart;
+        std::array< double, 3 > Using;
+        std::array< double, 3 > UsingRefPart;
 
-        UsingRefPart[0] = ux_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL)
-                        + ux_sing_TanglMvt2D(pos_ref_part, H1_, H2_, contact_length_, UT_, param_, param_, NULL);
-        UsingRefPart[1] = uz_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL)
-                        + uz_sing_TangMvt2D(pos_ref_part, H1_, H2_, contact_length_, UT_, param_, param_, NULL);
+        UsingRefPart[0] = ux_sing_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL)
+                        + ux_sing_tangMvt3D(pos_ref_part, H1_, H2_, contact_length_, UT_, param_, param_, NULL);
+        UsingRefPart[1] = uy_sing_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL)
+                        + uy_sing_tangMvt3D(pos_ref_part, H1_, H2_, contact_length_, UT_, param_, param_, NULL);
+        UsingRefPart[2] = uz_sing_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL)
+                        + uz_sing_tangMvt3D(pos_ref_part, H1_, H2_, contact_length_, UT_, param_, param_, NULL);
 
-        for(std::size_t k=0; k<2; ++k){
+        for(std::size_t k=0; k<3; ++k){
           Using[0] += base_[k][0]*UsingRefPart[k];
           Using[1] += base_[k][1]*UsingRefPart[k];
+          Using[2] += base_[k][2]*UsingRefPart[k];
         }
 
         return Using;
       }
 
-      auto get_u_sing(position_type& pos)
+      auto get_u_sing(position_type const& pos)
       {
         return get_u_sing(pos, std::integral_constant<int, Dimensions>{});
       }

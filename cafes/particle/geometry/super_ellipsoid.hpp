@@ -126,31 +126,31 @@ namespace cafes
           // return perimeter;
         }
         
-        std::vector<position_type>
-        surface(double const& k, double tol=1e-2)
-        {
-          std::vector<position_type> that;
-          auto radius = shape_factors_[0];
-          int n = 6*shape_factors_[0]/k;
-
-          for(std::size_t i=0; i<n; ++i){
-            auto c = radius*std::cos(2*i*M_PI/n);
-            auto s = radius*std::sin(2*i*M_PI/n);
-            that.push_back({center_[0] + c, center_[1] + s});
-          }
-          return that;
-        }
-
         // std::vector<position_type>
-        // surface(double const& k, double tol=1e-2) const
+        // surface(double const& k, double tol=1e-2)
         // {
-        //   auto that = uniform_sampling(shape_factors_, n_, k, tol);
-        //   if (q_.is_rotate()){
-        //     std::for_each(that.begin(), that.end(),[&](auto& p){ p = q_.rotate(p);});
+        //   std::vector<position_type> that;
+        //   auto radius = shape_factors_[0];
+        //   int n = 6*shape_factors_[0]/k;
+
+        //   for(std::size_t i=0; i<n; ++i){
+        //     auto c = radius*std::cos(2*i*M_PI/n);
+        //     auto s = radius*std::sin(2*i*M_PI/n);
+        //     that.push_back({center_[0] + c, center_[1] + s});
         //   }
-        //   std::for_each(that.begin(), that.end(),[&](auto& p){p += center_;});
         //   return that;
         // }
+
+        std::vector<position_type>
+        surface(double const& k, double tol=1e-2) const
+        {
+          auto that = uniform_sampling(shape_factors_, n_, k, tol);
+          if (q_.is_rotate()){
+            std::for_each(that.begin(), that.end(),[&](auto& p){ p = q_.rotate(p);});
+          }
+          std::for_each(that.begin(), that.end(),[&](auto& p){p += center_;});
+          return that;
+        }
 
         std::vector<position_type> radial_vector(std::vector<double> const& u_samples) const
         {
