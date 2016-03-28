@@ -1,6 +1,8 @@
 #include <cafes.hpp>
 #include <petsc.h>
 
+#include <particle/singularity/add_singularity.hpp>
+
 void zeros(const PetscReal x[], PetscScalar *u){
   *u = 0.;
 }
@@ -38,9 +40,11 @@ int main(int argc, char **argv)
     auto s = cafes::make_DtoN(pt, st, st.ctx->h[0]);
     
     ierr = s.create_Mat_and_Vec();CHKERRQ(ierr);
-    ierr = s.setup_RHS();CHKERRQ(ierr);
-    ierr = s.setup_KSP();CHKERRQ(ierr);
-    ierr = s.solve();CHKERRQ(ierr);
+    //ierr = s.setup_RHS();CHKERRQ(ierr);
+    //ierr = s.setup_KSP();CHKERRQ(ierr);
+    
+    ierr = cafes::singularity::save_singularity<dim, decltype(*(s.ctx))>("Resultats", "test", *(s.ctx));CHKERRQ(ierr);
+    //ierr = s.solve();CHKERRQ(ierr);
 
     ierr = cafes::io::save_VTK("Resultats", "test", st.sol, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
 

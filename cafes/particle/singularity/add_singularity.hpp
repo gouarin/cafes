@@ -8,6 +8,13 @@
 
 #include <petsc.h>
 #include <iostream>
+#include <sstream>
+
+#include "vtkDoubleArray.h"
+#include "vtkPoints.h"
+#include "vtkPointData.h"
+#include "vtkStructuredGrid.h"
+#include "vtkXMLStructuredGridWriter.h"
 
 namespace cafes
 {
@@ -263,6 +270,168 @@ namespace cafes
             if (geometry::intersect(box, pbox))
             {
               ierr = computesingularBC(ctx, sing, ipart, jpart, g);CHKERRQ(ierr);
+            }
+          }
+        }
+      }
+
+      PetscFunctionReturn(0);
+    }
+
+
+    #undef __FUNCT__
+    #define __FUNCT__ "save_singularity"
+    template<std::size_t Dimensions, typename Shape>
+    PetscErrorCode save_singularity(const char* path,
+                                    const char* filename,
+                                    singularity<Dimensions, Shape> sing, 
+                                    particle<Shape> const& p1, particle<Shape> const& p2,
+                                    geometry::box<2, int> box,
+                                    std::array<double, 2> const& h)
+    {
+      PetscErrorCode ierr;
+      PetscFunctionBeginUser;
+
+      using position_type = geometry::position<Dimensions, double>;
+      using position_type_i = geometry::position<Dimensions, int>;
+
+      vtkStructuredGrid* singDataSet;
+
+      singDataSet = vtkStructuredGrid::New();
+
+      singDataSet->SetExtent(0, box.length(0)*sing.scale-1, 0, box.length(1)*sing.scale-1, 0, 0);
+
+      vtkPoints* singPoints = vtkPoints::New();
+
+      vtkDoubleArray* velocity_sing = vtkDoubleArray::New();
+      velocity_sing->SetNumberOfComponents(3);
+      velocity_sing->SetName("velocity_sing");
+
+      vtkDoubleArray* gradx_velocity_sing = vtkDoubleArray::New();
+      gradx_velocity_sing->SetNumberOfComponents(3);
+      gradx_velocity_sing->SetName("gradx_velocity_sing");
+
+      vtkDoubleArray* grady_velocity_sing = vtkDoubleArray::New();
+      grady_velocity_sing->SetNumberOfComponents(3);
+      grady_velocity_sing->SetName("grady_velocity_sing");
+
+      vtkDoubleArray* pressure_sing = vtkDoubleArray::New();
+      pressure_sing->SetName("pressure_sing");
+
+      std::array<double, Dimensions> hs = {{h[0]/sing.scale, h[1]/sing.scale}};
+      double coef = 1./(sing.scale*sing.scale);
+
+      for(std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j)
+      {
+        for(std::size_t js=0; js<sing.scale; ++js)
+        {
+          for(std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i)
+          {
+            position_type_i pts_i = {i, j};
+
+            for(std::size_t is=0; is<sing.scale; ++is){
+              position_type pts = {i*h[0] + is*hs[0], j*h[1] + js*hs[1]};
+              singPoints->InsertNextPoint(pts[0], pts[1], 0.);
+              bool add_sing = false;
+
+              if (!p1.contains(pts) && !p2.contains(pts))
+              {
+                auto pos_ref_part = sing.get_pos_in_part_ref(pts);
+
+                if (abs(pos_ref_part[1]) < sing.cutoff_dist_)
+                {
+                  add_sing = true;
+                  position_type pts_loc = {is*hs[0], js*hs[1]};
+                  
+                  auto Using = sing.get_u_sing(pts);
+                  auto gradUsing = sing.get_grad_u_sing(pts);
+                  auto psing = sing.get_p_sing(pts);
+                  // Add points to vtk + singular value to vtk
+                  velocity_sing->InsertNextTuple3(Using[0], Using[1], 0.);
+                  gradx_velocity_sing->InsertNextTuple3(gradUsing[0][0], gradUsing[0][1], 0.);
+                  grady_velocity_sing->InsertNextTuple3(gradUsing[1][0], gradUsing[1][1], 0.);
+                  pressure_sing->InsertNextValue(psing);
+                }
+              }
+
+              if (!add_sing)
+              {
+                velocity_sing->InsertNextTuple3(0., 0., 0.);
+                gradx_velocity_sing->InsertNextTuple3(0., 0., 0.);
+                grady_velocity_sing->InsertNextTuple3(0., 0., 0.);
+                pressure_sing->InsertNextValue(0.);
+              }
+            }
+          }
+        }
+      }
+
+      singDataSet->SetPoints(singPoints);
+      singDataSet->GetPointData()->AddArray(velocity_sing);
+      singDataSet->GetPointData()->AddArray(gradx_velocity_sing);
+      singDataSet->GetPointData()->AddArray(grady_velocity_sing);
+      singDataSet->GetPointData()->SetScalars(pressure_sing);
+
+      vtkXMLStructuredGridWriter* singDataWriter = vtkXMLStructuredGridWriter::New();
+      std::stringstream oc;
+
+      oc << path << "/" << filename << "_sing_" << 0 << "_" << 1 << ".vts";//a changer
+      singDataWriter->SetFileName(oc.str().data());
+      //dataWriter->SetDataModeToAscii();
+  #if VTK_MAJOR_VERSION <= 5
+      singDataWriter->SetInput(singDataSet);
+  #else
+      singDataWriter->SetInputData(singDataSet);
+  #endif
+      singDataWriter->Write();
+
+      singPoints->Delete();
+      velocity_sing->Delete();
+      gradx_velocity_sing->Delete();
+      grady_velocity_sing->Delete();
+      singDataSet->Delete();
+      singDataWriter->Delete();
+
+      pressure_sing->Delete();
+
+      PetscFunctionReturn(0);
+    }
+
+    #undef __FUNCT__
+    #define __FUNCT__ "save_singularity"
+    template<std::size_t Dimensions, typename Ctx>
+    PetscErrorCode save_singularity(const char* path,
+                                    const char* filename,
+                                    Ctx& ctx)
+    {
+      PetscErrorCode ierr;
+      PetscFunctionBeginUser;
+
+      auto union_box_func = geometry::union_box<Dimensions, int>;
+
+      auto box = fem::get_DM_bounds<Dimensions>(ctx.problem.ctx->dm, 0);
+      auto& h = ctx.problem.ctx->h;
+
+      //Loop on particles couples
+      for (std::size_t ipart=0; ipart<ctx.particles.size()-1; ++ipart)
+      {
+        auto p1 = ctx.particles[ipart];
+        for (std::size_t jpart=ipart+1; jpart<ctx.particles.size(); ++jpart)
+        {
+          auto p2 = ctx.particles[jpart];
+
+          using shape_type = typename decltype(p1)::shape_type;
+          auto sing = singularity<Dimensions, shape_type>(p1, p2, h[0]);
+
+          if (sing.is_singularity_)
+          {
+            auto pbox = union_box_func({(p1.center_ - sing.cutoff_dist_)/h, (p1.center_ + sing.cutoff_dist_)/h},
+                                      {(p2.center_ - sing.cutoff_dist_)/h, (p2.center_ + sing.cutoff_dist_)/h});
+
+            if (geometry::intersect(box, pbox))
+            {
+              auto new_box = geometry::box_inside(box, pbox);
+              ierr = save_singularity(path, filename, sing, p1, p2, new_box, h);CHKERRQ(ierr);
             }
           }
         }
