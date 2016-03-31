@@ -622,7 +622,7 @@ namespace cafes
         //data->Update();
 
         std::stringstream output;
-        output << path << "/" << filename << ".vtp";
+        output << path << "/" << filename << "_particles.vtp";
         vtkXMLPolyDataWriter* writer = vtkXMLPolyDataWriter::New();
         writer->SetFileName(output.str().data());
       #if VTK_MAJOR_VERSION <= 5
@@ -635,7 +635,6 @@ namespace cafes
       }
       PetscFunctionReturn(0);
     }
-
   }
 }
 #endif

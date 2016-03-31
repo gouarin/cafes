@@ -221,8 +221,21 @@ namespace cafes
 
           if (sing.is_singularity_)
           {
-            auto pbox = union_box_func({(p1.center_ - sing.cutoff_dist_)/h, (p1.center_ + sing.cutoff_dist_)/h},
-                                      {(p2.center_ - sing.cutoff_dist_)/h, (p2.center_ + sing.cutoff_dist_)/h});
+            auto p1_bl = (p1.center_ - sing.cutoff_dist_)/h;
+            auto p1_ur = (p1.center_ + sing.cutoff_dist_)/h;
+
+            auto p2_bl = (p2.center_ - sing.cutoff_dist_)/h;
+            auto p2_ur = (p2.center_ + sing.cutoff_dist_)/h;
+
+            std::transform(p1_bl.begin(), p1_bl.end(), p1_bl.begin(), [](auto& p){return std::floor(p);});
+            std::transform(p1_ur.begin(), p1_ur.end(), p1_ur.begin(), [](auto& p){return std::ceil(p);});
+            std::transform(p2_bl.begin(), p2_bl.end(), p2_bl.begin(), [](auto& p){return std::floor(p);});
+            std::transform(p2_ur.begin(), p2_ur.end(), p2_ur.begin(), [](auto& p){return std::ceil(p);});
+
+            auto pbox = union_box_func({p1_bl, p1_ur}, {p2_bl, p2_ur});
+
+            // auto pbox = union_box_func({(p1.center_ - sing.cutoff_dist_)/h, (p1.center_ + sing.cutoff_dist_)/h},
+            //                            {(p2.center_ - sing.cutoff_dist_)/h, (p2.center_ + sing.cutoff_dist_)/h});
 
             if (geometry::intersect(box, pbox))
             {
@@ -264,8 +277,20 @@ namespace cafes
 
           if (sing.is_singularity_)
           {
-            auto pbox = union_box_func({(p1.center_ - sing.cutoff_dist_)/h, (p1.center_ + sing.cutoff_dist_)/h},
-                                      {(p2.center_ - sing.cutoff_dist_)/h, (p2.center_ + sing.cutoff_dist_)/h});
+            auto p1_bl = (p1.center_ - sing.cutoff_dist_)/h;
+            auto p1_ur = (p1.center_ + sing.cutoff_dist_)/h;
+
+            auto p2_bl = (p2.center_ - sing.cutoff_dist_)/h;
+            auto p2_ur = (p2.center_ + sing.cutoff_dist_)/h;
+
+            std::transform(p1_bl.begin(), p1_bl.end(), p1_bl.begin(), [](auto& p){return std::floor(p);});
+            std::transform(p1_ur.begin(), p1_ur.end(), p1_ur.begin(), [](auto& p){return std::ceil(p);});
+            std::transform(p2_bl.begin(), p2_bl.end(), p2_bl.begin(), [](auto& p){return std::floor(p);});
+            std::transform(p2_ur.begin(), p2_ur.end(), p2_ur.begin(), [](auto& p){return std::ceil(p);});
+
+            auto pbox = union_box_func({p1_bl, p1_ur}, {p2_bl, p2_ur});
+            // auto pbox = union_box_func({(p1.center_ - sing.cutoff_dist_)/h, (p1.center_ + sing.cutoff_dist_)/h},
+            //                           {(p2.center_ - sing.cutoff_dist_)/h, (p2.center_ + sing.cutoff_dist_)/h});
 
             if (geometry::intersect(box, pbox))
             {
@@ -425,8 +450,21 @@ namespace cafes
 
           if (sing.is_singularity_)
           {
-            auto pbox = union_box_func({(p1.center_ - sing.cutoff_dist_)/h, (p1.center_ + sing.cutoff_dist_)/h},
-                                      {(p2.center_ - sing.cutoff_dist_)/h, (p2.center_ + sing.cutoff_dist_)/h});
+            auto p1_bl = (p1.center_ - sing.cutoff_dist_)/h;
+            auto p1_ur = (p1.center_ + sing.cutoff_dist_)/h;
+
+            auto p2_bl = (p2.center_ - sing.cutoff_dist_)/h;
+            auto p2_ur = (p2.center_ + sing.cutoff_dist_)/h;
+
+            std::transform(p1_bl.begin(), p1_bl.end(), p1_bl.begin(), [](auto& p){return std::floor(p);});
+            std::transform(p1_ur.begin(), p1_ur.end(), p1_ur.begin(), [](auto& p){return std::ceil(p);});
+            std::transform(p2_bl.begin(), p2_bl.end(), p2_bl.begin(), [](auto& p){return std::floor(p);});
+            std::transform(p2_ur.begin(), p2_ur.end(), p2_ur.begin(), [](auto& p){return std::ceil(p);});
+
+            auto pbox = union_box_func({p1_bl, p1_ur}, {p2_bl, p2_ur});
+
+            // auto pbox = union_box_func({(p1.center_ - sing.cutoff_dist_)/h, (p1.center_ + sing.cutoff_dist_)/h},
+            //                            {(p2.center_ - sing.cutoff_dist_)/h, (p2.center_ + sing.cutoff_dist_)/h});
 
             if (geometry::intersect(box, pbox))
             {

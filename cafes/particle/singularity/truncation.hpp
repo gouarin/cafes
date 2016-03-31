@@ -9,7 +9,6 @@ namespace cafes
 {
   namespace singularity
   {
-
     PetscScalar alphaTrunc  (PetscReal X){
 
       PetscReal X2 = 0;
