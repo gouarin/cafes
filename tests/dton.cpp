@@ -32,10 +32,24 @@ int main(int argc, char **argv)
     
     auto st = cafes::make_stokes<dim>(bc, rhs);
 
-    auto se1 = cafes::make_circle( { .3, .5}, .19, 0);
-    auto se2 = cafes::make_circle( { .7, .5}, .19, 0);
-    std::vector<cafes::particle<decltype(se1)>> pt{ cafes::make_particle(se1, {1., 0.}, {0.,0.,0.}),
-                                                    cafes::make_particle(se2, {-1., 0.}, {0.,0.,0.})};
+    double R1   = 1.;
+    double R2   = 1.;
+    double dist = 1./11;
+
+
+
+    auto se1 = cafes::make_circle( { 2.5-R1-dist, 2.5}, R1, 0);
+    auto se2 = cafes::make_circle( { 2.5+R2+dist, 2.5}, R2, 0);
+    std::vector<cafes::particle<decltype(se1)>> pt{ cafes::make_particle(se1, { 1., 0.}, {0.,0.,0.}),
+	cafes::make_particle(se2, {-1., 0.}, {0.,0.,0.})};
+    
+
+
+      // auto se1 = cafes::make_sphere( { 2.5-R1-dist, 2.5, 2.5}, 1., 0);
+      // auto se2 = cafes::make_sphere( { 2.5+R2+dist, 2.5, 2.5}, 1., 0);
+      // std::vector<cafes::particle<decltype(se1)>> pt{ cafes::make_particle(se1, { 1., 0., 0.}, {0.,0.,0.}),
+      // 	                                              cafes::make_particle(se2, {-1., 0., 0.}, {0.,0.,0.})};
+    
 
     auto s = cafes::make_DtoN(pt, st, st.ctx->h[0]);
     

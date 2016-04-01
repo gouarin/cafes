@@ -440,7 +440,7 @@ namespace cafes
       double r  = sqrt(t2);
 
       double t3 = chiTrunc(r, l, eps);
-      double t11 = pow(t2 * H + t2 * M + 2 * a, 2);
+      double t11 = pow(t2 * H + t2 * M + 2 * a, 2);//std::cout << "U = " << U << std::endl;
       return  -12 / t11 / (H + M) * t3 * U * mu;
 
     }
@@ -621,18 +621,15 @@ namespace cafes
       double t2  = X[0]*X[0]+X[1]*X[1];
       double r   = sqrt(t2);
 
-      double t1 = r * U;
       double t3 = H * t2;
-      double t4 = t2 * M;
+      double t4 = M * t2;
       double t5 = 2 * a;
-      double t7 = t3 - t4 - t5 + 4 * z;
-      double t9 = dchiTrunc(r, l, eps);
-      double t10 = t3 + t4 + t5;
-      double t11 = t10 * t10;
-      double t14 = H + M;
-      double t15 = 0.1e1 / t14;
-      double t24 = chiTrunc(r, l, eps);
-      return -6 * t1 * t7 * t9 / t11 * t15 + 12 * t1 * t14 * t7 * t15 / t11 / t10 * t24;
+      double t9 = H + M;
+      double t11 = t3 + t4 + t5;
+      double t12 = t11 * t11;
+      double t17 = chiTrunc(r, l, eps);
+      double t20 = dchiTrunc(r, l, eps);
+      return 6 * r * U * (t3 - t4 - t5 + 4 * z) / t9 / t12 / t11 * (-t11 * t20 + 2 * t17 * t9);
     }
 
     PetscScalar druz_sing_normalMvt3D(position3d X, PetscReal H, PetscReal M, PetscReal a, double U, PetscReal l, PetscReal eps, PetscReal* param  )
@@ -764,6 +761,13 @@ namespace cafes
     }
 
 
+
+
+
+
+
+
+
     PetscScalar ux_sing_normalMvt3D(position3d X, PetscReal H, PetscReal M, PetscReal a, double U, PetscReal l, PetscReal eps, PetscReal* param  )
     {
       double r2  = X[0]*X[0]+X[1]*X[1];
@@ -786,19 +790,24 @@ namespace cafes
         return 0.;
     }
 
+
+
+
+
+
+
+
+
     PetscScalar dxux_sing_normalMvt3D(position3d X, PetscReal H, PetscReal M, PetscReal a, double U, PetscReal l, PetscReal eps, PetscReal* param  )
     {
       double r2  = X[0]*X[0]+X[1]*X[1];
       double r   = sqrt(r2);
 
-      // si r=0 on a un inf .... a discuter
-      // if(r2==0.0)
-      //   {
-      // 	r2 = 0.0000000001;
-      // 	r  = 0.00001;
-      //   }
-
-      return drur_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[0]*X[0]/r2 + ur_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[1]*X[1]/r2/r;
+      if(r2!=0)
+	return drur_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[0]*X[0]/r2 
+	  +      ur_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[1]*X[1]/r2/r;
+      else
+        return 0;
     }
 
     PetscScalar dyux_sing_normalMvt3D(position3d X, PetscReal H, PetscReal M, PetscReal a, double U, PetscReal l, PetscReal eps, PetscReal* param  )
@@ -806,14 +815,11 @@ namespace cafes
       double r2  = X[0]*X[0]+X[1]*X[1];
       double r   = sqrt(r2);
 
-      // si r=0 on a un inf .... a discuter
-      // if(r2==0)
-      //   {
-      // 	r2 = 0.0000000001;
-      // 	r  = 0.00001;
-      //   }
-
-      return drur_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[0]*X[1]/r2 - ur_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[0]*X[1]/r2/r;
+      if(r2!=0)
+	return drur_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[0]*X[1]/r2 
+	  -      ur_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[0]*X[1]/r2/r;
+      else
+        return 0;
     }
 
     PetscScalar dzux_sing_normalMvt3D(position3d X, PetscReal H, PetscReal M, PetscReal a, double U, PetscReal l, PetscReal eps, PetscReal* param  )
@@ -821,14 +827,10 @@ namespace cafes
       double r2  = X[0]*X[0]+X[1]*X[1];
       double r   = sqrt(r2);
 
-      // si r=0 on a un inf .... a discuter
-      // if(r2==0)
-      //   {
-      // 	r2 = 0.0000000001;
-      // 	r  = 0.00001;
-      //   }
-
-      return dzur_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[0]/r;
+      if(r2!=0)
+	return dzur_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[0]/r;
+      else 
+	return dzur_sing_normalMvt3D(X, H,  M, a, U, l, eps, param);
     }
 
     PetscScalar dxuy_sing_normalMvt3D(position3d X, PetscReal H, PetscReal M, PetscReal a, double U, PetscReal l, PetscReal eps, PetscReal* param  )
@@ -836,14 +838,11 @@ namespace cafes
       double r2  = X[0]*X[0]+X[1]*X[1];
       double r   = sqrt(r2);
 
-      // si r=0 on a un inf .... a discuter
-      // if(r2==0)
-      //   {
-      // 	r2 = 0.0000000001;
-      // 	r  = 0.00001;
-      //   }
-
-      return drur_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[0]*X[1]/r2 - ur_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[0]*X[1]/r2/r;
+      if(r2!=0)
+	return drur_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[0]*X[1]/r2 
+	  -      ur_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[0]*X[1]/r2/r;
+      else
+        return 0;
     }
 
     PetscScalar dyuy_sing_normalMvt3D(position3d X, PetscReal H, PetscReal M, PetscReal a, double U, PetscReal l, PetscReal eps, PetscReal* param  )
@@ -851,14 +850,11 @@ namespace cafes
       double r2  = X[0]*X[0]+X[1]*X[1];
       double r   = sqrt(r2);
 
-      // si r=0 on a un inf .... a discuter
-      // if(r2==0)
-      //   {
-      // 	r2 = 0.0000000001;
-      // 	r  = 0.00001;
-      //   }
-
-      return drur_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[1]*X[1]/r2 + ur_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[0]*X[0]/r2/r;
+      if(r2!=0)
+	return drur_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[1]*X[1]/r2 
+	  +      ur_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[0]*X[0]/r2/r;
+      else
+        return 0;
     }
 
     PetscScalar dzuy_sing_normalMvt3D(position3d X, PetscReal H, PetscReal M, PetscReal a, double U, PetscReal l, PetscReal eps, PetscReal* param  )
@@ -866,14 +862,10 @@ namespace cafes
       double r2  = X[0]*X[0]+X[1]*X[1];
       double r   = sqrt(r2);
 
-      // si r=0 on a un inf .... a discuter
-      // if(r2==0)
-      //   {
-      // 	r2 = 0.0000000001;
-      // 	r  = 0.00001;
-      //   }
-
-      return dzur_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[1]/r;
+      if(r2!=0)
+	return dzur_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[1]/r;
+      else
+        return 0;
     }
 
     PetscScalar dxuz_sing_normalMvt3D(position3d X, PetscReal H, PetscReal M, PetscReal a, double U, PetscReal l, PetscReal eps, PetscReal* param  )
@@ -881,14 +873,10 @@ namespace cafes
       double r2  = X[0]*X[0]+X[1]*X[1];
       double r   = sqrt(r2);
 
-      // si r=0 on a un inf .... a discuter
-      // if(r2==0)
-      //   {
-      // 	r2 = 0.0000000001;
-      // 	r  = 0.00001;
-      //   }
-
-      return druz_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[0]/r;
+      if(r2!=0)
+	return druz_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[0]/r;
+      else
+        return 0;
     }
 
 
@@ -897,14 +885,10 @@ namespace cafes
       double r2  = X[0]*X[0]+X[1]*X[1];
       double r   = sqrt(r2);
         
-      // si r=0 on a un inf .... a discuter
-      // if(r2==0)
-      //   {
-      // 	r2 = 0.0000000001;
-      // 	r  = 0.00001;
-      //   }
-
-      return druz_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[1]/r;
+      if(r2!=0)
+	return druz_sing_normalMvt3D(X, H,  M, a, U, l, eps, param)*X[1]/r;
+      else
+        return 0;
     }
 
     PetscScalar dzuz_sing_normalMvt3D(position3d X, PetscReal H, PetscReal M, PetscReal a, double U, PetscReal l, PetscReal eps, PetscReal* param  )

@@ -32,12 +32,18 @@ int main(int argc, char **argv)
     
     auto st = cafes::make_stokes<dim>(bc, rhs);
 
-    double radius = .1;
-    double z = 4*radius;
-    double y = 4*radius;
-    double x = 4*radius;
-    auto se1 = cafes::make_sphere( { .3, .5, .5}, radius, 0);
-    auto se2 = cafes::make_sphere( { .7, .5, .5}, radius, 0);
+    // double radius = .1;
+    // double z = 4*radius;
+    // double y = 4*radius;
+    // double x = 4*radius;
+
+    double R1   = 1.2;
+    double R2   = 1.;
+    double dist = 1./11;
+
+
+    auto se1 = cafes::make_sphere( {2.5-R1-dist, 2.5, 2.5}, R1, 0);
+    auto se2 = cafes::make_sphere( {2.5+R2+dist, 2.5, 2.5}, R2, 0);
     // std::vector<cafes::particle<decltype(se)>> pt;
     // while(z<.9){
     //   y = 4*radius;
@@ -54,15 +60,17 @@ int main(int argc, char **argv)
     // }
 
     // std::cout << pt.size() << "\n";
-    std::vector<cafes::particle<decltype(se1)>> pt{ cafes::make_particle(se1, {0., 0., 0.}, {0.,0.,0.}),
-                                                    cafes::make_particle(se2, {0., 0., 0.}, {0.,0.,0.})};
+    std::vector<cafes::particle<decltype(se1)>> pt{ cafes::make_particle(se1, {1., 0., 0.}, {0.,0.,0.}),
+                                                    cafes::make_particle(se2, {-1., 0., 0.}, {0.,0.,0.})};
 
     auto s = cafes::make_DtoN(pt, st, {.1, .1});
     
     ierr = s.create_Mat_and_Vec();CHKERRQ(ierr);
-    ierr = s.setup_RHS();CHKERRQ(ierr);
-    ierr = s.setup_KSP();CHKERRQ(ierr);
-    ierr = s.solve();CHKERRQ(ierr);
+    // ierr = s.setup_RHS();CHKERRQ(ierr);
+    // ierr = s.setup_KSP();CHKERRQ(ierr);
+    ierr = cafes::singularity::save_singularity<dim, decltype(*(s.ctx))>("Resultats", "test", *(s.ctx));CHKERRQ(ierr);
+    // ierr = s.solve();CHKERRQ(ierr);
+
 
     ierr = cafes::io::save_VTK("Resultats", "test", st.sol, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
     ierr = cafes::io::saveParticles("Resultats", "test_particles", pt);CHKERRQ(ierr);

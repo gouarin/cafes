@@ -69,12 +69,13 @@ namespace cafes
         if (is_singularity_)
         {
           construct_base(p1, p2);
-          std::cout << "singularity base " << base_[0] << " " << base_[1] << "\n";
+          std::cout << "#singularity base " << base_[0] << " " << base_[1] << "\n";
 
           auto origin_comp = [r1](double x, double y){return x + r1*y;};
-          std::transform(p1.center_.begin(), p1.center_.end(), base_[0].begin(), origin_.begin(), origin_comp);
+          std::transform(p1.center_.begin(), p1.center_.end(), base_[2*Dimensions-4].begin(), origin_.begin(), origin_comp);
 
-          std::cout << "singularity origin " << origin_ << "\n";
+
+          std::cout << "#singularity origin " << origin_ << "\n";
         }
       }
 
@@ -95,37 +96,37 @@ namespace cafes
       void construct_base(particle<Shape> const& p1, particle<Shape> const& p2,
                           std::integral_constant<int, 3>)
       {
-        base_[0] = position_diff<Shape, Dimensions>(p1, p2)/distance<Shape, Dimensions>(p1, p2);
+        base_[2] = position_diff<Shape, Dimensions>(p1, p2)/distance<Shape, Dimensions>(p1, p2);
 
         auto vel_diff = velocity_diff<Shape, Dimensions>(p1, p2);
-        vector_space_[0] = std::inner_product(vel_diff.begin(), vel_diff.end(), base_[0].begin(), 0.);
+        vector_space_[2] = std::inner_product(vel_diff.begin(), vel_diff.end(), base_[2].begin(), 0.);
 
         auto vel_norm = std::inner_product(vel_diff.begin(), vel_diff.end(), vel_diff.begin(), 0.);
 
-        if (vector_space_[0] == vel_norm)
+        if (vector_space_[2]*vector_space_[2] == vel_norm)
         {
-          base_[1][0]    = -sign(base_[0][2])*base_[0][2]
-                           -sign(base_[0][1])*base_[0][1];
-          base_[1][1]    =  sign(base_[0][1])*base_[0][0];
-          base_[1][2]    =  sign(base_[0][2])*base_[0][0];
+	  base_[0][0]    = -sign(base_[2][2])*base_[2][2]
+                           -sign(base_[2][1])*base_[2][1];
+          base_[0][1]    =  sign(base_[2][1])*base_[2][0];
+          base_[0][2]    =  sign(base_[2][2])*base_[0][0];
         }
         else
         {
           // Check the formula to have dU - (dU.n)n ?
           for(std::size_t d=0; d<3; ++d)
-            base_[1][d] = vel_diff[d]*(1 - base_[0][d]);
+            base_[0][d] = vel_diff[d]*(1 - base_[2][d]);
         }
 
         auto norm = std::inner_product(base_[0].begin(), base_[0].end(), base_[0].begin(), 0.);
-        base_[1] /= std::sqrt(norm);
+        base_[0] /= std::sqrt(norm);
 
-        base_[2] = geometry::cross_product(base_[0], base_[1]);
+        base_[1] = geometry::cross_product(base_[2], base_[0]);
 
         for(std::size_t d=0; d<2; ++d)
           vector_space_[d] = std::inner_product(vel_diff.begin(), vel_diff.end(), base_[d].begin(), 0.);
 
-        UN_ = vector_space_[0];
-        UT_ = vector_space_[1];
+        UN_ = vector_space_[2];
+        UT_ = vector_space_[0];
       }
 
       void construct_base(particle<Shape> const& p1, particle<Shape> const& p2)
@@ -155,7 +156,10 @@ namespace cafes
       {
         auto pos_ref_part = get_pos_in_part_ref(pos);
         std::array< double, 2 > Using;
+	Using.fill(0);
         std::array< double, 2 > UsingRefPart;
+	UsingRefPart.fill(0);
+
 
         UsingRefPart[0] = ux_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL)
                         + ux_sing_tangMvt2D(pos_ref_part, H1_, H2_, contact_length_, UT_, param_, param_, NULL);
@@ -174,7 +178,10 @@ namespace cafes
       {
         auto pos_ref_part = get_pos_in_part_ref(pos);
         std::array< double, 3 > Using;
+	Using.fill(0);
         std::array< double, 3 > UsingRefPart;
+	UsingRefPart.fill(0);
+
 
         UsingRefPart[0] = ux_sing_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL)
                         + ux_sing_tangMvt3D(pos_ref_part, H1_, H2_, contact_length_, UT_, param_, param_, NULL);
@@ -189,7 +196,7 @@ namespace cafes
           Using[2] += base_[k][2]*UsingRefPart[k];
         }
 
-        return Using;
+	return Using;
       }
 
       auto get_u_sing(position_type const& pos)
@@ -269,8 +276,8 @@ namespace cafes
       auto get_p_sing(position_type& pos, std::integral_constant<int, 3>)
       {
         auto pos_ref_part = get_pos_in_part_ref(pos);
-
-        return p_sing_withT_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+        
+	return p_sing_withT_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
       }
 
       auto get_p_sing(position_type& pos)

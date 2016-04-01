@@ -1413,7 +1413,7 @@ namespace cafes
         return dzur_sing_tangMvt3D(X, H,  M, d, U, l, eps, param)*X[1]/r 
           +    dzut_sing_tangMvt3D(X, H,  M, d, U, l, eps, param)*X[0]/r;
       else
-        dzut_sing_tangMvt3D(X, H,  M, d, U, l, eps, param);
+	return dzut_sing_tangMvt3D(X, H,  M, d, U, l, eps, param);
     }
 
     PetscScalar dxuz_sing_tangMvt3D(position3d X, PetscReal H, PetscReal M, PetscReal d, double U, PetscReal l, PetscReal eps, PetscReal* param  )
