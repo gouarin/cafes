@@ -31,6 +31,12 @@ namespace cafes
             for(std::size_t i=0;i<Dimensions;++i) (*this)[i] *= scale;
             return *this;
         }
+
+        force& operator+=(double scale)
+        {
+            for(std::size_t i=0;i<Dimensions;++i) (*this)[i] += scale;
+            return +this;
+        }
       };
 
       template<std::size_t Dimensions>
@@ -45,6 +51,20 @@ namespace cafes
       {
           force<Dimensions> that{f};
           return that *= scale;
+      }
+
+      template<std::size_t Dimensions>
+      force<Dimensions> operator+(force<Dimensions> const& f, double scale)
+      {
+          force<Dimensions> that{f};
+          return that += scale;
+      }
+
+      template<std::size_t Dimensions>
+      force<Dimensions> operator+(double scale, force<Dimensions> const& f)
+      {
+          force<Dimensions> that{f};
+          return that += scale;
       }
   }
 }

@@ -214,7 +214,9 @@ namespace cafes
         auto pos_ref_part = get_pos_in_part_ref(pos);
         std::array< std::array<double, 2>, 2 > gradUsing;
         std::array< std::array<double, 2>, 2 > gradUsingRefPart;
-
+	for (std::array<double, 2>& x : gradUsing)        { x.fill(0); }
+	for (std::array<double, 2>& x : gradUsingRefPart) { x.fill(0); }
+	
         gradUsingRefPart[0][0] = dxux_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
         gradUsingRefPart[0][1] = dzux_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
         gradUsingRefPart[1][0] = dxuz_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
@@ -234,6 +236,8 @@ namespace cafes
         auto pos_ref_part = get_pos_in_part_ref(pos);
         std::array< std::array<double, 3>, 3 > gradUsing;
         std::array< std::array<double, 3>, 3 > gradUsingRefPart;
+	for (std::array<double, 3>& x : gradUsing)        { x.fill(0); }
+	for (std::array<double, 3>& x : gradUsingRefPart) { x.fill(0); }
 
         gradUsingRefPart[0][0] = dxux_sing_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
         gradUsingRefPart[0][1] = dyux_sing_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);

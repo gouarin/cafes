@@ -21,8 +21,8 @@ namespace cafes
 {
   namespace singularity
   {
-#undef __FUNCT__
-#define __FUNCT__ "computesingularST"
+    #undef __FUNCT__
+    #define __FUNCT__ "computesingularST"
     template<typename Shape>
     PetscErrorCode computesingularST(singularity<2, Shape> sing, 
                                      particle<Shape> const& p1, particle<Shape> const& p2,
@@ -84,8 +84,8 @@ namespace cafes
       PetscFunctionReturn(0);
     }
 
-#undef __FUNCT__
-#define __FUNCT__ "computesingularST"
+    #undef __FUNCT__
+    #define __FUNCT__ "computesingularST"
     template<typename Shape>
     PetscErrorCode computesingularST(singularity<3, Shape> sing, 
                                      particle<Shape> const& p1, particle<Shape> const& p2,
@@ -154,8 +154,8 @@ namespace cafes
       PetscFunctionReturn(0);
     }
 
-#undef __FUNCT__
-#define __FUNCT__ "computesingularBC"
+    #undef __FUNCT__
+    #define __FUNCT__ "computesingularBC"
     template<std::size_t Dimensions, typename Shape, typename Ctx>
     PetscErrorCode computesingularBC(Ctx& ctx,
                                      singularity<Dimensions, Shape> sing, 
@@ -193,8 +193,21 @@ namespace cafes
       PetscFunctionReturn(0);
     }
 
-#undef __FUNCT__
-#define __FUNCT__ "add_singularity_in_fluid"
+    #undef __FUNCT__
+    #define __FUNCT__ "computesingularForces"
+    template<std::size_t Dimensions, typename Shape, typename Ctx>
+    PetscErrorCode computesingularForces()
+    {
+      PetscErrorCode ierr;
+      PetscFunctionBeginUser;
+
+
+
+      PetscFunctionReturn(0);
+    }
+
+    #undef __FUNCT__
+    #define __FUNCT__ "add_singularity_in_fluid"
     template<std::size_t Dimensions, typename Ctx>
     PetscErrorCode add_singularity_in_fluid(Ctx& ctx)
     {
@@ -252,8 +265,8 @@ namespace cafes
       PetscFunctionReturn(0);
     }
 
-#undef __FUNCT__
-#define __FUNCT__ "add_singularity_to_surf"
+    #undef __FUNCT__
+    #define __FUNCT__ "add_singularity_to_surf"
     template<std::size_t Dimensions, typename Ctx>
     PetscErrorCode add_singularity_to_surf(Ctx& ctx, std::vector<std::vector<std::array<double, Dimensions>>>& g)
     {
@@ -305,8 +318,8 @@ namespace cafes
     }
 
 
-#undef __FUNCT__
-#define __FUNCT__ "save_singularity"
+    #undef __FUNCT__
+    #define __FUNCT__ "save_singularity"
     template<std::size_t Dimensions, typename Shape>
     PetscErrorCode save_singularity(const char* path,
                                     const char* filename,
@@ -424,8 +437,8 @@ namespace cafes
     }
 
 
-#undef __FUNCT__
-#define __FUNCT__ "save_singularity"
+    #undef __FUNCT__
+    #define __FUNCT__ "save_singularity"
     template<std::size_t Dimensions, typename Shape>
     PetscErrorCode save_singularity(const char* path,
                                     const char* filename,
@@ -547,8 +560,8 @@ namespace cafes
       PetscFunctionReturn(0);
     }
 
-#undef __FUNCT__
-#define __FUNCT__ "save_singularity"
+    #undef __FUNCT__
+    #define __FUNCT__ "save_singularity"
     template<std::size_t Dimensions, typename Ctx>
     PetscErrorCode save_singularity(const char* path,
 				    const char* filename,
