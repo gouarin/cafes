@@ -48,7 +48,7 @@ namespace cafes
       using position_type_i = geometry::position<Dimensions, int>;
 
       Problem_type& problem;
-      std::vector<particle<Shape>> const& particles;
+      std::vector<particle<Shape>>& particles;
       std::vector<std::vector<std::pair<position_type_i, position_type>>> const& surf_points;
       std::vector<std::vector<position_type>> const& radial_vec;
       std::vector<int> const& nb_surf_points;

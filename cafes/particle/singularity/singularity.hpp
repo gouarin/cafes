@@ -69,7 +69,10 @@ namespace cafes
         if (is_singularity_)
         {
           construct_base(p1, p2);
-          std::cout << "#singularity base " << base_[0] << " " << base_[1] << "\n";
+          std::cout << "#singularity base ";
+          for(std::size_t d=0; d<Dimensions; ++d)
+            std::cout << base_[d] << " ";
+          std::cout << "\n";
 
           auto origin_comp = [r1](double x, double y){return x + r1*y;};
           std::transform(p1.center_.begin(), p1.center_.end(), base_[2*Dimensions-4].begin(), origin_.begin(), origin_comp);
@@ -81,26 +84,93 @@ namespace cafes
 
       geometry::box<Dimensions, int> get_box(std::array<double, 2> h)
       {
-        return { { std::floor((origin_[0] - contact_length_)/h[0]),
-                   std::floor((origin_[1] - cutoff_dist_)/h[1])},
-                 { std::ceil((origin_[0] + 3*contact_length_)/h[0]),
-                   std::ceil((origin_[1] + cutoff_dist_)/h[1])} };
+        double theta1 = std::asin(cutoff_dist_*H1_);
+        double theta2 = std::asin(cutoff_dist_*H2_);
+
+        position_type p1_ref_up{ 1./H1_*(-1 + std::cos(theta1)), 1/H1_*std::sin(theta1)};
+        position_type p1_ref_down{ 1./H1_*(-1 + std::cos(theta1)), -1/H1_*std::sin(theta1)};
+
+        position_type p2_ref_up{ contact_length_ + 1./H2_*(1 - std::cos(theta2)), 1/H2_*std::sin(theta2)};
+        position_type p2_ref_down{ contact_length_ + 1./H2_*(1 - std::cos(theta2)), -1/H2_*std::sin(theta2)};
+
+        position_type p1_up{ base_[0][0]*p1_ref_up[0]+ base_[1][0]*p1_ref_up[1] + origin_[0],
+                             base_[0][1]*p1_ref_up[0]+ base_[1][1]*p1_ref_up[1] + origin_[1]};
+        position_type p2_up{ base_[0][0]*p2_ref_up[0]+ base_[1][0]*p2_ref_up[1] + origin_[0],
+                             base_[0][1]*p2_ref_up[0]+ base_[1][1]*p2_ref_up[1] + origin_[1]};
+
+        position_type p1_down{ base_[0][0]*p1_ref_down[0]+ base_[1][0]*p1_ref_down[1] + origin_[0],
+                               base_[0][1]*p1_ref_down[0]+ base_[1][1]*p1_ref_down[1] + origin_[1]};
+        position_type p2_down{ base_[0][0]*p2_ref_down[0]+ base_[1][0]*p2_ref_down[1] + origin_[0],
+                               base_[0][1]*p2_ref_down[0]+ base_[1][1]*p2_ref_down[1] + origin_[1]};
+
+        return { { std::floor(std::min({p1_up[0], p1_down[0], p2_up[0], p2_down[0]})/h[0]),
+                   std::floor(std::min({p1_up[1], p1_down[1], p2_up[1], p2_down[1]})/h[1])},
+                 { std::ceil(std::max({p1_up[0], p1_down[0], p2_up[0], p2_down[0]})/h[0]),
+                   std::ceil(std::max({p1_up[1], p1_down[1], p2_up[1], p2_down[1]})/h[1])}
+               };
       }
 
       geometry::box<Dimensions, int> get_box(std::array<double, 3> h)
       {
-        return { { std::floor((origin_[0] - contact_length_)/h[0]),
-                   std::floor((origin_[1] - cutoff_dist_)/h[1]),
-                   std::floor((origin_[2] - cutoff_dist_)/h[2])},
-                 { std::ceil((origin_[0] + 3*contact_length_)/h[0]),
-                   std::ceil((origin_[1] + cutoff_dist_)/h[1]),
-                   std::ceil((origin_[2] + cutoff_dist_)/h[2])} };
+        double theta1 = std::asin(cutoff_dist_*H1_);
+        double theta2 = std::asin(cutoff_dist_*H2_);
+
+        position_type p1_ref_up_back   {  1/H1_*std::sin(theta1),  cutoff_dist_ , 1./H1_*(-1 + std::cos(theta1))};
+        position_type p1_ref_up_front  {  1/H1_*std::sin(theta1), -cutoff_dist_ , 1./H1_*(-1 + std::cos(theta1))};
+        position_type p1_ref_down_back { -1/H1_*std::sin(theta1),  cutoff_dist_ , 1./H1_*(-1 + std::cos(theta1))};
+        position_type p1_ref_down_front{ -1/H1_*std::sin(theta1), -cutoff_dist_ , 1./H1_*(-1 + std::cos(theta1))};
+
+        position_type p2_ref_up_back   { 1/H2_*std::sin(theta2),  cutoff_dist_, contact_length_ + 1./H2_*(1 - std::cos(theta2))};
+        position_type p2_ref_up_front  { 1/H2_*std::sin(theta2), -cutoff_dist_, contact_length_ + 1./H2_*(1 - std::cos(theta2))};
+        position_type p2_ref_down_back {-1/H2_*std::sin(theta2),  cutoff_dist_, contact_length_ + 1./H2_*(1 - std::cos(theta2))};
+        position_type p2_ref_down_front{-1/H2_*std::sin(theta2), -cutoff_dist_, contact_length_ + 1./H2_*(1 - std::cos(theta2))};
+
+        position_type p1_up_back{ base_[0][0]*p1_ref_up_back[0] + base_[1][0]*p1_ref_up_back[1] + base_[2][0]*p1_ref_up_back[2] + origin_[0],
+                                  base_[0][1]*p1_ref_up_back[0] + base_[1][1]*p1_ref_up_back[1] + base_[2][1]*p1_ref_up_back[2] + origin_[1],
+                                  base_[0][2]*p1_ref_up_back[0] + base_[1][2]*p1_ref_up_back[1] + base_[2][2]*p1_ref_up_back[2] + origin_[2]};
+        position_type p1_up_front{ base_[0][0]*p1_ref_up_front[0] + base_[1][0]*p1_ref_up_front[1] + base_[2][0]*p1_ref_up_front[2] + origin_[0],
+                                   base_[0][1]*p1_ref_up_front[0] + base_[1][1]*p1_ref_up_front[1] + base_[2][1]*p1_ref_up_front[2] + origin_[1],
+                                   base_[0][2]*p1_ref_up_front[0] + base_[1][2]*p1_ref_up_front[1] + base_[2][2]*p1_ref_up_front[2] + origin_[2]};
+
+        position_type p1_down_back{ base_[0][0]*p1_ref_down_back[0] + base_[1][0]*p1_ref_down_back[1] + base_[2][0]*p1_ref_down_back[2] + origin_[0],
+                                    base_[0][1]*p1_ref_down_back[0] + base_[1][1]*p1_ref_down_back[1] + base_[2][1]*p1_ref_down_back[2] + origin_[1],
+                                    base_[0][2]*p1_ref_down_back[0] + base_[1][2]*p1_ref_down_back[1] + base_[2][2]*p1_ref_down_back[2] + origin_[2]};
+        position_type p1_down_front{ base_[0][0]*p1_ref_down_front[0] + base_[1][0]*p1_ref_down_front[1] + base_[2][0]*p1_ref_down_front[2] + origin_[0],
+                                     base_[0][1]*p1_ref_down_front[0] + base_[1][1]*p1_ref_down_front[1] + base_[2][1]*p1_ref_down_front[2] + origin_[1],
+                                     base_[0][2]*p1_ref_down_front[0] + base_[1][2]*p1_ref_down_front[1] + base_[2][2]*p1_ref_down_front[2] + origin_[2]};
+
+        position_type p2_up_back{ base_[0][0]*p2_ref_up_back[0] + base_[1][0]*p2_ref_up_back[1] + base_[2][0]*p2_ref_up_back[2] + origin_[0],
+                                  base_[0][1]*p2_ref_up_back[0] + base_[1][1]*p2_ref_up_back[1] + base_[2][1]*p2_ref_up_back[2] + origin_[1],
+                                  base_[0][2]*p2_ref_up_back[0] + base_[1][2]*p2_ref_up_back[1] + base_[2][2]*p2_ref_up_back[2] + origin_[2]};
+        position_type p2_up_front{ base_[0][0]*p2_ref_up_front[0] + base_[1][0]*p2_ref_up_front[1] + base_[2][0]*p2_ref_up_front[2] + origin_[0],
+                                   base_[0][1]*p2_ref_up_front[0] + base_[1][1]*p2_ref_up_front[1] + base_[2][1]*p2_ref_up_front[2] + origin_[1],
+                                   base_[0][2]*p2_ref_up_front[0] + base_[1][2]*p2_ref_up_front[1] + base_[2][2]*p2_ref_up_front[2] + origin_[2]};
+
+        position_type p2_down_back{ base_[0][0]*p2_ref_down_back[0] + base_[1][0]*p2_ref_down_back[1] + base_[2][0]*p2_ref_down_back[2] + origin_[0],
+                                    base_[0][1]*p2_ref_down_back[0] + base_[1][1]*p2_ref_down_back[1] + base_[2][1]*p2_ref_down_back[2] + origin_[1],
+                                    base_[0][2]*p2_ref_down_back[0] + base_[1][2]*p2_ref_down_back[1] + base_[2][2]*p2_ref_down_back[2] + origin_[2]};
+        position_type p2_down_front{ base_[0][0]*p2_ref_down_front[0] + base_[1][0]*p2_ref_down_front[1] + base_[2][0]*p2_ref_down_front[2] + origin_[0],
+                                     base_[0][1]*p2_ref_down_front[0] + base_[1][1]*p2_ref_down_front[1] + base_[2][1]*p2_ref_down_front[2] + origin_[1],
+                                     base_[0][2]*p2_ref_down_front[0] + base_[1][2]*p2_ref_down_front[1] + base_[2][2]*p2_ref_down_front[2] + origin_[2]};
+
+        return { { std::floor(std::min({p1_up_back[0], p1_up_front[0], p1_down_back[0], p1_down_front[0],
+                                       p2_up_back[0], p2_up_front[0], p2_down_back[0], p2_down_front[0]})/h[0]),
+                   std::floor(std::min({p1_up_back[1], p1_up_front[1], p1_down_back[1], p1_down_front[1],
+                                       p2_up_back[1], p2_up_front[1], p2_down_back[1], p2_down_front[1]})/h[1]),
+                   std::floor(std::min({p1_up_back[2], p1_up_front[2], p1_down_back[2], p1_down_front[2],
+                                       p2_up_back[2], p2_up_front[2], p2_down_back[2], p2_down_front[2]})/h[2])},
+                 { std::ceil(std::max({p1_up_back[0], p1_up_front[0], p1_down_back[0], p1_down_front[0],
+                                      p2_up_back[0], p2_up_front[0], p2_down_back[0], p2_down_front[0]})/h[0]),
+                   std::ceil(std::max({p1_up_back[1], p1_up_front[1], p1_down_back[1], p1_down_front[1],
+                                      p2_up_back[1], p2_up_front[1], p2_down_back[1], p2_down_front[1]})/h[1]),
+                   std::ceil(std::max({p1_up_back[2], p1_up_front[2], p1_down_back[2], p1_down_front[2],
+                                      p2_up_back[2], p2_up_front[2], p2_down_back[2], p2_down_front[2]})/h[2])}};
       }
 
       void construct_base(particle<Shape> const& p1, particle<Shape> const& p2,
                           std::integral_constant<int, 2>)
       {
-        base_[0] = position_diff<Shape, Dimensions>(p1, p2)/distance<Shape, Dimensions>(p1, p2);
+        base_[0] = position_diff<Shape, Dimensions>(p2, p1)/distance<Shape, Dimensions>(p1, p2);
         base_[1][0] = -base_[0][1];
         base_[1][1] = base_[0][0];
 
@@ -114,7 +184,7 @@ namespace cafes
       void construct_base(particle<Shape> const& p1, particle<Shape> const& p2,
                           std::integral_constant<int, 3>)
       {
-        base_[2] = position_diff<Shape, Dimensions>(p1, p2)/distance<Shape, Dimensions>(p1, p2);
+        base_[2] = position_diff<Shape, Dimensions>(p2, p1)/distance<Shape, Dimensions>(p1, p2);
 
         auto vel_diff = velocity_diff<Shape, Dimensions>(p1, p2);
         vector_space_[2] = std::inner_product(vel_diff.begin(), vel_diff.end(), base_[2].begin(), 0.);
@@ -145,6 +215,7 @@ namespace cafes
 
         UN_ = vector_space_[2];
         UT_ = vector_space_[0];
+        std::cout << "UN_ " << UN_ << "\n";
       }
 
       void construct_base(particle<Shape> const& p1, particle<Shape> const& p2)
@@ -221,56 +292,56 @@ namespace cafes
       // GRAD_U_SING
       //
       /////////////////////////////////////////////////////////////////////////////
-      auto get_grad_u_sing(position_type pos, std::integral_constant<int, 2>)
+      auto get_grad_u_sing_ref(position_type pos, std::integral_constant<int, 2>)
       {
-        auto pos_ref_part = get_pos_in_part_ref(pos);
-        std::array< std::array<double, 2>, 2 > gradUsing{};
         std::array< std::array<double, 2>, 2 > gradUsingRefPart{};
 
-        gradUsingRefPart[0][0] = dxux_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
-        gradUsingRefPart[0][1] = dzux_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
-        gradUsingRefPart[1][0] = dxuz_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
-        gradUsingRefPart[1][1] = dzuz_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+        gradUsingRefPart[0][0] = dxux_sing_normalMvt2D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+        gradUsingRefPart[0][1] = dzux_sing_normalMvt2D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+        gradUsingRefPart[1][0] = dxuz_sing_normalMvt2D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+        gradUsingRefPart[1][1] = dzuz_sing_normalMvt2D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
 
-        for(std::size_t k=0; k<2; ++k)
-          for(std::size_t l=0; l<2; ++l)
-            for(std::size_t m=0; m<2; ++m)
-              for(std::size_t n=0; n<2; ++n)
-                gradUsing[k][l] += base_[m][k]*base_[n][l]*gradUsingRefPart[m][n];
-
-        return gradUsing;
+        return gradUsingRefPart;
       }
 
-      auto get_grad_u_sing(position_type& pos, std::integral_constant<int, 3>)
+      auto get_grad_u_sing_ref(position_type& pos, std::integral_constant<int, 3>)
       {
-        auto pos_ref_part = get_pos_in_part_ref(pos);
-        std::array< std::array<double, 3>, 3 > gradUsing{};
         std::array< std::array<double, 3>, 3 > gradUsingRefPart{};
 
-        gradUsingRefPart[0][0] = dxux_sing_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
-        gradUsingRefPart[0][1] = dyux_sing_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
-        gradUsingRefPart[0][2] = dzux_sing_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+        gradUsingRefPart[0][0] = dxux_sing_normalMvt3D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+        gradUsingRefPart[0][1] = dyux_sing_normalMvt3D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+        gradUsingRefPart[0][2] = dzux_sing_normalMvt3D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
 
-        gradUsingRefPart[1][0] = dxuy_sing_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
-        gradUsingRefPart[1][1] = dyuy_sing_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
-        gradUsingRefPart[1][2] = dzuy_sing_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+        gradUsingRefPart[1][0] = dxuy_sing_normalMvt3D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+        gradUsingRefPart[1][1] = dyuy_sing_normalMvt3D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+        gradUsingRefPart[1][2] = dzuy_sing_normalMvt3D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
 
-        gradUsingRefPart[2][0] = dxuy_sing_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
-        gradUsingRefPart[2][1] = dyuy_sing_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
-        gradUsingRefPart[2][2] = dzuy_sing_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+        gradUsingRefPart[2][0] = dxuz_sing_normalMvt3D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+        gradUsingRefPart[2][1] = dyuz_sing_normalMvt3D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+        gradUsingRefPart[2][2] = dzuz_sing_normalMvt3D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
 
-        for(std::size_t k=0; k<3; ++k)
-          for(std::size_t l=0; l<3; ++l)
-            for(std::size_t m=0; m<3; ++m)
-              for(std::size_t n=0; n<3; ++n)
+        return gradUsingRefPart;
+      }
+
+      auto get_grad_u_sing(position_type pos)
+      {
+        auto pos_ref_part = get_pos_in_part_ref(pos);
+        std::array< std::array<double, Dimensions>, Dimensions > gradUsing{};
+
+        auto gradUsingRefPart = get_grad_u_sing_ref(pos_ref_part, std::integral_constant<int, Dimensions>{});
+
+        for(std::size_t k=0; k<Dimensions; ++k)
+          for(std::size_t l=0; l<Dimensions; ++l)
+            for(std::size_t m=0; m<Dimensions; ++m)
+              for(std::size_t n=0; n<Dimensions; ++n)
                 gradUsing[k][l] += base_[m][k]*base_[n][l]*gradUsingRefPart[m][n];
 
         return gradUsing;
       }
 
-      auto get_grad_u_sing(position_type& pos)
+      auto get_grad_u_sing_ref(position_type& pos)
       {
-        return get_grad_u_sing(pos, std::integral_constant<int, Dimensions>{});
+        return get_grad_u_sing_ref(pos, std::integral_constant<int, Dimensions>{});
       }
 
       /////////////////////////////////////////////////////////////////////////////
@@ -278,6 +349,21 @@ namespace cafes
       // P_SING
       //
       /////////////////////////////////////////////////////////////////////////////
+      auto get_p_sing_ref(position_type& pos, std::integral_constant<int, 2>)
+      {
+        return p_sing_withT_normalMvt2D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+      }
+
+      auto get_p_sing_ref(position_type& pos, std::integral_constant<int, 3>)
+      {
+        return p_sing_withT_normalMvt3D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+      }
+
+      auto get_p_sing_ref(position_type& pos)
+      {
+        return get_p_sing_ref(pos, std::integral_constant<int, Dimensions>{});
+      }
+
       auto get_p_sing(position_type& pos, std::integral_constant<int, 2>)
       {
         auto pos_ref_part = get_pos_in_part_ref(pos);

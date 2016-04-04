@@ -19,7 +19,7 @@ namespace cafes
       using velocity_type  = physics::velocity<dimension_type::value>;
       using force_type     = physics::force<dimension_type::value>;
 
-      force_type force_;
+      force_type force_{};
       double rho_;
       particle( Shape const& s, force_type const& f, double r )
       : Shape(s), force_(f), rho_(r)
@@ -37,7 +37,7 @@ namespace cafes
       using Shape::surface_area;
 
       velocity_type velocity_;
-      physics::velocity<3> angular_velocity_;
+      physics::velocity<3> angular_velocity_{};
       
   };
 
@@ -116,7 +116,7 @@ namespace cafes
   {
     geometry::position<Dimensions, double> pos_diff;
     auto diff = [](double x, double y){return x-y;};
-    std::transform(p2.center_.begin(), p2.center_.end(), p1.center_.begin(), pos_diff.begin(), diff);
+    std::transform(p1.center_.begin(), p1.center_.end(), p2.center_.begin(), pos_diff.begin(), diff);
     return pos_diff;
   }
 
@@ -126,7 +126,7 @@ namespace cafes
   {
     physics::velocity<Dimensions> vel_diff;
     auto diff = [](double x, double y){return x-y;};
-    std::transform(p2.velocity_.begin(), p2.velocity_.end(), p1.velocity_.begin(), vel_diff.begin(), diff);
+    std::transform(p1.velocity_.begin(), p1.velocity_.end(), p2.velocity_.begin(), vel_diff.begin(), diff);
     return vel_diff;
   }
 
@@ -139,8 +139,6 @@ namespace cafes
     dist = std::inner_product(pos_diff.begin(), pos_diff.end(), pos_diff.begin(), 0.);
     return std::sqrt(dist);
   }
-
-
 
   template<typename ST>
   particle<ST> make_particle(ST const& se, physics::force<ST::dimension_type::value> const& a, double d)

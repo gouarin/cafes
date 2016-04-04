@@ -68,12 +68,16 @@ int main(int argc, char **argv)
     ierr = s.create_Mat_and_Vec();CHKERRQ(ierr);
     // ierr = s.setup_RHS();CHKERRQ(ierr);
     // ierr = s.setup_KSP();CHKERRQ(ierr);
-    ierr = cafes::singularity::save_singularity<dim, decltype(*(s.ctx))>("Resultats", "test", *(s.ctx));CHKERRQ(ierr);
+
+    ierr = cafes::singularity::compute_singular_forces<dim, decltype(*(s.ctx))>(*(s.ctx));CHKERRQ(ierr);
+    std::cout << "force on particle 0 -> " << s.ctx->particles[0].force_ << "\n";
+
+    ierr = cafes::singularity::save_singularity<dim, decltype(*(s.ctx))>("Resultats", "test_avec_tronc", *(s.ctx));CHKERRQ(ierr);
     // ierr = s.solve();CHKERRQ(ierr);
 
 
-    ierr = cafes::io::save_VTK("Resultats", "test", st.sol, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
-    ierr = cafes::io::saveParticles("Resultats", "test_particles", pt);CHKERRQ(ierr);
+    ierr = cafes::io::save_VTK("Resultats", "test_avec_tronc", st.sol, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
+    ierr = cafes::io::saveParticles("Resultats", "test_avec_tronc_particles", pt);CHKERRQ(ierr);
     ierr = PetscFinalize();CHKERRQ(ierr);
 
     return 0;

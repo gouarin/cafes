@@ -26,6 +26,19 @@ namespace cafes
                         );
         }
 
+        friend std::ostream &operator<<( std::ostream &output, 
+                                         force const& f )
+        { 
+          output << "force( ";
+
+          for(std::size_t i=0; i<Dimensions; ++i)
+            output << f[i] << " ";
+
+          output << ")";
+
+          return output;            
+        }
+
         force& operator*=(double scale)
         {
             for(std::size_t i=0;i<Dimensions;++i) (*this)[i] *= scale;
@@ -35,8 +48,21 @@ namespace cafes
         force& operator+=(double scale)
         {
             for(std::size_t i=0;i<Dimensions;++i) (*this)[i] += scale;
-            return +this;
+            return *this;
         }
+
+        force& operator+=(force<Dimensions> const& f)
+        {
+            for(std::size_t i=0;i<Dimensions;++i) (*this)[i] += f[i];
+            return *this;
+        }
+
+        force& operator-=(force<Dimensions> const& f)
+        {
+            for(std::size_t i=0;i<Dimensions;++i) (*this)[i] -= f[i];
+            return *this;
+        }
+
       };
 
       template<std::size_t Dimensions>
@@ -65,6 +91,20 @@ namespace cafes
       {
           force<Dimensions> that{f};
           return that += scale;
+      }
+
+      template<std::size_t Dimensions>
+      force<Dimensions> operator+(force<Dimensions> const& f1, force<Dimensions> const& f2)
+      {
+          force<Dimensions> that{f1};
+          return that += f2;
+      }
+
+      template<std::size_t Dimensions>
+      force<Dimensions> operator-(force<Dimensions> const& f1, force<Dimensions> const& f2)
+      {
+          force<Dimensions> that{f1};
+          return that -= f2;
       }
   }
 }

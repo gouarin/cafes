@@ -151,6 +151,32 @@ namespace cafes
       else
         return 0;  
     }
+
+
+    // PetscScalar chiTrunc(PetscReal X, PetscReal l, PetscReal eps)
+    // {
+    //   return 1;
+    // }
+
+    // PetscScalar dchiTrunc(PetscReal X, PetscReal l, PetscReal eps)
+    // {
+    //   return 0;
+    // }
+
+    // PetscScalar d2chiTrunc(PetscReal X, PetscReal l, PetscReal eps)
+    // {
+    //   return 0;
+    // }
+
+    // PetscScalar d3chiTrunc(PetscReal X, PetscReal l, PetscReal eps)
+    // {
+    //   return 0;
+    // }
+
+    // PetscScalar d4chiTrunc(PetscReal X, PetscReal l, PetscReal eps)
+    // {
+    //   return 0;
+    // }
   }
 }
 

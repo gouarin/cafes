@@ -200,19 +200,6 @@ namespace cafes
     }
 
     #undef __FUNCT__
-    #define __FUNCT__ "computesingularForces"
-    template<std::size_t Dimensions, typename Shape, typename Ctx>
-    PetscErrorCode computesingularForces()
-    {
-      PetscErrorCode ierr;
-      PetscFunctionBeginUser;
-
-
-
-      PetscFunctionReturn(0);
-    }
-
-    #undef __FUNCT__
     #define __FUNCT__ "add_singularity_in_fluid"
     template<std::size_t Dimensions, typename Ctx>
     PetscErrorCode add_singularity_in_fluid(Ctx& ctx)
@@ -257,6 +244,136 @@ namespace cafes
 
       ierr = sol.local_to_global(ADD_VALUES);CHKERRQ(ierr);
 
+      PetscFunctionReturn(0);
+    }
+
+    #undef __FUNCT__
+    #define __FUNCT__ "compute_singular_forces"
+    template<typename Shape>
+    auto compute_singular_forces(singularity<2, Shape> sing, std::size_t N)
+    {
+      using position_type = geometry::position<2, double>;
+
+      double mu = 1.;
+      double theta = std::asin(sing.cutoff_dist_*sing.H1_);
+
+      physics::force<2> force{};
+
+      for (std::size_t i=-N; i<N; ++i)
+      {
+        double cos_t = std::cos(i*theta/N);
+        double sin_t = std::sin(i*theta/N);
+        std::array< std::array<double, 2>, 2> sigma;
+
+        position_type pos{(cos_t - 1.)/sing.H1_, sin_t/sing.H1_};
+        position_type normal{cos_t, sin_t};
+
+        auto gradUsing = sing.get_grad_u_sing_ref(pos);
+        auto psing = sing.get_p_sing(pos);
+
+        sigma[0][0] = 2*mu*gradUsing[0][0] - psing;
+        sigma[0][1] = mu*(gradUsing[0][1] + gradUsing[1][0]);
+        sigma[1][0] = sigma[0][1];
+        sigma[1][1] = 2*mu*gradUsing[1][1] - psing;
+
+        for(std::size_t d1=0; d1<2; ++d1)
+          for(std::size_t d2=0; d2<2; ++d2)
+            force[d1] += theta/N/sing.H1_*sigma[d1][d2]*normal[d2];
+      }
+      return force;
+    }
+
+    #undef __FUNCT__
+    #define __FUNCT__ "compute_singular_forces"
+    template<typename Shape>
+    auto compute_singular_forces(singularity<3, Shape> sing, std::size_t N)
+    {
+      using position_type = geometry::position<3, double>;
+
+      double mu = 1.;
+      double theta = std::asin(sing.cutoff_dist_*sing.H1_);
+      double A = 2*M_PI*theta/N/N/sing.H1_/sing.H1_;
+
+      physics::force<3> force{};
+
+      for (std::size_t i=1; i<=N; ++i)
+      {
+        double cosi_t = std::cos(i*theta/N);
+        double sini_t = std::sin(i*theta/N);
+        double coef = A*sini_t;
+        for (std::size_t j=1; j<=N; ++j)
+        {
+          double cosj_t = std::cos(2*M_PI*j/N);
+          double sinj_t = std::sin(2*M_PI*j/N);
+          std::array< std::array<double, 3>, 3> sigma;
+
+          position_type pos{sini_t*cosj_t/sing.H1_, sini_t*sinj_t/sing.H1_, (cosi_t - 1.)/sing.H1_};
+          position_type normal{sini_t*cosj_t, sini_t*sinj_t, cosi_t};
+
+          auto gradUsing = sing.get_grad_u_sing_ref(pos);
+          auto psing = sing.get_p_sing_ref(pos);
+
+          sigma[0][0] = 2*mu*gradUsing[0][0] - psing;
+          sigma[0][1] = 2*mu*gradUsing[0][1];
+          sigma[0][2] = mu*(gradUsing[0][2] + gradUsing[2][0]);
+
+          sigma[1][0] = sigma[0][1];
+          sigma[1][1] = 2*mu*gradUsing[1][1] - psing;
+          sigma[1][2] = mu*(gradUsing[1][2] + gradUsing[2][1]);
+
+          sigma[2][0] = sigma[0][2];
+          sigma[2][1] = sigma[1][2];
+          sigma[2][2] = 2*mu*gradUsing[2][2] - psing;
+
+          // sigma[0][0] = - psing;
+          // sigma[0][1] = 0.;
+          // sigma[0][2] = 0.;
+
+          // sigma[1][0] = sigma[0][1];
+          // sigma[1][1] = - psing;
+          // sigma[1][2] = 0.;
+
+          // sigma[2][0] = sigma[0][2];
+          // sigma[2][1] = sigma[1][2];
+          // sigma[2][2] = - psing;
+
+          for(std::size_t d1=0; d1<3; ++d1)
+            for(std::size_t d2=0; d2<3; ++d2)
+              force[d1] += coef*sigma[d1][d2]*normal[d2];
+        }
+      }
+      std::cout << force << "\n";
+      return force;
+    }
+
+    #undef __FUNCT__
+    #define __FUNCT__ "compute_singular_forces"
+    template<std::size_t Dimensions, typename Ctx>
+    PetscErrorCode compute_singular_forces(Ctx& ctx, std::size_t N=100)
+    { 
+      PetscErrorCode ierr;
+      PetscFunctionBeginUser;
+
+      auto& h = ctx.problem.ctx->h;
+
+      //Loop on particles couples
+      for (std::size_t ipart=0; ipart<ctx.particles.size()-1; ++ipart)
+      {
+        auto p1 = ctx.particles[ipart];
+        for (std::size_t jpart=ipart+1; jpart<ctx.particles.size(); ++jpart)
+        {
+          auto p2 = ctx.particles[jpart];
+
+          using shape_type = typename decltype(p1)::shape_type;
+          auto sing = singularity<Dimensions, shape_type>(p1, p2, h[0]);
+
+          if (sing.is_singularity_)
+          {
+            ctx.particles[ipart].force_ += compute_singular_forces(sing, N);
+            ctx.particles[jpart].force_ -= compute_singular_forces(sing, N);
+          }
+        }
+      }
       PetscFunctionReturn(0);
     }
 
