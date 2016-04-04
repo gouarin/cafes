@@ -5,6 +5,7 @@
 #include <particle/singularity/singularity.hpp>
 #include <particle/singularity/UandPNormal.hpp>
 #include <particle/geometry/box.hpp>
+#include <particle/geometry/position.hpp>
 #include <petsc/vec.hpp>
 
 #include <petsc.h>
@@ -41,46 +42,48 @@ namespace cafes
       double coef = 1./(sing.scale*sing.scale);
 
       for(std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j)
-	{
-	  for(std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i)
-	    {
-	      position_type_i pts_i = {i, j};
-	      auto ielem = fem::get_element(pts_i);
+      {
+        for(std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i)
+        {
+          position_type_i pts_i = {i, j};
+          auto ielem = fem::get_element(pts_i);
 
-	      for(std::size_t js=0; js<sing.scale; ++js)
-		{
-		  for(std::size_t is=0; is<sing.scale; ++is){
-		    position_type pts = {i*h[0] + is*hs[0], j*h[1] + js*hs[1]};
+          for(std::size_t js=0; js<sing.scale; ++js)
+          {
+            for(std::size_t is=0; is<sing.scale; ++is)
+            {
+              position_type pts = {i*h[0] + is*hs[0], j*h[1] + js*hs[1]};
 
-		    if (!p1.contains(pts) && !p2.contains(pts))
-		      {
-			auto pos_ref_part = sing.get_pos_in_part_ref(pts);
+              if (!p1.contains(pts) && !p2.contains(pts))
+              {
+                auto pos_ref_part = sing.get_pos_in_part_ref(pts);
 
-			if (abs(pos_ref_part[1]) < sing.cutoff_dist_)
-			  {
-			    position_type pts_loc = {is*hs[0], js*hs[1]};
+                if (abs(pos_ref_part[1]) < sing.cutoff_dist_)
+                {
+                  position_type pts_loc = {is*hs[0], js*hs[1]};
+
+                  auto bfunc = fem::P1_integration_grad(pts_loc, h);
+
+                  auto gradUsing = sing.get_grad_u_sing(pts);
+                  auto psing = sing.get_p_sing(pts);
                   
-			    auto bfunc = fem::P1_integration_grad(pts_loc, h);
+                  for (std::size_t j=0; j<bfunc.size(); ++j)
+                  {
+                    auto u = sol.at(ielem[j]);
 
-			    auto gradUsing = sing.get_grad_u_sing(pts);
-			    auto psing = sing.get_p_sing(pts);
-                  
-			    for (std::size_t j=0; j<bfunc.size(); ++j){
-			      auto u = sol.at(ielem[j]);
-
-			      for (std::size_t d1=0; d1<Dimensions; ++d1)
-				{
-				  for (std::size_t d2=0; d2<Dimensions; ++d2)
-				    u[d1] -= coef*gradUsing[d1][d2]*bfunc[j][d2];
-				  u[d1] += coef*psing*bfunc[j][d1];
-				}
-			    }
-			  }
-		      }
-		  }
-		}
-	    }
-	}
+                    for (std::size_t d1=0; d1<Dimensions; ++d1)
+                    {
+                      for (std::size_t d2=0; d2<Dimensions; ++d2)
+                        u[d1] -= coef*gradUsing[d1][d2]*bfunc[j][d2];
+                      u[d1] += coef*psing*bfunc[j][d1];
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
       PetscFunctionReturn(0);
     }
 
@@ -107,50 +110,53 @@ namespace cafes
       double coef = 1./(sing.scale*sing.scale*sing.scale);
 
       for(std::size_t k=box.bottom_left[2]; k<box.upper_right[2]; ++k)
-	{
-	  for(std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j)
-	    {
-	      for(std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i)
-		{
-		  position_type_i pts_i = {i, j, k};
-		  auto ielem = fem::get_element(pts_i);
+      {
+        for(std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j)
+        {
+          for(std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i)
+          {
+            position_type_i pts_i = {i, j, k};
+            auto ielem = fem::get_element(pts_i);
 
-		  for(std::size_t ks=0; ks<sing.scale; ++ks)
-		    {
-		      for(std::size_t js=0; js<sing.scale; ++js)
-			{
-			  for(std::size_t is=0; is<sing.scale; ++is){
-			    position_type pts = {i*h[0] + is*hs[0], 
-						 j*h[1] + js*hs[1],
-						 k*h[2] + ks*hs[2] };
+            for(std::size_t ks=0; ks<sing.scale; ++ks)
+            {
+              for(std::size_t js=0; js<sing.scale; ++js)
+              {
+                for(std::size_t is=0; is<sing.scale; ++is)
+                {
+                  position_type pts = {i*h[0] + is*hs[0], 
+                                       j*h[1] + js*hs[1],
+                                       k*h[2] + ks*hs[2] };
 
-			    if (!p1.contains(pts) && !p2.contains(pts))
-			      {
-				position_type pts_loc = {is*hs[0], 
-							 js*hs[1],
-							 ks*hs[2]};
+                  if (!p1.contains(pts) && !p2.contains(pts))
+                  {
+                    position_type pts_loc = {is*hs[0], 
+                                             js*hs[1],
+                                             ks*hs[2]};
+
+                    auto bfunc = fem::P1_integration_grad(pts_loc, h);
+
+                    auto gradUsing = sing.get_grad_u_sing(pts);
+                    auto psing = sing.get_p_sing(pts);
                     
-				auto bfunc = fem::P1_integration_grad(pts_loc, h);
+                    for (std::size_t j=0; j<bfunc.size(); ++j)
+                    {
+                      auto u = sol.at(ielem[j]);
 
-				auto gradUsing = sing.get_grad_u_sing(pts);
-				auto psing = sing.get_p_sing(pts);
-                    
-				for (std::size_t j=0; j<bfunc.size(); ++j){
-				  auto u = sol.at(ielem[j]);
-
-				  for (std::size_t d1=0; d1<Dimensions; ++d1){
-				    for (std::size_t d2=0; d2<Dimensions; ++d2)
-				      u[d1] -= coef*gradUsing[d1][d2]*bfunc[j][d2];
-				    u[d1] += coef*psing*bfunc[j][d1];
-				  }
-				}
-			      }
-			  }
-			}
-		    }
-		}
-	    }
-	}
+                      for (std::size_t d1=0; d1<Dimensions; ++d1)
+                      {
+                        for (std::size_t d2=0; d2<Dimensions; ++d2)
+                          u[d1] -= coef*gradUsing[d1][d2]*bfunc[j][d2];
+                        u[d1] += coef*psing*bfunc[j][d1];
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
       PetscFunctionReturn(0);
     }
 
@@ -161,34 +167,34 @@ namespace cafes
                                      singularity<Dimensions, Shape> sing, 
                                      std::size_t ipart_1, std::size_t ipart_2,
                                      std::vector<std::vector<std::array<double, Dimensions>>>& g
-				     )
+             )
     {
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
       for(std::size_t isurf=0; isurf<ctx.surf_points[ipart_1].size(); ++isurf)
-	{
-	  auto pos = ctx.surf_points[ipart_1][isurf].second;
-	  auto pos_ref_part = sing.get_pos_in_part_ref(pos);
-	  if (abs(pos_ref_part[1]) < sing.cutoff_dist_)
-	    {
-	      auto Using = sing.get_u_sing(pos);
-	      for (std::size_t d=0; d<Dimensions; ++d)
-		g[ipart_1][isurf][d] -= Using[d];
-	    }
-	}
+      {
+        auto pos = ctx.surf_points[ipart_1][isurf].second;
+        auto pos_ref_part = sing.get_pos_in_part_ref(pos);
+        if (abs(pos_ref_part[1]) < sing.cutoff_dist_)
+        {
+          auto Using = sing.get_u_sing(pos);
+          for (std::size_t d=0; d<Dimensions; ++d)
+            g[ipart_1][isurf][d] -= Using[d];
+        }
+      }
 
       for(std::size_t isurf=0; isurf<ctx.surf_points[ipart_2].size(); ++isurf)
-	{
-	  auto pos = ctx.surf_points[ipart_2][isurf].second;
-	  auto pos_ref_part = sing.get_pos_in_part_ref(pos);
-	  if (abs(pos_ref_part[1]) < sing.cutoff_dist_)
-	    {
-	      auto Using = sing.get_u_sing(pos);
-	      for (std::size_t d=0; d<Dimensions; ++d)
-		g[ipart_2][isurf][d] -= Using[d];
-	    }
-	}
+      {
+        auto pos = ctx.surf_points[ipart_2][isurf].second;
+        auto pos_ref_part = sing.get_pos_in_part_ref(pos);
+        if (abs(pos_ref_part[1]) < sing.cutoff_dist_)
+        {
+          auto Using = sing.get_u_sing(pos);
+          for (std::size_t d=0; d<Dimensions; ++d)
+            g[ipart_2][isurf][d] -= Using[d];
+        }
+      }
 
       PetscFunctionReturn(0);
     }
@@ -224,41 +230,30 @@ namespace cafes
 
       //Loop on particles couples
       for (std::size_t ipart=0; ipart<ctx.particles.size()-1; ++ipart)
-	{
-	  auto p1 = ctx.particles[ipart];
-	  for (std::size_t jpart=ipart+1; jpart<ctx.particles.size(); ++jpart)
-	    {
-	      auto p2 = ctx.particles[jpart];
+      {
+        auto p1 = ctx.particles[ipart];
+        for (std::size_t jpart=ipart+1; jpart<ctx.particles.size(); ++jpart)
+        {
+          auto p2 = ctx.particles[jpart];
 
-	      using shape_type = typename decltype(p1)::shape_type;
-	      auto sing = singularity<Dimensions, shape_type>(p1, p2, h[0]);
+          using shape_type = typename decltype(p1)::shape_type;
+          auto sing = singularity<Dimensions, shape_type>(p1, p2, h[0]);
 
-	      if (sing.is_singularity_)
-		{
-		  auto p1_bl = (p1.center_ - sing.cutoff_dist_)/h;
-		  auto p1_ur = (p1.center_ + sing.cutoff_dist_)/h;
+          if (sing.is_singularity_)
+          {
+            auto pbox = union_box_func({geometry::floor((p1.center_ - sing.cutoff_dist_)/h),
+                                        geometry::ceil((p1.center_ + sing.cutoff_dist_)/h)},
+                                       {geometry::floor((p2.center_ - sing.cutoff_dist_)/h),
+                                        geometry::ceil((p2.center_ + sing.cutoff_dist_)/h)});
 
-		  auto p2_bl = (p2.center_ - sing.cutoff_dist_)/h;
-		  auto p2_ur = (p2.center_ + sing.cutoff_dist_)/h;
-
-		  std::transform(p1_bl.begin(), p1_bl.end(), p1_bl.begin(), [](auto& p){return std::floor(p);});
-		  std::transform(p1_ur.begin(), p1_ur.end(), p1_ur.begin(), [](auto& p){return std::ceil(p);});
-		  std::transform(p2_bl.begin(), p2_bl.end(), p2_bl.begin(), [](auto& p){return std::floor(p);});
-		  std::transform(p2_ur.begin(), p2_ur.end(), p2_ur.begin(), [](auto& p){return std::ceil(p);});
-
-		  auto pbox = union_box_func({p1_bl, p1_ur}, {p2_bl, p2_ur});
-
-		  // auto pbox = union_box_func({(p1.center_ - sing.cutoff_dist_)/h, (p1.center_ + sing.cutoff_dist_)/h},
-		  //                            {(p2.center_ - sing.cutoff_dist_)/h, (p2.center_ + sing.cutoff_dist_)/h});
-
-		  if (geometry::intersect(box, pbox))
-		    {
-		      auto new_box = geometry::box_inside(box, pbox);
-		      ierr = computesingularST(sing, p1, p2, sol, new_box, h);CHKERRQ(ierr);
-		    }
-		}
-	    }
-	}
+            if (geometry::intersect(box, pbox))
+            {
+              auto new_box = geometry::box_inside(box, pbox);
+              ierr = computesingularST(sing, p1, p2, sol, new_box, h);CHKERRQ(ierr);
+            }
+          }
+        }
+      }
 
       ierr = sol.local_to_global(ADD_VALUES);CHKERRQ(ierr);
 
@@ -280,39 +275,29 @@ namespace cafes
 
       //Loop on particles couples
       for (std::size_t ipart=0; ipart<ctx.particles.size()-1; ++ipart)
-	{
-	  auto p1 = ctx.particles[ipart];
-	  for (std::size_t jpart=ipart+1; jpart<ctx.particles.size(); ++jpart)
-	    {
-	      auto p2 = ctx.particles[jpart];
+      {
+        auto p1 = ctx.particles[ipart];
+        for (std::size_t jpart=ipart+1; jpart<ctx.particles.size(); ++jpart)
+        {
+          auto p2 = ctx.particles[jpart];
 
-	      using shape_type = typename decltype(p1)::shape_type;
-	      auto sing = singularity<Dimensions, shape_type>(p1, p2, h[0]);
+          using shape_type = typename decltype(p1)::shape_type;
+          auto sing = singularity<Dimensions, shape_type>(p1, p2, h[0]);
 
-	      if (sing.is_singularity_)
-		{
-		  auto p1_bl = (p1.center_ - sing.cutoff_dist_)/h;
-		  auto p1_ur = (p1.center_ + sing.cutoff_dist_)/h;
+          if (sing.is_singularity_)
+          {
+            auto pbox = union_box_func({geometry::floor((p1.center_ - sing.cutoff_dist_)/h), 
+                                        geometry::ceil((p1.center_ + sing.cutoff_dist_)/h)},
+                                       {geometry::floor((p2.center_ - sing.cutoff_dist_)/h), 
+                                        geometry::ceil((p2.center_ + sing.cutoff_dist_)/h)});
 
-		  auto p2_bl = (p2.center_ - sing.cutoff_dist_)/h;
-		  auto p2_ur = (p2.center_ + sing.cutoff_dist_)/h;
-
-		  std::transform(p1_bl.begin(), p1_bl.end(), p1_bl.begin(), [](auto& p){return std::floor(p);});
-		  std::transform(p1_ur.begin(), p1_ur.end(), p1_ur.begin(), [](auto& p){return std::ceil(p);});
-		  std::transform(p2_bl.begin(), p2_bl.end(), p2_bl.begin(), [](auto& p){return std::floor(p);});
-		  std::transform(p2_ur.begin(), p2_ur.end(), p2_ur.begin(), [](auto& p){return std::ceil(p);});
-
-		  auto pbox = union_box_func({p1_bl, p1_ur}, {p2_bl, p2_ur});
-		  // auto pbox = union_box_func({(p1.center_ - sing.cutoff_dist_)/h, (p1.center_ + sing.cutoff_dist_)/h},
-		  //                           {(p2.center_ - sing.cutoff_dist_)/h, (p2.center_ + sing.cutoff_dist_)/h});
-
-		  if (geometry::intersect(box, pbox))
-		    {
-		      ierr = computesingularBC(ctx, sing, ipart, jpart, g);CHKERRQ(ierr);
-		    }
-		}
-	    }
-	}
+            if (geometry::intersect(box, pbox))
+            {
+              ierr = computesingularBC(ctx, sing, ipart, jpart, g);CHKERRQ(ierr);
+            }
+          }
+        }
+      }
 
       PetscFunctionReturn(0);
     }
@@ -361,54 +346,54 @@ namespace cafes
       double coef = 1./(sing.scale*sing.scale);
 
       for(std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j)
-	{
-	  for(std::size_t js=0; js<sing.scale; ++js)
-	    {
-	      for(std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i)
-		{
-		  position_type_i pts_i = {i, j};
+      {
+        for(std::size_t js=0; js<sing.scale; ++js)
+        {
+          for(std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i)
+          {
+            position_type_i pts_i = {i, j};
 
-		  for(std::size_t is=0; is<sing.scale; ++is){
-		    position_type pts = {i*h[0] + is*hs[0], j*h[1] + js*hs[1]};
-		    singPoints->InsertNextPoint(pts[0], pts[1], 0.);
-		    bool add_sing = false;
+            for(std::size_t is=0; is<sing.scale; ++is){
+              position_type pts = {i*h[0] + is*hs[0], j*h[1] + js*hs[1]};
+              singPoints->InsertNextPoint(pts[0], pts[1], 0.);
+              bool add_sing = false;
 
-		    if (!p1.contains(pts) && !p2.contains(pts))
-		      {
-			auto pos_ref_part = sing.get_pos_in_part_ref(pts);
+              if (!p1.contains(pts) && !p2.contains(pts))
+              {
+                auto pos_ref_part = sing.get_pos_in_part_ref(pts);
 
-			if (abs(pos_ref_part[1]) < sing.cutoff_dist_)
-			  {
-			    add_sing = true;
-			    //position_type pts_loc = {is*hs[0], js*hs[1]};
-                  
-			    auto Using = sing.get_u_sing(pts);
-			    auto gradUsing = sing.get_grad_u_sing(pts);
-			    auto psing = sing.get_p_sing(pts);
-			    // Add points to vtk + singular value to vtk
-			    velocity_sing->InsertNextTuple3(Using[0], Using[1], 0.);
-			    gradx_velocity_sing->InsertNextTuple3(gradUsing[0][0], gradUsing[0][1], 0.);
-			    grady_velocity_sing->InsertNextTuple3(gradUsing[1][0], gradUsing[1][1], 0.);
-			    pressure_sing->InsertNextValue(psing);
-			  }
-		      }
+                if (abs(pos_ref_part[1]) < sing.cutoff_dist_)
+                {
+                  add_sing = true;
+                  //position_type pts_loc = {is*hs[0], js*hs[1]};
+                          
+                  auto Using = sing.get_u_sing(pts);
+                  auto gradUsing = sing.get_grad_u_sing(pts);
+                  auto psing = sing.get_p_sing(pts);
+                  // Add points to vtk + singular value to vtk
+                  velocity_sing->InsertNextTuple3(Using[0], Using[1], 0.);
+                  gradx_velocity_sing->InsertNextTuple3(gradUsing[0][0], gradUsing[0][1], 0.);
+                  grady_velocity_sing->InsertNextTuple3(gradUsing[1][0], gradUsing[1][1], 0.);
+                  pressure_sing->InsertNextValue(psing);
+                }
+              }
 
-		    if (!add_sing)
-		      {
-			velocity_sing->InsertNextTuple3(0., 0., 0.);
-			gradx_velocity_sing->InsertNextTuple3(0., 0., 0.);
-			grady_velocity_sing->InsertNextTuple3(0., 0., 0.);
-			pressure_sing->InsertNextValue(0.);
-		      }
-		  }
-		}
-	    }
-	}
+              if (!add_sing)
+              {
+                velocity_sing->InsertNextTuple3(0., 0., 0.);
+                gradx_velocity_sing->InsertNextTuple3(0., 0., 0.);
+                grady_velocity_sing->InsertNextTuple3(0., 0., 0.);
+                pressure_sing->InsertNextValue(0.);
+              }
+            }
+          }
+        }
+      }
 
       singDataSet->SetPoints(singPoints);
       singDataSet->GetPointData()->AddArray(velocity_sing);
-      //singDataSet->GetPointData()->AddArray(gradx_velocity_sing);
-      // singDataSet->GetPointData()->AddArray(grady_velocity_sing);
+      singDataSet->GetPointData()->AddArray(gradx_velocity_sing);
+      singDataSet->GetPointData()->AddArray(grady_velocity_sing);
       singDataSet->GetPointData()->SetScalars(pressure_sing);
 
       vtkXMLStructuredGridWriter* singDataWriter = vtkXMLStructuredGridWriter::New();
@@ -482,52 +467,52 @@ namespace cafes
 
       for(std::size_t k=box.bottom_left[2]; k<box.upper_right[2]; ++k)
       {
-	for(std::size_t ks=0; ks<sing.scale; ++ks)
-	{
-	  for(std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j)
-	  {
-	    for(std::size_t js=0; js<sing.scale; ++js)
-	    {
-	      for(std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i)
-	      {
-		position_type_i pts_i = {i, j, k};
+        for(std::size_t ks=0; ks<sing.scale; ++ks)
+        {
+          for(std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j)
+          {
+            for(std::size_t js=0; js<sing.scale; ++js)
+            {
+              for(std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i)
+              {
+                position_type_i pts_i = {i, j, k};
 
-		for(std::size_t is=0; is<sing.scale; ++is){
-		  position_type pts = {i*h[0] + is*hs[0], j*h[1] + js*hs[1], k*h[2] + ks*hs[2]};
-		  singPoints->InsertNextPoint(pts[0], pts[1], pts[2]);
-		  bool add_sing = false;
+                for(std::size_t is=0; is<sing.scale; ++is){
+                  position_type pts = {i*h[0] + is*hs[0], j*h[1] + js*hs[1], k*h[2] + ks*hs[2]};
+                  singPoints->InsertNextPoint(pts[0], pts[1], pts[2]);
+                  bool add_sing = false;
 
-		  if (!p1.contains(pts) && !p2.contains(pts))
-		    {
-		      auto pos_ref_part = sing.get_pos_in_part_ref(pts);
+                  if (!p1.contains(pts) && !p2.contains(pts))
+                  {
+                    auto pos_ref_part = sing.get_pos_in_part_ref(pts);
 
-		      if (abs(pos_ref_part[1]) < sing.cutoff_dist_)
-			{
-			  add_sing = true;
-			  //position_type pts_loc = {is*hs[0], js*hs[1], ks*hs[2]};
-			  auto Using = sing.get_u_sing(pts);
-			  auto gradUsing = sing.get_grad_u_sing(pts);
-			  auto psing = sing.get_p_sing(pts);
-			  // Add points to vtk + singular value to vtk
-			  velocity_sing->InsertNextTuple3(Using[0], Using[1], Using[2]);
-			  gradx_velocity_sing->InsertNextTuple3(gradUsing[0][0], gradUsing[0][1], gradUsing[0][2]);
-			  grady_velocity_sing->InsertNextTuple3(gradUsing[1][0], gradUsing[1][1], gradUsing[1][2]);
-			  pressure_sing->InsertNextValue(psing);
-			}
-		    }
+                    if (abs(pos_ref_part[1]) < sing.cutoff_dist_)
+                    {
+                      add_sing = true;
+                      //position_type pts_loc = {is*hs[0], js*hs[1], ks*hs[2]};
+                      auto Using = sing.get_u_sing(pts);
+                      auto gradUsing = sing.get_grad_u_sing(pts);
+                      auto psing = sing.get_p_sing(pts);
+                      // Add points to vtk + singular value to vtk
+                      velocity_sing->InsertNextTuple3(Using[0], Using[1], Using[2]);
+                      gradx_velocity_sing->InsertNextTuple3(gradUsing[0][0], gradUsing[0][1], gradUsing[0][2]);
+                      grady_velocity_sing->InsertNextTuple3(gradUsing[1][0], gradUsing[1][1], gradUsing[1][2]);
+                      pressure_sing->InsertNextValue(psing);
+                    }
+                  }
 
-		  if (!add_sing)
-		    {
-		      velocity_sing->InsertNextTuple3(0., 0., 0.);
-		      gradx_velocity_sing->InsertNextTuple3(0., 0., 0.);
-		      grady_velocity_sing->InsertNextTuple3(0., 0., 0.);
-		      pressure_sing->InsertNextValue(0.);
-		    }
-		}
-	      }
-	    }
-	  }
-	}
+                  if (!add_sing)
+                  {
+                    velocity_sing->InsertNextTuple3(0., 0., 0.);
+                    gradx_velocity_sing->InsertNextTuple3(0., 0., 0.);
+                    grady_velocity_sing->InsertNextTuple3(0., 0., 0.);
+                    pressure_sing->InsertNextValue(0.);
+                  }
+                }
+              }
+            }
+          }
+        }
       }
       singDataSet->SetPoints(singPoints);
       singDataSet->GetPointData()->AddArray(velocity_sing);
@@ -564,8 +549,8 @@ namespace cafes
     #define __FUNCT__ "save_singularity"
     template<std::size_t Dimensions, typename Ctx>
     PetscErrorCode save_singularity(const char* path,
-				    const char* filename,
-				    Ctx& ctx)
+            const char* filename,
+            Ctx& ctx)
     {
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
@@ -577,41 +562,32 @@ namespace cafes
 
       //Loop on particles couples
       for (std::size_t ipart=0; ipart<ctx.particles.size()-1; ++ipart)
-	{
-	  auto p1 = ctx.particles[ipart];
-	  for (std::size_t jpart=ipart+1; jpart<ctx.particles.size(); ++jpart)
-	    {
-	      auto p2 = ctx.particles[jpart];
+      {
+        auto p1 = ctx.particles[ipart];
+        for (std::size_t jpart=ipart+1; jpart<ctx.particles.size(); ++jpart)
+        {
+          auto p2 = ctx.particles[jpart];
 
-	      using shape_type = typename decltype(p1)::shape_type;
-	      auto sing = singularity<Dimensions, shape_type>(p1, p2, h[0]);
+          using shape_type = typename decltype(p1)::shape_type;
+          auto sing = singularity<Dimensions, shape_type>(p1, p2, h[0]);
 
-	      if (sing.is_singularity_)
-		{
-		  auto p1_bl = (p1.center_ - sing.cutoff_dist_)/h;
-		  auto p1_ur = (p1.center_ + sing.cutoff_dist_)/h;
+          if (sing.is_singularity_)
+          {
+            // auto pbox = union_box_func({geometry::floor((p1.center_ - sing.cutoff_dist_)/h), 
+            //                             geometry::ceil((p1.center_ + sing.cutoff_dist_)/h)},
+            //                            {geometry::floor((p2.center_ - sing.cutoff_dist_)/h), 
+            //                             geometry::ceil((p2.center_ + sing.cutoff_dist_)/h)});
+            auto pbox = sing.get_box(h);
+            std::cout << box << " " << pbox << "\n";
+            if (geometry::intersect(box, pbox))
+            {
+              auto new_box = geometry::box_inside(box, pbox);
 
-		  auto p2_bl = (p2.center_ - sing.cutoff_dist_)/h;
-		  auto p2_ur = (p2.center_ + sing.cutoff_dist_)/h;
-
-		  std::transform(p1_bl.begin(), p1_bl.end(), p1_bl.begin(), [](auto& p){return std::floor(p);});
-		  std::transform(p1_ur.begin(), p1_ur.end(), p1_ur.begin(), [](auto& p){return std::ceil(p);});
-		  std::transform(p2_bl.begin(), p2_bl.end(), p2_bl.begin(), [](auto& p){return std::floor(p);});
-		  std::transform(p2_ur.begin(), p2_ur.end(), p2_ur.begin(), [](auto& p){return std::ceil(p);});
-
-		  auto pbox = union_box_func({p1_bl, p1_ur}, {p2_bl, p2_ur});
-
-		  // auto pbox = union_box_func({(p1.center_ - sing.cutoff_dist_)/h, (p1.center_ + sing.cutoff_dist_)/h},
-		  //                            {(p2.center_ - sing.cutoff_dist_)/h, (p2.center_ + sing.cutoff_dist_)/h});
-
-		  if (geometry::intersect(box, pbox))
-		    {
-		      auto new_box = geometry::box_inside(box, pbox);
-		      ierr = save_singularity(path, filename, sing, p1, p2, new_box, h);CHKERRQ(ierr);
-		    }
-		}
-	    }
-	}
+              ierr = save_singularity(path, filename, sing, p1, p2, new_box, h);CHKERRQ(ierr);
+            }
+          }
+        }
+      }
 
       PetscFunctionReturn(0);
     }

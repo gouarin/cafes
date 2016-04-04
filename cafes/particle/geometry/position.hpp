@@ -2,7 +2,9 @@
 #define PARTICLE_GEOMETRY_POSITION_HPP_INCLUDED
 
 #include <particle/physics/velocity.hpp>
+#include <algorithm>
 #include <array>
+#include <cmath>
 #include <iostream>
 #include <type_traits>
 
@@ -209,6 +211,22 @@ namespace cafes
       {
           position<Dimensions, T> that{p};
           return that /= v;
+      }
+
+      template<std::size_t Dimensions>
+      position<Dimensions, int> ceil(position<Dimensions, double> const& pos)
+      {
+          position<Dimensions, double> that;
+          std::transform(pos.begin(), pos.end(), that.begin(), [](auto& p){return std::ceil(p);});
+          return that;
+      }
+
+      template<std::size_t Dimensions>
+      position<Dimensions, int> floor(position<Dimensions, double> const& pos)
+      {
+          position<Dimensions, double> that;
+          std::transform(pos.begin(), pos.end(), that.begin(), [](auto& p){return std::floor(p);});
+          return that;
       }
 
   }

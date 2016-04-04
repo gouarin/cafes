@@ -120,6 +120,9 @@ namespace cafes
       PetscFunctionReturn(0);
     }
 
+    //!
+    //! Stokes class 
+    //! 
     template<std::size_t Dimensions>
     struct stokes : public Problem<Dimensions>{
       //using parent = Problem<Dimensions>::Problem;
@@ -127,12 +130,12 @@ namespace cafes
       fem::rhs_conditions<Dimensions> rhsc_;
       options<Dimensions> opt{};
 
-      Ctx *ctx;
-      Vec sol;
-      Vec rhs;
-      Mat A;
-      Mat P;
-      KSP ksp;
+      Ctx *ctx; //!< Context for the PETSc solver
+      Vec sol;  //!< The solution of Stokes problem
+      Vec rhs;  //!< The RHS of Stokes problem
+      Mat A;    //!< The matrix of Stokes problem
+      Mat P;    //!< The preconditioner of Stokes problem
+      KSP ksp;  //!< The solver of Stokes problem
 
       stokes(fem::dirichlet_conditions<Dimensions> bc, fem::rhs_conditions<Dimensions> rhsc={nullptr})
       {

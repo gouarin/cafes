@@ -79,6 +79,24 @@ namespace cafes
         }
       }
 
+      geometry::box<Dimensions, int> get_box(std::array<double, 2> h)
+      {
+        return { { std::floor((origin_[0] - contact_length_)/h[0]),
+                   std::floor((origin_[1] - cutoff_dist_)/h[1])},
+                 { std::ceil((origin_[0] + 3*contact_length_)/h[0]),
+                   std::ceil((origin_[1] + cutoff_dist_)/h[1])} };
+      }
+
+      geometry::box<Dimensions, int> get_box(std::array<double, 3> h)
+      {
+        return { { std::floor((origin_[0] - contact_length_)/h[0]),
+                   std::floor((origin_[1] - cutoff_dist_)/h[1]),
+                   std::floor((origin_[2] - cutoff_dist_)/h[2])},
+                 { std::ceil((origin_[0] + 3*contact_length_)/h[0]),
+                   std::ceil((origin_[1] + cutoff_dist_)/h[1]),
+                   std::ceil((origin_[2] + cutoff_dist_)/h[2])} };
+      }
+
       void construct_base(particle<Shape> const& p1, particle<Shape> const& p2,
                           std::integral_constant<int, 2>)
       {
@@ -105,7 +123,7 @@ namespace cafes
 
         if (vector_space_[2]*vector_space_[2] == vel_norm)
         {
-	  base_[0][0]    = -sign(base_[2][2])*base_[2][2]
+          base_[0][0]    = -sign(base_[2][2])*base_[2][2]
                            -sign(base_[2][1])*base_[2][1];
           base_[0][1]    =  sign(base_[2][1])*base_[2][0];
           base_[0][2]    =  sign(base_[2][2])*base_[0][0];
@@ -155,11 +173,8 @@ namespace cafes
       auto get_u_sing(position_type const& pos, std::integral_constant<int, 2>)
       {
         auto pos_ref_part = get_pos_in_part_ref(pos);
-        std::array< double, 2 > Using;
-	Using.fill(0);
-        std::array< double, 2 > UsingRefPart;
-	UsingRefPart.fill(0);
-
+        std::array< double, 2 > Using{};
+        std::array< double, 2 > UsingRefPart{};
 
         UsingRefPart[0] = ux_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL)
                         + ux_sing_tangMvt2D(pos_ref_part, H1_, H2_, contact_length_, UT_, param_, param_, NULL);
@@ -177,11 +192,8 @@ namespace cafes
       auto get_u_sing(position_type const& pos, std::integral_constant<int, 3>)
       {
         auto pos_ref_part = get_pos_in_part_ref(pos);
-        std::array< double, 3 > Using;
-	Using.fill(0);
-        std::array< double, 3 > UsingRefPart;
-	UsingRefPart.fill(0);
-
+        std::array< double, 3 > Using{};
+        std::array< double, 3 > UsingRefPart{};
 
         UsingRefPart[0] = ux_sing_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL)
                         + ux_sing_tangMvt3D(pos_ref_part, H1_, H2_, contact_length_, UT_, param_, param_, NULL);
@@ -196,7 +208,7 @@ namespace cafes
           Using[2] += base_[k][2]*UsingRefPart[k];
         }
 
-	return Using;
+        return Using;
       }
 
       auto get_u_sing(position_type const& pos)
@@ -212,11 +224,9 @@ namespace cafes
       auto get_grad_u_sing(position_type pos, std::integral_constant<int, 2>)
       {
         auto pos_ref_part = get_pos_in_part_ref(pos);
-        std::array< std::array<double, 2>, 2 > gradUsing;
-        std::array< std::array<double, 2>, 2 > gradUsingRefPart;
-	for (std::array<double, 2>& x : gradUsing)        { x.fill(0); }
-	for (std::array<double, 2>& x : gradUsingRefPart) { x.fill(0); }
-	
+        std::array< std::array<double, 2>, 2 > gradUsing{};
+        std::array< std::array<double, 2>, 2 > gradUsingRefPart{};
+
         gradUsingRefPart[0][0] = dxux_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
         gradUsingRefPart[0][1] = dzux_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
         gradUsingRefPart[1][0] = dxuz_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
@@ -234,10 +244,8 @@ namespace cafes
       auto get_grad_u_sing(position_type& pos, std::integral_constant<int, 3>)
       {
         auto pos_ref_part = get_pos_in_part_ref(pos);
-        std::array< std::array<double, 3>, 3 > gradUsing;
-        std::array< std::array<double, 3>, 3 > gradUsingRefPart;
-	for (std::array<double, 3>& x : gradUsing)        { x.fill(0); }
-	for (std::array<double, 3>& x : gradUsingRefPart) { x.fill(0); }
+        std::array< std::array<double, 3>, 3 > gradUsing{};
+        std::array< std::array<double, 3>, 3 > gradUsingRefPart{};
 
         gradUsingRefPart[0][0] = dxux_sing_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
         gradUsingRefPart[0][1] = dyux_sing_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
@@ -280,8 +288,8 @@ namespace cafes
       auto get_p_sing(position_type& pos, std::integral_constant<int, 3>)
       {
         auto pos_ref_part = get_pos_in_part_ref(pos);
-        
-	return p_sing_withT_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+
+        return p_sing_withT_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
       }
 
       auto get_p_sing(position_type& pos)
