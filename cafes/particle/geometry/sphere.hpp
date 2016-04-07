@@ -27,6 +27,13 @@ namespace cafes
       {
         return 4*M_PI*shape_factors_[0]*shape_factors_[0];
       }
+
+      double volume() const
+      {
+        return 4./3*M_PI*shape_factors_[0]*shape_factors_[0]*shape_factors_[0];
+      }
+
+
     };
   }
 
