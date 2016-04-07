@@ -166,6 +166,7 @@ namespace cafes
     PetscErrorCode computesingularBC(Ctx& ctx,
                                      singularity<Dimensions, Shape> sing, 
                                      std::size_t ipart_1, std::size_t ipart_2,
+                                     geometry::box<Dimensions, double> box,
                                      std::vector<std::vector<std::array<double, Dimensions>>>& g
              )
     {
@@ -175,24 +176,30 @@ namespace cafes
       for(std::size_t isurf=0; isurf<ctx.surf_points[ipart_1].size(); ++isurf)
       {
         auto pos = ctx.surf_points[ipart_1][isurf].second;
-        auto pos_ref_part = sing.get_pos_in_part_ref(pos);
-        if (abs(pos_ref_part[1]) < sing.cutoff_dist_)
+        if (geometry::point_inside(box, pos))
         {
-          auto Using = sing.get_u_sing(pos);
-          for (std::size_t d=0; d<Dimensions; ++d)
-            g[ipart_1][isurf][d] -= Using[d];
+          auto pos_ref_part = sing.get_pos_in_part_ref(pos);
+          if (abs(pos_ref_part[1]) < sing.cutoff_dist_)
+          {
+            auto Using = sing.get_u_sing(pos);
+            for (std::size_t d=0; d<Dimensions; ++d)
+              g[ipart_1][isurf][d] -= Using[d];
+          }
         }
       }
 
       for(std::size_t isurf=0; isurf<ctx.surf_points[ipart_2].size(); ++isurf)
       {
         auto pos = ctx.surf_points[ipart_2][isurf].second;
-        auto pos_ref_part = sing.get_pos_in_part_ref(pos);
-        if (abs(pos_ref_part[1]) < sing.cutoff_dist_)
+        if (geometry::point_inside(box, pos))
         {
-          auto Using = sing.get_u_sing(pos);
-          for (std::size_t d=0; d<Dimensions; ++d)
-            g[ipart_2][isurf][d] -= Using[d];
+          auto pos_ref_part = sing.get_pos_in_part_ref(pos);
+          if (abs(pos_ref_part[1]) < sing.cutoff_dist_)
+          {
+            auto Using = sing.get_u_sing(pos);
+            for (std::size_t d=0; d<Dimensions; ++d)
+              g[ipart_2][isurf][d] -= Using[d];
+          }
         }
       }
 
@@ -228,11 +235,7 @@ namespace cafes
 
           if (sing.is_singularity_)
           {
-            auto pbox = union_box_func({geometry::floor((p1.center_ - sing.cutoff_dist_)/h),
-                                        geometry::ceil((p1.center_ + sing.cutoff_dist_)/h)},
-                                       {geometry::floor((p2.center_ - sing.cutoff_dist_)/h),
-                                        geometry::ceil((p2.center_ + sing.cutoff_dist_)/h)});
-
+            auto pbox = sing.get_box(h);
             if (geometry::intersect(box, pbox))
             {
               auto new_box = geometry::box_inside(box, pbox);
@@ -284,9 +287,9 @@ namespace cafes
     }
 
     #undef __FUNCT__
-    #define __FUNCT__ "compute_singular_forces"
+    #define __FUNCT__ "compute_singular_forces_on_part1"
     template<typename Shape>
-    auto compute_singular_forces(singularity<3, Shape> sing, std::size_t N)
+    auto compute_singular_forces_on_part1(singularity<3, Shape> sing, std::size_t N)
     {
       using position_type = geometry::position<3, double>;
 
@@ -295,6 +298,7 @@ namespace cafes
       double A = 2*M_PI*theta/N/N/sing.H1_/sing.H1_;
 
       physics::force<3> force{};
+      physics::force<3> force_ref{};
 
       for (std::size_t i=1; i<=N; ++i)
       {
@@ -325,24 +329,70 @@ namespace cafes
           sigma[2][1] = sigma[1][2];
           sigma[2][2] = 2*mu*gradUsing[2][2] - psing;
 
-          // sigma[0][0] = - psing;
-          // sigma[0][1] = 0.;
-          // sigma[0][2] = 0.;
-
-          // sigma[1][0] = sigma[0][1];
-          // sigma[1][1] = - psing;
-          // sigma[1][2] = 0.;
-
-          // sigma[2][0] = sigma[0][2];
-          // sigma[2][1] = sigma[1][2];
-          // sigma[2][2] = - psing;
+          for(std::size_t d1=0; d1<3; ++d1)
+            for(std::size_t d2=0; d2<3; ++d2)
+              force_ref[d1] += coef*sigma[d1][d2]*normal[d2];
 
           for(std::size_t d1=0; d1<3; ++d1)
             for(std::size_t d2=0; d2<3; ++d2)
-              force[d1] += coef*sigma[d1][d2]*normal[d2];
+              force[d1] += sing.base_[d2][d1]*force_ref[d2];
         }
       }
-      std::cout << force << "\n";
+      return force;
+    }
+
+    #undef __FUNCT__
+    #define __FUNCT__ "compute_singular_forces_on_part2"
+    template<typename Shape>
+    auto compute_singular_forces_on_part2(singularity<3, Shape> sing, std::size_t N)
+    {
+      using position_type = geometry::position<3, double>;
+
+      double mu = 1.;
+      double theta = std::asin(sing.cutoff_dist_*sing.H2_);
+      double A = 2*M_PI*theta/N/N/sing.H2_/sing.H2_;
+
+      physics::force<3> force{};
+      physics::force<3> force_ref{};
+
+      for (std::size_t i=1; i<=N; ++i)
+      {
+        double cosi_t = std::cos(i*theta/N);
+        double sini_t = std::sin(i*theta/N);
+        double coef = A*sini_t;
+        for (std::size_t j=1; j<=N; ++j)
+        {
+          double cosj_t = std::cos(2*M_PI*j/N);
+          double sinj_t = std::sin(2*M_PI*j/N);
+          std::array< std::array<double, 3>, 3> sigma;
+
+          position_type pos{sini_t*cosj_t/sing.H2_, sini_t*sinj_t/sing.H2_, sing.contact_length_ + (1. - cosi_t)/sing.H2_};
+          position_type normal{sini_t*cosj_t, sini_t*sinj_t, -cosi_t};
+
+          auto gradUsing = sing.get_grad_u_sing_ref(pos);
+          auto psing = sing.get_p_sing_ref(pos);
+
+          sigma[0][0] = 2*mu*gradUsing[0][0] - psing;
+          sigma[0][1] = 2*mu*gradUsing[0][1];
+          sigma[0][2] = mu*(gradUsing[0][2] + gradUsing[2][0]);
+
+          sigma[1][0] = sigma[0][1];
+          sigma[1][1] = 2*mu*gradUsing[1][1] - psing;
+          sigma[1][2] = mu*(gradUsing[1][2] + gradUsing[2][1]);
+
+          sigma[2][0] = sigma[0][2];
+          sigma[2][1] = sigma[1][2];
+          sigma[2][2] = 2*mu*gradUsing[2][2] - psing;
+
+          for(std::size_t d1=0; d1<3; ++d1)
+            for(std::size_t d2=0; d2<3; ++d2)
+              force_ref[d1] += coef*sigma[d1][d2]*normal[d2];
+
+          for(std::size_t d1=0; d1<3; ++d1)
+            for(std::size_t d2=0; d2<3; ++d2)
+              force[d1] += sing.base_[d2][d1]*force_ref[d2];
+        }
+      }
       return force;
     }
 
@@ -355,6 +405,9 @@ namespace cafes
       PetscFunctionBeginUser;
 
       auto& h = ctx.problem.ctx->h;
+
+      for (std::size_t ipart=0; ipart<ctx.particles.size(); ++ipart)
+        ctx.particles[ipart].force_.fill(0.);
 
       //Loop on particles couples
       for (std::size_t ipart=0; ipart<ctx.particles.size()-1; ++ipart)
@@ -369,8 +422,43 @@ namespace cafes
 
           if (sing.is_singularity_)
           {
-            ctx.particles[ipart].force_ += compute_singular_forces(sing, N);
-            ctx.particles[jpart].force_ -= compute_singular_forces(sing, N);
+            ctx.particles[ipart].force_ -= compute_singular_forces_on_part1(sing, N);
+            ctx.particles[jpart].force_ += compute_singular_forces_on_part2(sing, N);
+          }
+        }
+      }
+      PetscFunctionReturn(0);
+    }
+
+    #undef __FUNCT__
+    #define __FUNCT__ "compute_singular_forces"
+    template<std::size_t Dimensions, typename Shape>
+    PetscErrorCode compute_singular_forces(std::vector<particle<Shape>> const& particles,
+                                           std::vector<physics::force<Dimensions>>& forces,
+                                           std::array<double, Dimensions>& h,
+                                           std::size_t N=100)
+    { 
+      PetscErrorCode ierr;
+      PetscFunctionBeginUser;
+
+      for (std::size_t ipart=0; ipart<particles.size(); ++ipart)
+        forces[ipart].fill(0.);
+
+      //Loop on particles couples
+      for (std::size_t ipart=0; ipart<particles.size()-1; ++ipart)
+      {
+        auto p1 = particles[ipart];
+        for (std::size_t jpart=ipart+1; jpart<particles.size(); ++jpart)
+        {
+          auto p2 = particles[jpart];
+
+          //using shape_type = typename decltype(p1)::shape_type;
+          auto sing = singularity<Dimensions, Shape>(p1, p2, h[0]);
+
+          if (sing.is_singularity_)
+          {
+            forces[ipart] -= compute_singular_forces_on_part1(sing, N);
+            forces[jpart] -= compute_singular_forces_on_part2(sing, N);
           }
         }
       }
@@ -403,14 +491,14 @@ namespace cafes
 
           if (sing.is_singularity_)
           {
-            auto pbox = union_box_func({geometry::floor((p1.center_ - sing.cutoff_dist_)/h), 
-                                        geometry::ceil((p1.center_ + sing.cutoff_dist_)/h)},
-                                       {geometry::floor((p2.center_ - sing.cutoff_dist_)/h), 
-                                        geometry::ceil((p2.center_ + sing.cutoff_dist_)/h)});
-
+            auto pbox = sing.get_box(h);
             if (geometry::intersect(box, pbox))
             {
-              ierr = computesingularBC(ctx, sing, ipart, jpart, g);CHKERRQ(ierr);
+              auto new_box = geometry::box_inside(box, pbox);
+              geometry::box<Dimensions, double> new_box_d{new_box.bottom_left, new_box.upper_right};
+              new_box_d.bottom_left *= h;
+              new_box_d.upper_right *= h;
+              ierr = computesingularBC(ctx, sing, ipart, jpart, new_box_d, g);CHKERRQ(ierr);
             }
           }
         }

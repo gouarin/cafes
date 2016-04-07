@@ -42,7 +42,7 @@ namespace cafes
       
       physics::velocity<Dimensions> vector_space_;
 
-      singularity(particle<Shape> const& p1, particle<Shape> const& p2, double h, double alpha=1, double treshold=1./5)
+      singularity(particle<Shape> const& p1, particle<Shape> const& p2, double h, double alpha=4, double treshold=1./5)
       : alpha_{alpha}, threshold_{treshold}
       {
         double dist = distance<Shape, Dimensions>(p1, p2);
@@ -69,16 +69,15 @@ namespace cafes
         if (is_singularity_)
         {
           construct_base(p1, p2);
-          std::cout << "#singularity base ";
-          for(std::size_t d=0; d<Dimensions; ++d)
-            std::cout << base_[d] << " ";
-          std::cout << "\n";
+          // std::cout << "#singularity base ";
+          // for(std::size_t d=0; d<Dimensions; ++d)
+          //   std::cout << base_[d] << " ";
+          // std::cout << "\n";
 
           auto origin_comp = [r1](double x, double y){return x + r1*y;};
           std::transform(p1.center_.begin(), p1.center_.end(), base_[2*Dimensions-4].begin(), origin_.begin(), origin_comp);
 
-
-          std::cout << "#singularity origin " << origin_ << "\n";
+          //std::cout << "#singularity origin " << origin_ << "\n";
         }
       }
 
@@ -215,7 +214,7 @@ namespace cafes
 
         UN_ = vector_space_[2];
         UT_ = vector_space_[0];
-        std::cout << "UN_ " << UN_ << "\n";
+        //std::cout << "UN_ " << UN_ << "\n";
       }
 
       void construct_base(particle<Shape> const& p1, particle<Shape> const& p2)
