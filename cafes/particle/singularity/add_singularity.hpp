@@ -58,7 +58,7 @@ namespace cafes
               {
                 auto pos_ref_part = sing.get_pos_in_part_ref(pts);
 
-                if (abs(pos_ref_part[1]) < sing.cutoff_dist_)
+                if (std::abs(pos_ref_part[1]) < sing.cutoff_dist_)
                 {
                   position_type pts_loc = {is*hs[0], js*hs[1]};
 
@@ -176,7 +176,7 @@ namespace cafes
       {
         auto pos = ctx.surf_points[ipart_1][isurf].second;
         auto pos_ref_part = sing.get_pos_in_part_ref(pos);
-        if (abs(pos_ref_part[1]) < sing.cutoff_dist_)
+        if (std::abs(pos_ref_part[1]) < sing.cutoff_dist_)
         {
           auto Using = sing.get_u_sing(pos);
           for (std::size_t d=0; d<Dimensions; ++d)
@@ -188,7 +188,7 @@ namespace cafes
       {
         auto pos = ctx.surf_points[ipart_2][isurf].second;
         auto pos_ref_part = sing.get_pos_in_part_ref(pos);
-        if (abs(pos_ref_part[1]) < sing.cutoff_dist_)
+        if (std::abs(pos_ref_part[1]) < sing.cutoff_dist_)
         {
           auto Using = sing.get_u_sing(pos);
           for (std::size_t d=0; d<Dimensions; ++d)
@@ -479,7 +479,7 @@ namespace cafes
               {
                 auto pos_ref_part = sing.get_pos_in_part_ref(pts);
 
-                if (abs(pos_ref_part[1]) < sing.cutoff_dist_)
+                if (std::abs(pos_ref_part[1]) < sing.cutoff_dist_)
                 {
                   add_sing = true;
                   //position_type pts_loc = {is*hs[0], js*hs[1]};
@@ -603,7 +603,7 @@ namespace cafes
                   {
                     auto pos_ref_part = sing.get_pos_in_part_ref(pts);
 
-                    if (abs(pos_ref_part[1]) < sing.cutoff_dist_)
+                    if (std::abs(pos_ref_part[1]) < sing.cutoff_dist_)
                     {
                       add_sing = true;
                       //position_type pts_loc = {is*hs[0], js*hs[1], ks*hs[2]};

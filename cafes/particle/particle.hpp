@@ -1,9 +1,10 @@
 #ifndef PARTICLE_PARTICLE_HPP_INCLUDED
 #define PARTICLE_PARTICLE_HPP_INCLUDED
 
-// #include <array>
-// #include <algorithm>
-// #include <initializer_list>
+#include <array>
+#include <algorithm>
+#include <initializer_list>
+#include <numeric>
 #include <particle/physics/force.hpp>
 #include <particle/physics/velocity.hpp>
 #include <particle/geometry/box.hpp>

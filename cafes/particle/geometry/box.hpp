@@ -3,6 +3,7 @@
 
 #include <particle/geometry/position.hpp>
 #include <iostream>
+#include <vector>
 
 namespace cafes
 {
