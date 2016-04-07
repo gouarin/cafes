@@ -63,6 +63,10 @@ namespace cafes
             return *this;
         }
 
+        void fill(double value)
+        {
+          for(std::size_t i=0;i<Dimensions;++i) (*this)[i] = value;
+        }
       };
 
       template<std::size_t Dimensions>
