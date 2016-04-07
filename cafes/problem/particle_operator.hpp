@@ -191,14 +191,14 @@ namespace cafes
       for(auto& rpts: r){       
         for(std::size_t i=0; i<rpts.size(); ++i){
           g[ipart][i][0] -= particles[ipart].velocity_[0] 
-                          - particles[ipart].angular_velocity_[2]*r[ipart][i][1]
-                          + particles[ipart].angular_velocity_[1]*r[ipart][i][2];
+                          + particles[ipart].angular_velocity_[1]*r[ipart][i][2]
+                          - particles[ipart].angular_velocity_[2]*r[ipart][i][1];
           g[ipart][i][1] -= particles[ipart].velocity_[1] 
                           + particles[ipart].angular_velocity_[2]*r[ipart][i][0]
                           - particles[ipart].angular_velocity_[0]*r[ipart][i][2];
           g[ipart][i][2] -= particles[ipart].velocity_[2] 
-                          - particles[ipart].angular_velocity_[1]*r[ipart][i][0]
-                          + particles[ipart].angular_velocity_[0]*r[ipart][i][1];
+                          + particles[ipart].angular_velocity_[0]*r[ipart][i][1]
+                          - particles[ipart].angular_velocity_[1]*r[ipart][i][0];
           //g[ipart][i] -= particles[ipart].velocity_ + cross_product(r[ipart][i], particles[ipart].angular_velocity_);
         }
         ipart++;
@@ -210,7 +210,7 @@ namespace cafes
     #define __FUNCT__ "interp_fluid_to_surf"
     template<std::size_t Dimensions, typename Ctx>
     PetscErrorCode interp_fluid_to_surf(Ctx& ctx, std::vector<std::vector<std::array<double, Dimensions>>>& g,
-                                        bool rigid_motion = false)
+                                        bool rigid_motion = false, bool singularity = false)
     {
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
@@ -236,8 +236,12 @@ namespace cafes
         ipart++;
       }
 
-      if (rigid_motion){
+      if (rigid_motion)
+      {
         ierr = interp_rigid_motion_(ctx.particles, ctx.radial_vec, g);CHKERRQ(ierr);
+      }
+      if (singularity)
+      {
         ierr = singularity::add_singularity_to_surf<Dimensions, Ctx>(ctx, g);CHKERRQ(ierr);
       }
 
@@ -366,14 +370,13 @@ namespace cafes
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
-      if (ctx.compute_rhs){
+      if (ctx.compute_rhs)
+      {
         ierr = ctx.problem.setup_RHS();CHKERRQ(ierr);
-        ierr = io::save_VTK("Resultats", "rhs_before_sing", ctx.problem.rhs, ctx.problem.ctx->dm, ctx.problem.ctx->h);CHKERRQ(ierr);
-
+      }
+      if (ctx.compute_singularity)
+      {
         ierr = singularity::add_singularity_in_fluid<Dimensions, Ctx>(ctx);CHKERRQ(ierr);
-
-        ierr = io::save_VTK("Resultats", "rhs_after_sing", ctx.problem.rhs, ctx.problem.ctx->dm, ctx.problem.ctx->h);CHKERRQ(ierr);
-
       }
 
       ierr = set_rhs_problem<Dimensions, Ctx>(ctx, x, apply_forces);CHKERRQ(ierr);
@@ -383,10 +386,12 @@ namespace cafes
       ierr = DMCompositeGetEntries(ctx.problem.ctx->dm, &dav, nullptr);CHKERRQ(ierr);
       ierr = DMCompositeGetAccess(ctx.problem.ctx->dm, ctx.problem.rhs, &rhs, nullptr);CHKERRQ(ierr);
 
-      if (ctx.compute_rhs){
+      if (ctx.compute_rhs)
+      {
         ierr = SetDirichletOnRHS(dav, ctx.problem.ctx->bc_, rhs, ctx.problem.ctx->h);CHKERRQ(ierr);
       }
-      else{
+      else
+      {
         ierr = SetNullDirichletOnRHS(dav, ctx.problem.ctx->bc_, rhs, ctx.problem.ctx->h);CHKERRQ(ierr); 
       }
       ierr = DMCompositeRestoreAccess(ctx.problem.ctx->dm, ctx.problem.rhs, &rhs, nullptr);CHKERRQ(ierr);
@@ -484,8 +489,8 @@ namespace cafes
       for(std::size_t ipart=0; ipart<particles.size(); ++ipart){
         auto& p = particles[ipart];
         auto pbox = p.bounding_box(h);
-        std::array<double, Dimensions> mean_tmp{0};
-        std::array<double, Dimensions> cross_tmp{0};
+        std::array<double, Dimensions> mean_tmp{};
+        std::array<double, Dimensions> cross_tmp{};
         if (geometry::intersect(box, pbox)){
           auto new_box = geometry::box_inside(box, pbox);
 
@@ -501,7 +506,7 @@ namespace cafes
                         position_type pts_corner = {is*hs[0], js*hs[1], ks*hs[2]};
                         auto bfunc = fem::P1_integration(pts_corner, h);
                         auto ielem = fem::get_element(pts_i);
-                        std::array<double, Dimensions> tmp{0.};
+                        std::array<double, Dimensions> tmp{};
                         for(std::size_t ib=0; ib<bfunc.size(); ++ib)
                           for(std::size_t d=0; d<Dimensions; ++d)
                             tmp[d] += psol[ielem[ib][2]][ielem[ib][1]][ielem[ib][0]][d]*bfunc[ib];

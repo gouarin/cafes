@@ -46,6 +46,7 @@ namespace cafes
     struct particle_context{
       using position_type   = geometry::position<Dimensions, double>;
       using position_type_i = geometry::position<Dimensions, int>;
+      using force_type   = physics::force<Dimensions>;
 
       Problem_type& problem;
       std::vector<particle<Shape>>& particles;
@@ -53,9 +54,11 @@ namespace cafes
       std::vector<std::vector<position_type>> const& radial_vec;
       std::vector<int> const& nb_surf_points;
       std::vector<int> const& num;
+      std::vector<force_type>& forces;
       std::size_t scale;
       bool compute_rhs;
-      bool compute_sol;
+      bool add_rigid_motion;
+      bool compute_singularity;
     };
   }
 }

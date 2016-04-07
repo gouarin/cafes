@@ -41,11 +41,11 @@ namespace cafes
 
       std::vector<std::vector<std::array<double, Dimensions>>> g;
       g.resize(ctx->particles.size());
-      for(std::size_t ipart=0; ipart<ctx->surf_points.size(); ++ipart)       
+      for(std::size_t ipart=0; ipart<ctx->surf_points.size(); ++ipart)
         g[ipart].resize(ctx->surf_points[ipart].size());
 
       // interpolation
-      ierr = interp_fluid_to_surf(*ctx, g, ctx->compute_rhs);CHKERRQ(ierr);
+      ierr = interp_fluid_to_surf(*ctx, g, ctx->add_rigid_motion, ctx->compute_singularity);CHKERRQ(ierr);
 
       ierr = SL_to_Rhs(*ctx, g);CHKERRQ(ierr);
       
@@ -79,13 +79,14 @@ namespace cafes
       Mat A;
       KSP ksp;
       std::size_t scale_=4;
+      bool default_flags_ = true;
 
       using dpart_type = typename std::conditional<Dimensions == 2, 
                                   double, 
                                   std::array<double, 2>>::type;
       dpart_type dpart_; 
 
-      DtoN(std::vector<particle<Shape>>const& parts, Problem_type& p, dpart_type dpart):
+      DtoN(std::vector<particle<Shape>>& parts, Problem_type& p, dpart_type dpart):
       parts_{parts}, problem_{p}, dpart_{dpart}
       {
         problem_.setup_KSP();
@@ -133,31 +134,8 @@ namespace cafes
             
             auto radial_valid = find_radial_surf_points_insides(spts, new_box, h, p.center_);
             radial_vec_[ipart].assign(radial_valid.begin(), radial_valid.end());
-            
-            if (Dimensions == 2)
-            {
-              for(std::size_t j=new_box.bottom_left[1]; j<new_box.upper_right[1]; ++j)
-                for(std::size_t i=new_box.bottom_left[0]; i<new_box.upper_right[0]; ++i)
-                  for(std::size_t js=0; js<scale_; ++js)
-                    for(std::size_t is=0; is<scale_; ++is){
-                      position_type pts_2 = {i*h[0] + is*hs[0], j*h[1] + js*hs[1]};
-                        if (p.contains(pts_2)) 
-                          num_local[ipart]++;
-                      }
-            }
-            // else
-            // {
-            //   for(std::size_t k=new_box.bottom_left[2]; k<new_box.upper_right[2]; ++k)
-            //     for(std::size_t j=new_box.bottom_left[1]; j<new_box.upper_right[1]; ++j)
-            //       for(std::size_t i=new_box.bottom_left[0]; i<new_box.upper_right[0]; ++i)
-            //         for(std::size_t ks=0; ks<scale_; ++ks)
-            //           for(std::size_t js=0; js<scale_; ++js)
-            //             for(std::size_t is=0; is<scale_; ++is){
-            //               position_type pts_2 = {i*h[0] + is*hs[0], j*h[1] + js*hs[1], k*h[2] + ks*hs[2]};
-            //                 if (p.contains(pts_2)) 
-            //                   num_local[ipart]++;
-            //               }
-            // }
+
+            num_local[ipart] = pts.size();
           }
           ipart++;
         }
@@ -165,7 +143,8 @@ namespace cafes
         MPI_Allreduce(nb_surf_points_local.data(), nb_surf_points_.data(), parts_.size(), MPI_INT, MPI_SUM, PETSC_COMM_WORLD);
         MPI_Allreduce(num_local.data(), num_.data(), parts_.size(), MPI_INT, MPI_SUM, PETSC_COMM_WORLD);
 
-        ctx = new Ctx{problem_, parts_, surf_points_, radial_vec_, nb_surf_points_, num_, scale_, false, false};
+        std::vector<physics::force<Dimensions>> forces;
+        ctx = new Ctx{problem_, parts_, surf_points_, radial_vec_, nb_surf_points_, num_, forces, scale_, false, false};
 
         ierr = MatCreateShell(PETSC_COMM_WORLD, size*Dimensions, size*Dimensions, PETSC_DECIDE, PETSC_DECIDE, ctx, &A);CHKERRQ(ierr);
         ierr = MatShellSetOperation(A, MATOP_MULT, (void(*)(void))DtoN_matrix<Dimensions, Ctx>);CHKERRQ(ierr);
@@ -183,9 +162,12 @@ namespace cafes
         PetscErrorCode ierr;
         PetscFunctionBeginUser;
 
-        ctx->compute_rhs = true;
-        ctx->compute_sol = false;
-
+        if (default_flags_){
+          ctx->compute_rhs = true;
+          ctx->add_rigid_motion = true;
+          ctx->compute_singularity = true;
+        }
+        ierr = VecSet(sol, 0.);CHKERRQ(ierr);
         ierr = MatMult(A, sol, rhs);CHKERRQ(ierr);
         ierr = VecScale(rhs, -1.);CHKERRQ(ierr);
 
@@ -211,6 +193,28 @@ namespace cafes
         PetscFunctionReturn(0);
       }
 
+
+      #undef __FUNCT__
+      #define __FUNCT__ "solve_last_problem"
+      PetscErrorCode solve_last_problem()
+      {
+        PetscErrorCode ierr;
+        PetscFunctionBegin;
+        // solve the problem with the right control
+
+        if (default_flags_)
+        {
+          ctx->compute_rhs = true;
+          ctx->add_rigid_motion = true;
+          ctx->compute_singularity = true;
+        }
+
+        ierr = init_problem_1<Dimensions, Ctx>(*ctx, sol);CHKERRQ(ierr);
+        ierr = ctx->problem.solve();CHKERRQ(ierr);
+
+        PetscFunctionReturn(0);
+      }
+
       #undef __FUNCT__
       #define __FUNCT__ "solve"
       virtual PetscErrorCode solve() override
@@ -218,25 +222,27 @@ namespace cafes
         PetscErrorCode ierr;
         PetscFunctionBegin;
 
-        ctx->compute_rhs = false;
-        ctx->compute_sol = true;
+        if (default_flags_)
+        {
+          ctx->compute_rhs = false;
+          ctx->add_rigid_motion = false;
+          ctx->compute_singularity = true;
+        }
 
         ierr = KSPSolve(ksp, rhs, sol);CHKERRQ(ierr);
 
-        // solve the problem with the right control
-        ctx->compute_rhs = true;
-        ctx->compute_sol = true;
-        ierr = init_problem_1<Dimensions, Ctx>(*ctx, sol);CHKERRQ(ierr);
-        ierr = ctx->problem.solve();CHKERRQ(ierr);
+        if (default_flags_){
+          ierr = solve_last_problem();CHKERRQ(ierr);
+        }
 
         PetscFunctionReturn(0);
       }
 
-      };
+    };
   }
 
   template<typename PL, typename Problem_type, typename Dimensions = typename PL::value_type::dimension_type> 
-  auto make_DtoN(PL const& pt, Problem_type& p, 
+  auto make_DtoN(PL& pt, Problem_type& p, 
                 typename std::conditional<Dimensions::value == 2, double, 
                                   std::array<double, 2>>::type const& dpart)
   {
