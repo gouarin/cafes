@@ -190,7 +190,6 @@ namespace cafes
         PetscFunctionBeginUser;
 
         ctx->compute_rhs = true;
-        ctx->compute_sol = false;
 
         ierr = MatMult(A, sol, rhs);CHKERRQ(ierr);
         ierr = VecScale(rhs, -1.);CHKERRQ(ierr);
@@ -225,13 +224,11 @@ namespace cafes
         PetscFunctionBegin;
 
         ctx->compute_rhs = false;
-        ctx->compute_sol = true;
 
         ierr = KSPSolve(ksp, rhs, sol);CHKERRQ(ierr);
 
         // solve the problem with the right control
         ctx->compute_rhs = true;
-        ctx->compute_sol = true;
         ierr = init_problem_1<Dimensions, Ctx>(*ctx, sol, true);CHKERRQ(ierr);
         ierr = ctx->problem.solve();CHKERRQ(ierr);
 
