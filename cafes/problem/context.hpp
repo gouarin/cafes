@@ -54,7 +54,6 @@ namespace cafes
       std::vector<std::vector<position_type>> const& radial_vec;
       std::vector<int> const& nb_surf_points;
       std::vector<int> const& num;
-      std::vector<force_type>& forces;
       std::size_t scale;
       bool compute_rhs;
       bool add_rigid_motion;

@@ -2,6 +2,7 @@
 #define CAFES_PROBLEM_NTOD_HPP_INCLUDED
 
 #include <problem/dton.hpp>
+#include <particle/forces_torques.hpp>
 
 namespace cafes
 {
@@ -20,10 +21,12 @@ namespace cafes
       Ctx *ctx;
       ierr = MatShellGetContext(A, (void**) &ctx);CHKERRQ(ierr);
 
+      ierr = VecSet(ctx->problem.rhs, 0.);CHKERRQ(ierr);
+      ierr = VecSet(ctx->problem.sol, 0.);CHKERRQ(ierr);
+
       auto box = fem::get_DM_bounds<Dimensions>(ctx->problem.ctx->problem.ctx->dm, 0);
       auto& h = ctx->problem.ctx->problem.ctx->h;
 
-      // set velocity and angular velocity on particles
       std::size_t num = 0;
 
       if (ctx->compute_rhs)
@@ -47,21 +50,15 @@ namespace cafes
         {
           auto p = ctx->particles[ipart];
           auto pbox = p.bounding_box(h);
-          if (geometry::intersect(box, pbox)){
-            std::cout << "particle " << ipart << ":\n";
-            std::cout << "        velocity: ";
-            for(std::size_t d=0; d<Dimensions; ++d)
-              std::cout << px[num_print++] << " ";
-            std::cout << "\n";
-            std::cout << "    ang_velocity: ";
-            for(std::size_t d=0; d<Dimensions; ++d)
-              std::cout << px[num_print++] << " ";
-            std::cout << "\n";
-
+          if (geometry::intersect(box, pbox))
+          {
             for(std::size_t d=0; d<Dimensions; ++d)
               ctx->particles[ipart].velocity_[d] = px[num++];
-            for(std::size_t d=0; d<torque_size; ++d)
-              ctx->particles[ipart].angular_velocity_[d] = px[num++];
+            if (Dimensions == 2)
+              ctx->particles[ipart].angular_velocity_[2] = px[num++];
+            else
+              for(std::size_t d=0; d<Dimensions; ++d)
+                ctx->particles[ipart].angular_velocity_[d] = px[num++];
           }
         }
         ierr = VecRestoreArrayRead(x, &px);CHKERRQ(ierr);
@@ -76,73 +73,22 @@ namespace cafes
 
       ierr = ctx->problem.solve();CHKERRQ(ierr);
 
-      if (ctx->compute_rhs)
-      {
-        ctx->problem.ctx->compute_rhs = true;
-        ctx->problem.ctx->add_rigid_motion = false;
-        ctx->problem.ctx->compute_singularity = true;
-      }
-      else
-      {
-        ctx->problem.ctx->compute_rhs = false;
-        ctx->problem.ctx->add_rigid_motion = true;
-        ctx->problem.ctx->compute_singularity = true;
-      }
-      
-      //ierr = ctx->problem.solve_last_problem();CHKERRQ(ierr);
-      
-      if (ctx->compute_singularity)
-      {
-        ierr = singularity::compute_singular_forces(ctx->particles, ctx->forces, h, 100);CHKERRQ(ierr);
-      }
+      std::vector<double> forces, torques;
 
-      std::vector<double> mean, mean_local;
-      std::vector<double> cross_prod, cross_prod_local;
+      forces.resize(ctx->particles.size()*Dimensions);
+      torques.resize(ctx->particles.size()*torque_size);
 
-      mean_local.resize(ctx->particles.size()*Dimensions);
-      cross_prod_local.resize(ctx->particles.size()*torque_size);
+      std::fill(forces.begin(), forces.end(), 0.);
+      std::fill(torques.begin(), torques.end(), 0.);
 
-      std::fill(mean_local.begin(), mean_local.end(), 0.);
-      std::fill(cross_prod_local.begin(), cross_prod_local.end(), 0.);
-
-      mean.resize(ctx->particles.size()*Dimensions);
-      cross_prod.resize(ctx->particles.size()*torque_size);
-      std::fill(mean.begin(), mean.end(), 0.);
-      std::fill(cross_prod.begin(), cross_prod.end(), 0.);
-
-      num = 0;
-      PetscScalar const *pg;
-      ierr = VecGetArrayRead(ctx->problem.sol, &pg);CHKERRQ(ierr);
-
-      for(std::size_t ipart=0; ipart<ctx->particles.size(); ++ipart)
-      {
-        auto p = ctx->particles[ipart];
-        auto pbox = p.bounding_box(h);
-        if (geometry::intersect(box, pbox)){
-          auto new_box = geometry::overlap_box(box, pbox);
-          auto pts = find_fluid_points_insides(p, new_box, h);
-          for(auto& ind: pts){
-            std::array<double, Dimensions> g;
-            for(std::size_t d=0; d<Dimensions; ++d){
-              mean_local[ipart*Dimensions + d] += pg[num];
-              g[d] = pg[num++];
-            }
-            cafes::geometry::position<Dimensions, double> pos { ind[0]*h[0] - p.center_[0], ind[1]*h[1] - p.center_[1], ind[2]*h[2] - p.center_[2] };
-            cross_prod_local[ipart*Dimensions    ] += pos[1]*g[2] - pos[2]*g[1];
-            cross_prod_local[ipart*Dimensions + 1] += pos[2]*g[0] - pos[0]*g[2];
-            cross_prod_local[ipart*Dimensions + 2] += pos[0]*g[1] - pos[1]*g[0];
-          }       
-        }
-        for(std::size_t d=0; d<Dimensions; ++d){
-          mean_local[ipart*Dimensions + d] *= p.volume()/ctx->num[ipart];
-          cross_prod_local[ipart*Dimensions + d] *= p.volume()/ctx->num[ipart];
-        }
-
-      }
-      ierr = VecRestoreArrayRead(ctx->problem.sol, &pg);CHKERRQ(ierr);
-
-      MPI_Allreduce(mean_local.data(), mean.data(), mean.size(), MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
-      MPI_Allreduce(cross_prod_local.data(), cross_prod.data(), cross_prod.size(), MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
+      ierr = forces_torques_with_control(ctx->particles,
+                                         ctx->problem.sol,
+                                         box,
+                                         forces,
+                                         torques,
+                                         ctx->num,
+                                         h,
+                                         ctx->compute_singularity);CHKERRQ(ierr);
 
       // set y with the forces and the torques computed by DtoN
       num = 0;
@@ -153,32 +99,12 @@ namespace cafes
       {
         auto p = ctx->particles[ipart];
         auto pbox = p.bounding_box(h);
-        if (geometry::intersect(box, pbox)){
-          if (ctx->compute_singularity){
-            
-            std::cout << "particle " << ipart << ":\n";
-            std::cout << "    mean: ";
-            for(std::size_t d=0; d<Dimensions; ++d)
-              std::cout << mean[ipart*Dimensions + d] << " ";
-            std::cout << "\n";
-            std::cout << "    sing: ";
-            for(std::size_t d=0; d<Dimensions; ++d)
-              std::cout << ctx->forces[ipart][d] << " ";
-            std::cout << "\n";
-
-            for(std::size_t d=0; d<Dimensions; ++d)
-              py[num++] = ctx->forces[ipart][d] + mean[ipart*Dimensions + d];
-            for(std::size_t d=0; d<torque_size; ++d)
-              //py[num++] = ctx->particles[ipart].torque_[d] + vol*cross_prod[ipart*Dimensions + d];
-              py[num++] = cross_prod[ipart*Dimensions + d];
-          }
-          else
-          {
-            for(std::size_t d=0; d<Dimensions; ++d)
-              py[num++] = mean[ipart*Dimensions + d];
-            for(std::size_t d=0; d<torque_size; ++d)
-              py[num++] = cross_prod[ipart*Dimensions + d];
-          }
+        if (geometry::intersect(box, pbox))
+        {
+          for(std::size_t d=0; d<Dimensions; ++d)
+            py[num++] = forces[ipart*Dimensions + d];
+          for(std::size_t d=0; d<torque_size; ++d)
+            py[num++] = torques[ipart*Dimensions + d];
         }
       }
       ierr = VecRestoreArray(y, &py);CHKERRQ(ierr);
@@ -197,6 +123,7 @@ namespace cafes
       std::vector<force_type> forces_;
 
       Vec sol;
+      Vec stokes_sol_save;
       Vec rhs;
       Mat A;
       KSP ksp;
@@ -215,6 +142,7 @@ namespace cafes
         dton_.setup_KSP();
         dton_.default_flags_ = false;
         forces_.resize(dton_.parts_.size());
+        VecDuplicate(dton_.problem_.sol, &stokes_sol_save);
       }
 
       #undef __FUNCT__
@@ -230,7 +158,6 @@ namespace cafes
                       dton_.radial_vec_,
                       dton_.nb_surf_points_,
                       dton_.num_,
-                      forces_,
                       dton_.scale_,
                       false,
                       false,
@@ -272,6 +199,16 @@ namespace cafes
         ierr = MatMult(A, sol, rhs);CHKERRQ(ierr);
         ierr = VecScale(rhs, -1.);CHKERRQ(ierr);
 
+        // dton_.ctx->compute_rhs = true;
+        // dton_.ctx->add_rigid_motion = false;
+        // dton_.ctx->compute_singularity = true;
+
+        // ierr = dton_.solve_last_problem();CHKERRQ(ierr);
+
+        // // save Stokes sol
+        // ierr = VecCopy(dton_.problem_.sol, stokes_sol_save);CHKERRQ(ierr);
+        // ierr = cafes::io::save_VTK("Resultats", "stokes_sol_rhs", dton_.problem_.sol, dton_.problem_.ctx->dm, dton_.problem_.ctx->h);CHKERRQ(ierr);
+
         PetscFunctionReturn(0);
       }
 
@@ -302,6 +239,7 @@ namespace cafes
         PetscFunctionBegin;
 
         ctx->compute_rhs = false;
+        ctx->compute_singularity = true;
 
         ierr = KSPSolve(ksp, rhs, sol);CHKERRQ(ierr);
 
@@ -312,6 +250,8 @@ namespace cafes
 
         PetscScalar *psol;
         ierr = VecGetArray(sol, &psol);CHKERRQ(ierr);
+        int rank;
+        MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
 
         for (std::size_t ipart=0; ipart<ctx->particles.size(); ++ipart)
         {
@@ -323,11 +263,11 @@ namespace cafes
             for(std::size_t d=0; d<torque_size; ++d)
               ctx->particles[ipart].angular_velocity_[d] = psol[num++];
 
-            std::cout << "particle " << ipart << ":\n";
-            std::cout << "    velocity: ";
+            std::cout << "[" << rank << "] " << "particle " << ipart << ":\n";
+            std::cout << "[" << rank << "] " << "    velocity: ";
             for(std::size_t d=0; d<Dimensions; ++d)
               std::cout << psol[num_print++] << " ";
-            std::cout << "\n    angular_velocity: ";
+            std::cout << "\n" << "[" << rank << "] " <<  "    angular_velocity: ";
             for(std::size_t d=0; d<torque_size; ++d)
               std::cout << psol[num_print++] << " ";
             std::cout << "\n";
@@ -337,6 +277,8 @@ namespace cafes
 
         // solve the problem with the right control
         dton_.default_flags_ = true;
+        ierr = VecSet(dton_.sol, 0.);CHKERRQ(ierr);
+        ierr = VecSet(dton_.rhs, 0.);CHKERRQ(ierr);
         ierr = dton_.setup_RHS();CHKERRQ(ierr);
         ierr = dton_.solve();CHKERRQ(ierr);
 

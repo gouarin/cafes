@@ -143,8 +143,7 @@ namespace cafes
         MPI_Allreduce(nb_surf_points_local.data(), nb_surf_points_.data(), parts_.size(), MPI_INT, MPI_SUM, PETSC_COMM_WORLD);
         MPI_Allreduce(num_local.data(), num_.data(), parts_.size(), MPI_INT, MPI_SUM, PETSC_COMM_WORLD);
 
-        std::vector<physics::force<Dimensions>> forces;
-        ctx = new Ctx{problem_, parts_, surf_points_, radial_vec_, nb_surf_points_, num_, forces, scale_, false, false};
+        ctx = new Ctx{problem_, parts_, surf_points_, radial_vec_, nb_surf_points_, num_, scale_, false, false};
 
         ierr = MatCreateShell(PETSC_COMM_WORLD, size*Dimensions, size*Dimensions, PETSC_DECIDE, PETSC_DECIDE, ctx, &A);CHKERRQ(ierr);
         ierr = MatShellSetOperation(A, MATOP_MULT, (void(*)(void))DtoN_matrix<Dimensions, Ctx>);CHKERRQ(ierr);
@@ -167,7 +166,7 @@ namespace cafes
           ctx->add_rigid_motion = true;
           ctx->compute_singularity = true;
         }
-        ierr = VecSet(sol, 0.);CHKERRQ(ierr);
+
         ierr = MatMult(A, sol, rhs);CHKERRQ(ierr);
         ierr = VecScale(rhs, -1.);CHKERRQ(ierr);
 

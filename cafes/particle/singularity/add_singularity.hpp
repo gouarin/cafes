@@ -289,6 +289,78 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "compute_singular_forces_on_part1"
     template<typename Shape>
+    auto compute_singular_forces_on_part1(singularity<2, Shape> sing, std::size_t N)
+    {
+      using position_type = geometry::position<2, double>;
+
+      double mu = 1.;
+      double theta = std::asin(sing.cutoff_dist_*sing.H1_);
+
+      physics::force<2> force{};
+
+      for (std::size_t i=-N; i<N; ++i)
+      {
+        double cos_t = std::cos(i*theta/N);
+        double sin_t = std::sin(i*theta/N);
+        std::array< std::array<double, 2>, 2> sigma;
+
+        position_type pos{(cos_t - 1.)/sing.H1_, sin_t/sing.H1_};
+        position_type normal{cos_t, sin_t};
+
+        auto gradUsing = sing.get_grad_u_sing_ref(pos);
+        auto psing = sing.get_p_sing(pos);
+
+        sigma[0][0] = 2*mu*gradUsing[0][0] - psing;
+        sigma[0][1] = mu*(gradUsing[0][1] + gradUsing[1][0]);
+        sigma[1][0] = sigma[0][1];
+        sigma[1][1] = 2*mu*gradUsing[1][1] - psing;
+
+        for(std::size_t d1=0; d1<2; ++d1)
+          for(std::size_t d2=0; d2<2; ++d2)
+            force[d1] += theta/N/sing.H1_*sigma[d1][d2]*normal[d2];
+      }
+      return force;
+    }
+
+    #undef __FUNCT__
+    #define __FUNCT__ "compute_singular_forces_on_part2"
+    template<typename Shape>
+    auto compute_singular_forces_on_part2(singularity<2, Shape> sing, std::size_t N)
+    {
+      using position_type = geometry::position<2, double>;
+
+      double mu = 1.;
+      double theta = std::asin(sing.cutoff_dist_*sing.H1_);
+
+      physics::force<2> force{};
+
+      for (std::size_t i=-N; i<N; ++i)
+      {
+        double cos_t = std::cos(i*theta/N);
+        double sin_t = std::sin(i*theta/N);
+        std::array< std::array<double, 2>, 2> sigma;
+
+        position_type pos{(cos_t - 1.)/sing.H1_, sin_t/sing.H1_};
+        position_type normal{cos_t, sin_t};
+
+        auto gradUsing = sing.get_grad_u_sing_ref(pos);
+        auto psing = sing.get_p_sing(pos);
+
+        sigma[0][0] = 2*mu*gradUsing[0][0] - psing;
+        sigma[0][1] = mu*(gradUsing[0][1] + gradUsing[1][0]);
+        sigma[1][0] = sigma[0][1];
+        sigma[1][1] = 2*mu*gradUsing[1][1] - psing;
+
+        for(std::size_t d1=0; d1<2; ++d1)
+          for(std::size_t d2=0; d2<2; ++d2)
+            force[d1] += theta/N/sing.H1_*sigma[d1][d2]*normal[d2];
+      }
+      return force;
+    }
+
+    #undef __FUNCT__
+    #define __FUNCT__ "compute_singular_forces_on_part1"
+    template<typename Shape>
     auto compute_singular_forces_on_part1(singularity<3, Shape> sing, std::size_t N)
     {
       using position_type = geometry::position<3, double>;
@@ -423,7 +495,7 @@ namespace cafes
           if (sing.is_singularity_)
           {
             ctx.particles[ipart].force_ -= compute_singular_forces_on_part1(sing, N);
-            ctx.particles[jpart].force_ += compute_singular_forces_on_part2(sing, N);
+            ctx.particles[jpart].force_ -= compute_singular_forces_on_part2(sing, N);
           }
         }
       }
@@ -435,7 +507,7 @@ namespace cafes
     template<std::size_t Dimensions, typename Shape>
     PetscErrorCode compute_singular_forces(std::vector<particle<Shape>> const& particles,
                                            std::vector<physics::force<Dimensions>>& forces,
-                                           std::array<double, Dimensions>& h,
+                                           std::array<double, Dimensions> const& h,
                                            std::size_t N=100)
     { 
       PetscErrorCode ierr;
