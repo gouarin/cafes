@@ -17,3 +17,4 @@ include_directories(${PETSC_INCLUDE_CONF} ${PETSC_INCLUDE_DIR} ${MPI_INCLUDE_PAT
 
 ADD_SUBDIRECTORY(external_packages/qhull)
 ADD_SUBDIRECTORY(tests)
+ADD_SUBDIRECTORY(demos)

@@ -28,7 +28,7 @@ namespace cafes
         return 2*M_PI*shape_factors_[0];
       }
 
-      double voulume() const
+      double volume() const
       {
         return M_PI*shape_factors_[0]*shape_factors_[0];
       }
