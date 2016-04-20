@@ -36,8 +36,8 @@ namespace cafes
       ierr = VecSet(ctx->problem.rhs, 0.);CHKERRQ(ierr);
 
       ierr = init_problem_1<Dimensions, Ctx>(*ctx, x);CHKERRQ(ierr);
-
       ierr = ctx->problem.solve();CHKERRQ(ierr);
+      ierr = VecCopy(ctx->problem.sol, ctx->sol_tmp);CHKERRQ(ierr);
 
       std::vector<std::vector<std::array<double, Dimensions>>> g;
       g.resize(ctx->particles.size());
@@ -76,6 +76,7 @@ namespace cafes
       std::vector<int> num_;
       Vec sol;
       Vec rhs;
+      Vec sol_rhs, sol_g, sol_tmp;
       Mat A;
       KSP ksp;
       std::size_t scale_=4;
@@ -90,6 +91,9 @@ namespace cafes
       parts_{parts}, problem_{p}, dpart_{dpart}
       {
         problem_.setup_KSP();
+        VecDuplicate(problem_.sol, &sol_tmp);
+        VecDuplicate(problem_.sol, &sol_rhs);
+        VecDuplicate(problem_.sol, &sol_g);
       }
       
       #undef __FUNCT__
@@ -143,7 +147,7 @@ namespace cafes
         MPI_Allreduce(nb_surf_points_local.data(), nb_surf_points_.data(), parts_.size(), MPI_INT, MPI_SUM, PETSC_COMM_WORLD);
         MPI_Allreduce(num_local.data(), num_.data(), parts_.size(), MPI_INT, MPI_SUM, PETSC_COMM_WORLD);
 
-        ctx = new Ctx{problem_, parts_, surf_points_, radial_vec_, nb_surf_points_, num_, scale_, false, false};
+        ctx = new Ctx{problem_, parts_, surf_points_, radial_vec_, nb_surf_points_, num_, scale_, false, false, false, sol_tmp};
 
         ierr = MatCreateShell(PETSC_COMM_WORLD, size*Dimensions, size*Dimensions, PETSC_DECIDE, PETSC_DECIDE, ctx, &A);CHKERRQ(ierr);
         ierr = MatShellSetOperation(A, MATOP_MULT, (void(*)(void))DtoN_matrix<Dimensions, Ctx>);CHKERRQ(ierr);
@@ -169,6 +173,11 @@ namespace cafes
 
         ierr = MatMult(A, sol, rhs);CHKERRQ(ierr);
         ierr = VecScale(rhs, -1.);CHKERRQ(ierr);
+
+        ierr = VecCopy(sol_tmp, sol_rhs);CHKERRQ(ierr);
+        ierr = cafes::io::save_VTK("Resultats", "two_part_u0", sol_tmp, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
+        ierr = cafes::io::save_VTK("Resultats", "two_part_w0", problem_.sol, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
+        ierr = cafes::io::save_VTK("Resultats", "two_part_w0_rhs", problem_.rhs, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
 
         PetscFunctionReturn(0);
       }
@@ -201,6 +210,24 @@ namespace cafes
         PetscFunctionBegin;
         // solve the problem with the right control
 
+        ierr = VecSet(ctx->problem.rhs, 0.);CHKERRQ(ierr);
+
+        if (default_flags_)
+        {
+          ctx->compute_rhs = true;
+          ctx->add_rigid_motion = false;
+          ctx->compute_singularity = false;
+        }
+
+        ierr = init_problem_1<Dimensions, Ctx>(*ctx, sol);CHKERRQ(ierr);
+        //std::cout<<ctx->compute_rhs<<", "<<ctx->add_rigid_motion<<", "<<ctx->compute_singularity<<"\n";
+        //ierr = cafes::io::save_VTK("Resultats", "two_part_reg", sol, ctx->problem.ctx->dm, ctx->problem.ctx->h);CHKERRQ(ierr);
+
+        ierr = ctx->problem.solve();CHKERRQ(ierr);
+        ierr = cafes::io::save_VTK("Resultats", "two_part_tilde_ug", problem_.sol, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
+
+        ierr = VecSet(ctx->problem.rhs, 0.);CHKERRQ(ierr);
+
         if (default_flags_)
         {
           ctx->compute_rhs = true;
@@ -209,7 +236,11 @@ namespace cafes
         }
 
         ierr = init_problem_1<Dimensions, Ctx>(*ctx, sol);CHKERRQ(ierr);
+        //std::cout<<ctx->compute_rhs<<", "<<ctx->add_rigid_motion<<", "<<ctx->compute_singularity<<"\n";
+        //ierr = cafes::io::save_VTK("Resultats", "two_part_reg", sol, ctx->problem.ctx->dm, ctx->problem.ctx->h);CHKERRQ(ierr);
+
         ierr = ctx->problem.solve();CHKERRQ(ierr);
+        ierr = cafes::io::save_VTK("Resultats", "two_part_ureg", problem_.sol, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
 
         PetscFunctionReturn(0);
       }
@@ -225,12 +256,13 @@ namespace cafes
         {
           ctx->compute_rhs = false;
           ctx->add_rigid_motion = false;
-          ctx->compute_singularity = true;
+          ctx->compute_singularity = false;
         }
 
         ierr = KSPSolve(ksp, rhs, sol);CHKERRQ(ierr);
 
         if (default_flags_){
+          std::cout<<"Last Problem...\n";
           ierr = solve_last_problem();CHKERRQ(ierr);
         }
 

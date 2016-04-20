@@ -136,20 +136,13 @@ namespace cafes
       ierr = DMGetGlobalVector(ctx.problem.ctx->dm, &mass_mult);CHKERRQ(ierr);
 
       ierr = VecSet(forces, 0);CHKERRQ(ierr);
-      ierr = set_rhs_problem_<Dimensions, Ctx>(ctx, x, forces, true, std::integral_constant<int, Dimensions>{});CHKERRQ(ierr);
+      ierr = set_rhs_problem_<Dimensions, Ctx>(ctx, x, forces, apply_forces, std::integral_constant<int, Dimensions>{});CHKERRQ(ierr);
       ierr = fem::apply_mass_matrix(ctx.problem.ctx->dm, forces, mass_mult, ctx.problem.ctx->h);CHKERRQ(ierr);
       ierr = VecAXPY(ctx.problem.rhs, 1., mass_mult);CHKERRQ(ierr);
 
       ierr = DMRestoreGlobalVector(ctx.problem.ctx->dm, &mass_mult);CHKERRQ(ierr);
       ierr = DMRestoreGlobalVector(ctx.problem.ctx->dm, &forces);CHKERRQ(ierr);
 
-
-      DM dav;
-      Vec rhsv;
-      ierr = DMCompositeGetEntries(ctx.problem.ctx->dm, &dav, nullptr);CHKERRQ(ierr);
-      ierr = DMCompositeGetAccess(ctx.problem.ctx->dm, ctx.problem.rhs, &rhsv, nullptr);CHKERRQ(ierr);
-      ierr = SetDirichletOnRHS(dav, ctx.problem.ctx->bc_, rhsv, ctx.problem.ctx->h);CHKERRQ(ierr);
-      ierr = DMCompositeRestoreAccess(ctx.problem.ctx->dm, ctx.problem.rhs, &rhsv, nullptr);CHKERRQ(ierr);
       PetscFunctionReturn(0);
     }
 
@@ -165,6 +158,8 @@ namespace cafes
                                         array_2d_g& g){
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
+      
+      std::cout<<"add rigid motion to surf...\n";
 
       std::size_t ipart=0;
       for(auto& rpts: r){       
@@ -186,6 +181,7 @@ namespace cafes
                                         array_3d_g& g){
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
+      std::cout<<"add rigid motion to surf...\n";
 
       std::size_t ipart=0;
       for(auto& rpts: r){       
@@ -237,11 +233,11 @@ namespace cafes
       }
 
       if (rigid_motion)
-      {
+      { 
         ierr = interp_rigid_motion_(ctx.particles, ctx.radial_vec, g);CHKERRQ(ierr);
       }
       if (singularity)
-      {
+      { 
         ierr = singularity::add_singularity_to_surf<Dimensions, Ctx>(ctx, g);CHKERRQ(ierr);
       }
 
@@ -350,6 +346,12 @@ namespace cafes
           }
         }
       }
+
+      // if (ctx.compute_singularity)
+      // { 
+      //   ierr = singularity::add_singularity_to_surf<Dimensions, Ctx>(ctx, sol);CHKERRQ(ierr);
+      // }
+
       ierr = sol.local_to_global(ADD_VALUES);CHKERRQ(ierr);
 
       DM dav;

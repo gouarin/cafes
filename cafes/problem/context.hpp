@@ -58,6 +58,7 @@ namespace cafes
       bool compute_rhs;
       bool add_rigid_motion;
       bool compute_singularity;
+      Vec sol_tmp;
     };
   }
 }
