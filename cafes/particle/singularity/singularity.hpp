@@ -42,7 +42,7 @@ namespace cafes
       
       physics::velocity<Dimensions> vector_space_;
 
-      singularity(particle<Shape> const& p1, particle<Shape> const& p2, double h, double alpha=4, double treshold=1./5)
+      singularity(particle<Shape> const& p1, particle<Shape> const& p2, double h, double alpha=2, double treshold=1./5)
       : alpha_{alpha}, threshold_{treshold}
       {
         double dist = distance<Shape, Dimensions>(p1, p2);
@@ -55,6 +55,7 @@ namespace cafes
         contact_length_ = dist - r1 - r2;
         K_ = .5*(1./r1 + 1./r2);
 
+        std::cout << "K = " << K_ << ", H = " << H1_ << ", M = " << H2_ << "\n"; 
         auto minr = (r1 < r2)? r1: r2;
 
         auto tmp = alpha*std::sqrt(contact_length_/K_);
@@ -69,15 +70,15 @@ namespace cafes
         if (is_singularity_)
         {
           construct_base(p1, p2);
-          // std::cout << "#singularity base ";
-          // for(std::size_t d=0; d<Dimensions; ++d)
-          //   std::cout << base_[d] << " ";
-          // std::cout << "\n";
+          std::cout << "#singularity base ";
+          for(std::size_t d=0; d<Dimensions; ++d)
+            std::cout << base_[d] << " ";
+          std::cout << "\n";
 
           auto origin_comp = [r1](double x, double y){return x + r1*y;};
           std::transform(p1.center_.begin(), p1.center_.end(), base_[2*Dimensions-4].begin(), origin_.begin(), origin_comp);
 
-          //std::cout << "#singularity origin " << origin_ << "\n";
+          std::cout << "#singularity origin " << origin_ << "\n";
         }
       }
 

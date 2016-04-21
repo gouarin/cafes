@@ -368,6 +368,47 @@ namespace cafes
     }
 
     #undef __FUNCT__
+    #define __FUNCT__ "addsingularity"
+    template<typename Shape>
+    PetscErrorCode addsingularity(singularity<2, Shape> sing, 
+                                  particle<Shape> const& p1, particle<Shape> const& p2,
+                                  petsc::petsc_vec<2>& sol,
+                                  geometry::box<2, int> box,
+                                  std::array<double, 2> const& h)
+    {
+      PetscErrorCode ierr;
+      PetscFunctionBeginUser;
+
+      const int Dimensions = 2;
+      using position_type = geometry::position<Dimensions, double>;
+      using position_type_i = geometry::position<Dimensions, int>;
+
+      for(std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j)
+      {
+        for(std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i)
+        {
+          std::array<int, 2> pts_i = {{static_cast<int>(i), static_cast<int>(j)}};
+          position_type pts = {i*h[0], j*h[1]};
+
+          if (!p1.contains(pts) && !p2.contains(pts))
+          {
+            std::cout << "add sing \n";
+            auto pos_ref_part = sing.get_pos_in_part_ref(pts);
+
+            if (std::abs(pos_ref_part[1]) < sing.cutoff_dist_)
+            {
+              auto Using = sing.get_u_sing(pts);
+              auto u = sol.at(pts_i);
+              for (std::size_t d=0; d<Dimensions; ++d)
+                u[d] -= Using[d];
+            }
+          }
+        }
+      }
+      PetscFunctionReturn(0);
+    }
+
+    #undef __FUNCT__
     #define __FUNCT__ "add_singularity_in_fluid"
     template<std::size_t Dimensions, typename Ctx>
     PetscErrorCode add_singularity_in_fluid(Ctx& ctx)
@@ -426,6 +467,51 @@ namespace cafes
 
       ierr = sol.local_to_global(ADD_VALUES);CHKERRQ(ierr);
       // ierr = solp.local_to_global(ADD_VALUES);CHKERRQ(ierr);
+
+      PetscFunctionReturn(0);
+    }
+
+    #undef __FUNCT__
+    #define __FUNCT__ "add_singularity_to_last_sol"
+    template<std::size_t Dimensions, typename Ctx>
+    PetscErrorCode add_singularity_to_last_sol(Ctx& ctx, Vec vsol)
+    {
+      PetscErrorCode ierr;
+      PetscFunctionBeginUser;
+
+      auto union_box_func = geometry::union_box<Dimensions, int>;
+
+      auto box = fem::get_DM_bounds<Dimensions>(ctx.problem.ctx->dm, 0);
+      auto& h = ctx.problem.ctx->h;
+
+      auto sol = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, vsol, 0, true);
+
+      ierr = sol.global_to_local(INSERT_VALUES);CHKERRQ(ierr);
+
+      //Loop on particles couples
+      for (std::size_t ipart=0; ipart<ctx.particles.size()-1; ++ipart)
+      {
+        auto p1 = ctx.particles[ipart];
+        for (std::size_t jpart=ipart+1; jpart<ctx.particles.size(); ++jpart)
+        {
+          auto p2 = ctx.particles[jpart];
+
+          using shape_type = typename decltype(p1)::shape_type;
+          auto sing = singularity<Dimensions, shape_type>(p1, p2, h[0]);
+
+          if (sing.is_singularity_)
+          {
+            auto pbox = sing.get_box(h);
+            if (geometry::intersect(box, pbox))
+            {
+              auto new_box = geometry::box_inside(box, pbox);
+              ierr = addsingularity(sing, p1, p2, sol, new_box, h);CHKERRQ(ierr);
+            }
+          }
+        }
+      }
+
+      ierr = sol.local_to_global(ADD_VALUES);CHKERRQ(ierr);
 
       PetscFunctionReturn(0);
     }
@@ -866,8 +952,8 @@ namespace cafes
                   auto psing = sing.get_p_sing(pts);
                   // Add points to vtk + singular value to vtk
                   velocity_sing->InsertNextTuple3(Using[0], Using[1], 0.);
-                  gradx_velocity_sing->InsertNextTuple3(gradUsing[0][0], gradUsing[0][1], 0.);
-                  grady_velocity_sing->InsertNextTuple3(gradUsing[1][0], gradUsing[1][1], 0.);
+                  gradx_velocity_sing->InsertNextTuple3(gradUsing[0][0], gradUsing[1][0], 0.);
+                  grady_velocity_sing->InsertNextTuple3(gradUsing[0][1], gradUsing[1][1], 0.);
                   pressure_sing->InsertNextValue(psing);
                 }
               }

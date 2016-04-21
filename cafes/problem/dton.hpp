@@ -242,6 +242,9 @@ namespace cafes
         ierr = ctx->problem.solve();CHKERRQ(ierr);
         ierr = cafes::io::save_VTK("Resultats", "two_part_ureg", problem_.sol, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
 
+        ierr = singularity::add_singularity_to_last_sol<Dimensions, Ctx>(*ctx, problem_.sol);CHKERRQ(ierr);
+        ierr = cafes::io::save_VTK("Resultats", "two_part_u", problem_.sol, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
+
         PetscFunctionReturn(0);
       }
 
