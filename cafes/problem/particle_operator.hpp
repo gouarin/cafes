@@ -236,10 +236,10 @@ namespace cafes
       { 
         ierr = interp_rigid_motion_(ctx.particles, ctx.radial_vec, g);CHKERRQ(ierr);
       }
-      if (singularity)
-      { 
-        ierr = singularity::add_singularity_to_surf<Dimensions, Ctx>(ctx, g);CHKERRQ(ierr);
-      }
+      // if (singularity)
+      // { 
+      //   ierr = singularity::add_singularity_to_surf<Dimensions, Ctx>(ctx, g);CHKERRQ(ierr);
+      // }
 
       PetscFunctionReturn(0);
     }
@@ -347,10 +347,10 @@ namespace cafes
         }
       }
 
-      // if (ctx.compute_singularity)
-      // { 
-      //   ierr = singularity::add_singularity_to_surf<Dimensions, Ctx>(ctx, sol);CHKERRQ(ierr);
-      // }
+      if (ctx.compute_singularity)
+      { 
+        ierr = singularity::add_singularity_to_surf<Dimensions, Ctx>(ctx, sol);CHKERRQ(ierr);
+      }
 
       ierr = sol.local_to_global(ADD_VALUES);CHKERRQ(ierr);
 

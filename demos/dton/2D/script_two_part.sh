@@ -10,5 +10,5 @@ mpiexec -n $nproc $exec \
     -dton_ksp_rtol 1e-2 \
     -dton_ksp_type gcr \
     -dton_ksp_monitor \
-    -mx 65 \
-    -my 65
+    -mx 129 \
+    -my 129

@@ -59,7 +59,7 @@ namespace cafes
               {
                 auto pos_ref_part = sing.get_pos_in_part_ref(pts);
 
-                if (std::abs(pos_ref_part[1]) < sing.cutoff_dist_)
+                if (std::abs(pos_ref_part[1]) <= sing.cutoff_dist_)
                 {
                   position_type pts_loc = {is*hs[0], js*hs[1]};
 
@@ -68,15 +68,15 @@ namespace cafes
                   auto gradUsing = sing.get_grad_u_sing(pts);
                   auto psing = sing.get_p_sing(pts);
                   
-                  for (std::size_t j=0; j<bfunc.size(); ++j)
+                  for (std::size_t je=0; je<bfunc.size(); ++je)
                   {
-                    auto u = sol.at(ielem[j]);
+                    auto u = sol.at(ielem[je]);
 
                     for (std::size_t d1=0; d1<Dimensions; ++d1)
                     {
                       for (std::size_t d2=0; d2<Dimensions; ++d2)
-                        u[d1] -= coef*gradUsing[d1][d2]*bfunc[j][d2];
-                    u[d1] += coef*psing*bfunc[j][d1];
+                        u[d1] -= coef*gradUsing[d1][d2]*bfunc[je][d2];
+                    u[d1] += coef*psing*bfunc[je][d1];
                     }
                   }
                 }
@@ -124,7 +124,7 @@ namespace cafes
     //           {
     //             auto pos_ref_part = sing.get_pos_in_part_ref(pts);
 
-    //             if (std::abs(pos_ref_part[1]) < sing.cutoff_dist_)
+    //             if (std::abs(pos_ref_part[1]) <= sing.cutoff_dist_)
     //             {
     //               position_type pts_loc = {is*hs[0], js*hs[1]};
 
@@ -132,11 +132,11 @@ namespace cafes
 
     //               auto divUsing = sing.get_divu_sing(pts);
                   
-    //               for (std::size_t j=0; j<bfunc.size(); ++j)
+    //               for (std::size_t je=0; je<bfunc.size(); ++je)
     //               {
-    //                 auto u = sol.at(ielem[j]);
+    //                 auto u = sol.at(ielem[je]);
 
-    //                 u[0] -= coef*divUsing*bfunc[j];
+    //                 u[0] -= coef*divUsing*bfunc[je];
     //               }
     //             }
     //           }
@@ -199,15 +199,15 @@ namespace cafes
                     auto gradUsing = sing.get_grad_u_sing(pts);
                     auto psing = sing.get_p_sing(pts);
                     
-                    for (std::size_t j=0; j<bfunc.size(); ++j)
+                    for (std::size_t je=0; je<bfunc.size(); ++je)
                     {
-                      auto u = sol.at(ielem[j]);
+                      auto u = sol.at(ielem[je]);
 
                       for (std::size_t d1=0; d1<Dimensions; ++d1)
                       {
                         for (std::size_t d2=0; d2<Dimensions; ++d2)
-                          u[d1] -= coef*gradUsing[d1][d2]*bfunc[j][d2];
-                      u[d1] += coef*psing*bfunc[j][d1];
+                          u[d1] -= coef*gradUsing[d1][d2]*bfunc[je][d2];
+                      u[d1] += coef*psing*bfunc[je][d1];
                       }
                     }
                   }
@@ -236,7 +236,6 @@ namespace cafes
 
       double theta = std::asin(sing.cutoff_dist_*sing.H1_);
       int N = sing.cutoff_dist_/h[0]*sing.scale;
-      std::cout << "N " << N << "\n";
 
       // first particle
       for (int i=-N; i<N; ++i)
@@ -267,11 +266,11 @@ namespace cafes
           auto bfunc = fem::P1_integration(spts, h);
           auto ielem = fem::get_element(pos_i);
 
-          for (std::size_t j=0; j<bfunc.size(); ++j)
+          for (std::size_t je=0; je<bfunc.size(); ++je)
           {
-            auto u = sol.at(ielem[j]);
+            auto u = sol.at(ielem[je]);
             for (std::size_t d=0; d<2; ++d)
-              u[d] += Using[d]*bfunc[j]*theta/N/sing.H1_;
+              u[d] += Using[d]*bfunc[je]*theta/N/sing.H1_;
           }          
         }
       }
@@ -305,11 +304,11 @@ namespace cafes
           auto bfunc = fem::P1_integration(spts, h);
           auto ielem = fem::get_element(pos_i);
           
-          for (std::size_t j=0; j<bfunc.size(); ++j)
+          for (std::size_t je=0; je<bfunc.size(); ++je)
           {
-            auto u = sol.at(ielem[j]);
+            auto u = sol.at(ielem[je]);
             for (std::size_t d=0; d<2; ++d)
-              u[d] += Using[d]*bfunc[j]*theta/N/sing.H2_;
+              u[d] += Using[d]*bfunc[je]*theta/N/sing.H2_;
           }          
         }
       }
@@ -338,12 +337,11 @@ namespace cafes
         if (geometry::point_inside(box, pos))
         {
           auto pos_ref_part = sing.get_pos_in_part_ref(pos);
-          if (std::abs(pos_ref_part[1]) < sing.cutoff_dist_)
+          if (std::abs(pos_ref_part[1]) <= sing.cutoff_dist_)
           {
             auto Using = sing.get_u_sing(pos);
             for (std::size_t d=0; d<Dimensions; ++d)
               g[ipart_1][isurf][d] += Using[d];
-            std::cout << "part 1 " << pos << " " << g[ipart_1][isurf][0] << "\n"; 
           }
         }
       }
@@ -354,12 +352,11 @@ namespace cafes
         if (geometry::point_inside(box, pos))
         {
           auto pos_ref_part = sing.get_pos_in_part_ref(pos);
-          if (std::abs(pos_ref_part[1]) < sing.cutoff_dist_)
+          if (std::abs(pos_ref_part[1]) <= sing.cutoff_dist_)
           {
             auto Using = sing.get_u_sing(pos);
             for (std::size_t d=0; d<Dimensions; ++d)
               g[ipart_2][isurf][d] += Using[d];
-            std::cout << "part 2 " << pos << " " << g[ipart_2][isurf][0] << "\n"; 
           }
         }
       }
@@ -383,28 +380,73 @@ namespace cafes
       using position_type = geometry::position<Dimensions, double>;
       using position_type_i = geometry::position<Dimensions, int>;
 
+      std::array<double, Dimensions> hs = {{h[0]/sing.scale, h[1]/sing.scale}};
+      double coef = 3./4/(sing.scale*sing.scale);
+
       for(std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j)
       {
         for(std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i)
         {
-          std::array<int, 2> pts_i = {{static_cast<int>(i), static_cast<int>(j)}};
-          position_type pts = {i*h[0], j*h[1]};
+          position_type_i pts_i = {i, j};
+          auto ielem = fem::get_element(pts_i);
 
-          if (!p1.contains(pts) && !p2.contains(pts))
+          for(std::size_t js=0; js<sing.scale; ++js)
           {
-            std::cout << "add sing \n";
-            auto pos_ref_part = sing.get_pos_in_part_ref(pts);
-
-            if (std::abs(pos_ref_part[1]) < sing.cutoff_dist_)
+            for(std::size_t is=0; is<sing.scale; ++is)
             {
-              auto Using = sing.get_u_sing(pts);
-              auto u = sol.at(pts_i);
-              for (std::size_t d=0; d<Dimensions; ++d)
-                u[d] -= Using[d];
+              position_type pts = {i*h[0] + is*hs[0], j*h[1] + js*hs[1]};
+
+              if (!p1.contains(pts) && !p2.contains(pts))
+              {
+                auto pos_ref_part = sing.get_pos_in_part_ref(pts);
+
+                if (std::abs(pos_ref_part[1]) <= sing.cutoff_dist_)
+                {
+                  position_type pts_loc = {is*hs[0], js*hs[1]};
+
+                  auto bfunc = fem::P1_integration(pts_loc, h);
+
+                  auto Using = sing.get_u_sing(pts);
+                  
+                  for (std::size_t je=0; je<bfunc.size(); ++je)
+                  {
+                    auto u = sol.at(ielem[je]);
+
+                    for (std::size_t d=0; d<Dimensions; ++d)
+                      u[d] += coef*Using[d]*bfunc[je];
+                  }
+                }
+              }
             }
           }
         }
       }
+
+      // const int Dimensions = 2;
+      // using position_type = geometry::position<Dimensions, double>;
+      // using position_type_i = geometry::position<Dimensions, int>;
+
+      // for(std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j)
+      // {
+      //   for(std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i)
+      //   {
+      //     std::array<int, 2> pts_i = {{static_cast<int>(i), static_cast<int>(j)}};
+      //     position_type pts{i*h[0], j*h[1]};
+
+      //     if (!p1.contains(pts) && !p2.contains(pts))
+      //     {
+      //       auto pos_ref_part = sing.get_pos_in_part_ref(pts);
+
+      //       if (std::abs(pos_ref_part[1]) <= sing.cutoff_dist_)
+      //       {
+      //         auto Using = sing.get_u_sing(pts);
+      //         auto u = sol.at(pts_i);
+      //         for (std::size_t d=0; d<Dimensions; ++d)
+      //           u[d] += Using[d];
+      //       }
+      //     }
+      //   }
+      // }
       PetscFunctionReturn(0);
     }
 
@@ -484,7 +526,7 @@ namespace cafes
       auto box = fem::get_DM_bounds<Dimensions>(ctx.problem.ctx->dm, 0);
       auto& h = ctx.problem.ctx->h;
 
-      auto sol = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, vsol, 0, true);
+      auto sol = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, vsol, 0, false);
 
       ierr = sol.global_to_local(INSERT_VALUES);CHKERRQ(ierr);
 
@@ -511,7 +553,7 @@ namespace cafes
         }
       }
 
-      ierr = sol.local_to_global(ADD_VALUES);CHKERRQ(ierr);
+      ierr = sol.local_to_global(INSERT_VALUES);CHKERRQ(ierr);
 
       PetscFunctionReturn(0);
     }
@@ -936,13 +978,14 @@ namespace cafes
             for(std::size_t is=0; is<sing.scale; ++is){
               position_type pts = {i*h[0] + is*hs[0], j*h[1] + js*hs[1]};
               singPoints->InsertNextPoint(pts[0], pts[1], 0.);
+
               bool add_sing = false;
 
               if (!p1.contains(pts) && !p2.contains(pts))
               {
                 auto pos_ref_part = sing.get_pos_in_part_ref(pts);
 
-                if (std::abs(pos_ref_part[1]) < sing.cutoff_dist_)
+                if (std::abs(pos_ref_part[1]) <= sing.cutoff_dist_)
                 {
                   add_sing = true;
                   //position_type pts_loc = {is*hs[0], js*hs[1]};
@@ -1066,7 +1109,7 @@ namespace cafes
                   {
                     auto pos_ref_part = sing.get_pos_in_part_ref(pts);
 
-                    if (std::abs(pos_ref_part[1]) < sing.cutoff_dist_)
+                    if (std::abs(pos_ref_part[1]) <= sing.cutoff_dist_)
                     {
                       add_sing = true;
                       //position_type pts_loc = {is*hs[0], js*hs[1], ks*hs[2]};
@@ -1158,7 +1201,7 @@ namespace cafes
             //                            {geometry::floor((p2.center_ - sing.cutoff_dist_)/h), 
             //                             geometry::ceil((p2.center_ + sing.cutoff_dist_)/h)});
             auto pbox = sing.get_box(h);
-            std::cout << box << " " << pbox << "\n";
+
             if (geometry::intersect(box, pbox))
             {
               auto new_box = geometry::box_inside(box, pbox);

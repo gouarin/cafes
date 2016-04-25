@@ -279,7 +279,7 @@ namespace cafes
 
         bool contains(position_type const& p) const
         {
-           return implicit(p) <= 1.;
+           return implicit(p) < 1.;
         }
 
         private:

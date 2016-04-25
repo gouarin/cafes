@@ -42,7 +42,7 @@ namespace cafes
       
       physics::velocity<Dimensions> vector_space_;
 
-      singularity(particle<Shape> const& p1, particle<Shape> const& p2, double h, double alpha=2, double treshold=1./5)
+      singularity(particle<Shape> const& p1, particle<Shape> const& p2, double h, double alpha=4, double treshold=1./5)
       : alpha_{alpha}, threshold_{treshold}
       {
         double dist = distance<Shape, Dimensions>(p1, p2);
@@ -62,10 +62,11 @@ namespace cafes
         cutoff_dist_ = (tmp < minr)? tmp : minr;
 
         cutoff_dist_ = (cutoff_dist_ <= std::sqrt(2)*h)? std::sqrt(2)*h : cutoff_dist_; 
-
+        std::cout << "cutoff_dist " << cutoff_dist_ << "\n";
         param_ = .5*cutoff_dist_*cutoff_dist_;
         //is_singularity_ = contact_length_<threshold_*cutoff_dist_;
-        is_singularity_ = contact_length_<threshold_*minr;
+        //is_singularity_ = contact_length_<threshold_*minr;
+        is_singularity_ = contact_length_<1;
 
         if (is_singularity_)
         {

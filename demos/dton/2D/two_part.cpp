@@ -32,14 +32,16 @@ int main(int argc, char **argv)
     
     auto st = cafes::make_stokes<dim>(bc, rhs);
 
-    double R1   = .1;
-    double R2   = .1;
-    double dist = .1/6;
+    double R1   = .05;
+    double R2   = .05;
+    double dist = .05/2;
 
     auto se1 = cafes::make_circle( { .5-R1-dist/2, .5}, R1, 0);
     auto se2 = cafes::make_circle( { .5+R2+dist/2, .5}, R2, 0);
-    std::vector<cafes::particle<decltype(se1)>> pt{ cafes::make_particle(se1, { 1., 0.}, {0.,0.,0.}),
-	                                            cafes::make_particle(se2, {-1., 0.}, {0.,0.,0.})};
+    // std::vector<cafes::particle<decltype(se1)>> pt{ cafes::make_particle(se1, { 1., 0.}, {0.,0.,0.}),
+    //                                           cafes::make_particle(se2, {-1., 0.}, {0.,0.,0.})};
+    std::vector<cafes::particle<decltype(se1)>> pt{ cafes::make_particle(se2, { -1., 0.}, {0.,0.,0.}),
+                                              cafes::make_particle(se1, {1., 0.}, {0.,0.,0.})};
 
     auto s = cafes::make_DtoN(pt, st, .1);
     

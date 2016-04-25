@@ -81,6 +81,7 @@ namespace cafes
       KSP ksp;
       std::size_t scale_=4;
       bool default_flags_ = true;
+      bool use_sing = true;
 
       using dpart_type = typename std::conditional<Dimensions == 2, 
                                   double, 
@@ -168,7 +169,7 @@ namespace cafes
         if (default_flags_){
           ctx->compute_rhs = true;
           ctx->add_rigid_motion = true;
-          ctx->compute_singularity = true;
+          ctx->compute_singularity = use_sing;
         }
 
         ierr = MatMult(A, sol, rhs);CHKERRQ(ierr);
@@ -214,7 +215,7 @@ namespace cafes
 
         if (default_flags_)
         {
-          ctx->compute_rhs = true;
+          ctx->compute_rhs = false;
           ctx->add_rigid_motion = false;
           ctx->compute_singularity = false;
         }
@@ -226,13 +227,16 @@ namespace cafes
         ierr = ctx->problem.solve();CHKERRQ(ierr);
         ierr = cafes::io::save_VTK("Resultats", "two_part_tilde_ug", problem_.sol, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
 
+        VecAXPY(problem_.sol, 1, sol_rhs);
+        ierr = cafes::io::save_VTK("Resultats", "two_part_new_u", problem_.sol, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
+
         ierr = VecSet(ctx->problem.rhs, 0.);CHKERRQ(ierr);
 
         if (default_flags_)
         {
           ctx->compute_rhs = true;
           ctx->add_rigid_motion = true;
-          ctx->compute_singularity = true;
+          ctx->compute_singularity = use_sing;
         }
 
         ierr = init_problem_1<Dimensions, Ctx>(*ctx, sol);CHKERRQ(ierr);
@@ -242,7 +246,10 @@ namespace cafes
         ierr = ctx->problem.solve();CHKERRQ(ierr);
         ierr = cafes::io::save_VTK("Resultats", "two_part_ureg", problem_.sol, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
 
-        ierr = singularity::add_singularity_to_last_sol<Dimensions, Ctx>(*ctx, problem_.sol);CHKERRQ(ierr);
+        if (use_sing)
+        {
+          ierr = singularity::add_singularity_to_last_sol<Dimensions, Ctx>(*ctx, problem_.sol);CHKERRQ(ierr);
+        }
         ierr = cafes::io::save_VTK("Resultats", "two_part_u", problem_.sol, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
 
         PetscFunctionReturn(0);

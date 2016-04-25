@@ -614,7 +614,11 @@ namespace cafes
 
         std::size_t i = 0;
         for(auto& p: particles){
-          spheresPoints->SetPoint(i, p.center_[0], p.center_[1], p.center_[2]);
+          // fix this for 2D and 3D problem
+          // in 3D
+          //spheresPoints->SetPoint(i, p.center_[0], p.center_[1], p.center_[2]);
+          // in 2D
+          spheresPoints->SetPoint(i, p.center_[0], p.center_[1], 0.);
           shperesRadius->SetValue(i, p.shape_factors_[0]);
           i++;
         }
