@@ -268,10 +268,10 @@ namespace cafes
             mean_local[ipart*Dimensions + d] += g[ipart][isurf][d];
 
           if (Dimensions == 2)
-            cross_prod_local[ipart] += geometry::cross_product(ctx.radial_vec[ipart][isurf], g[ipart][isurf]);
+            //cross_prod_local[ipart] += geometry::cross_product(ctx.radial_vec[ipart][isurf], g[ipart][isurf]);
 
-            //cross_prod_local[ipart] += ctx.radial_vec[ipart][isurf][0]*g[ipart][isurf][1]
-            //                         - ctx.radial_vec[ipart][isurf][1]*g[ipart][isurf][0];
+            cross_prod_local[ipart] += ctx.radial_vec[ipart][isurf][0]*g[ipart][isurf][1]
+                                     - ctx.radial_vec[ipart][isurf][1]*g[ipart][isurf][0];
           else{
             cross_prod_local[ipart*Dimensions]     += ctx.radial_vec[ipart][isurf][1]*g[ipart][isurf][2]
                                                     - ctx.radial_vec[ipart][isurf][2]*g[ipart][isurf][1];
@@ -347,10 +347,10 @@ namespace cafes
         }
       }
 
-      if (ctx.compute_singularity)
-      { 
-        ierr = singularity::add_singularity_to_surf<Dimensions, Ctx>(ctx, sol);CHKERRQ(ierr);
-      }
+      // if (ctx.compute_singularity)
+      // { 
+      //   ierr = singularity::add_singularity_to_surf<Dimensions, Ctx>(ctx, sol);CHKERRQ(ierr);
+      // }
 
       ierr = sol.local_to_global(ADD_VALUES);CHKERRQ(ierr);
 
@@ -636,7 +636,7 @@ namespace cafes
       const int Dimensions = 3;
       using position_type = geometry::position<Dimensions, double>;
 
-      PetscScalar ***psol;
+      PetscScalar ****psol;
       ierr = DMDAVecGetArrayDOFRead(dm, sol, &psol);CHKERRQ(ierr);
 
       int num = 0;

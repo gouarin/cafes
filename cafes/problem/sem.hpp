@@ -235,7 +235,38 @@ namespace cafes
         PetscFunctionReturn(0);
       }
 
-      };
+      #undef __FUNCT__
+      #define __FUNCT__ "get_new_velocities"
+      PetscErrorCode get_new_velocities()
+      {
+        PetscErrorCode ierr;
+        PetscFunctionBegin;
+
+        std::vector<std::vector<std::array<double, Dimensions>>> g;
+        g.resize(ctx->particles.size());
+        for(std::size_t ipart=0; ipart<ctx->surf_points.size(); ++ipart)       
+          g[ipart].resize(ctx->surf_points[ipart].size());
+
+        // interpolation
+        ierr = interp_fluid_to_surf(*ctx, g);CHKERRQ(ierr);
+
+        std::vector<double> mean;
+        std::vector<double> cross_prod;
+
+        mean.resize(ctx->particles.size()*Dimensions);
+        cross_prod.resize(ctx->particles.size()*((Dimensions==2)?1:3));
+
+        // simplify this part: we only need to compute mean to set 
+        // the new velocity
+        ierr = simple_layer(*ctx, g, mean, cross_prod);CHKERRQ(ierr);
+
+        for(std::size_t ipart=0; ipart<ctx->particles.size(); ++ipart)
+          for(std::size_t d=0; d<Dimensions; ++d)
+            parts_[ipart].velocity_[d] = mean[ipart*Dimensions + d];
+          
+        PetscFunctionReturn(0);
+      }
+    };
   }
 
   template<typename PL, typename Problem_type, typename Dimensions = typename PL::value_type::dimension_type> 
