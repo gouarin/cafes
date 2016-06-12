@@ -381,7 +381,7 @@ namespace cafes
       using position_type_i = geometry::position<Dimensions, int>;
 
       std::array<double, Dimensions> hs = {{h[0]/sing.scale, h[1]/sing.scale}};
-      double coef = 3./4/(sing.scale*sing.scale);
+      double coef = 1./(sing.scale*sing.scale);
 
       for(std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j)
       {
