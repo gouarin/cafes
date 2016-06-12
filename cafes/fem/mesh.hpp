@@ -162,6 +162,23 @@ namespace cafes
         #undef __FUNCT__
         #define __FUNCT__ "createDMDA"
         PetscErrorCode createDMDA(DM& dm, 
+                                  std::array<int, 2> const& mvel, 
+                                  std::array<DMBoundaryType, 2> const& b_type, 
+                                  std::array<PetscBool, 2> const& period)
+        {
+            PetscErrorCode   ierr;
+            PetscFunctionBeginUser;
+
+            ierr = DMDACreate2d(PETSC_COMM_WORLD, b_type[0], b_type[1], DMDA_STENCIL_BOX,
+                                mvel[0], mvel[1], PETSC_DECIDE, PETSC_DECIDE,
+                                1, 1, 0, 0, &dm);CHKERRQ(ierr);
+            ierr = DMDASetFieldName(dm, 0, "u");CHKERRQ(ierr);
+            PetscFunctionReturn(0);
+        }
+
+        #undef __FUNCT__
+        #define __FUNCT__ "createDMDA"
+        PetscErrorCode createDMDA(DM& dm, 
                                   std::array<int, 3> const& mpres, 
                                   std::array<int, 3> const& mvel, 
                                   std::array<DMBoundaryType, 3> const& b_type, 
@@ -210,6 +227,23 @@ namespace cafes
         }
 
         #undef __FUNCT__
+        #define __FUNCT__ "createDMDA"
+        PetscErrorCode createDMDA(DM& dm, 
+                                  std::array<int, 3> const& mvel, 
+                                  std::array<DMBoundaryType, 3> const& b_type, 
+                                  std::array<PetscBool, 3> const& period)
+        {
+            PetscErrorCode   ierr;
+            PetscFunctionBeginUser;
+
+            ierr = DMDACreate3d(PETSC_COMM_WORLD, b_type[0], b_type[1], b_type[2], DMDA_STENCIL_BOX,
+                                mvel[0], mvel[1], mvel[2], PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE,
+                                1, 1, 0, 0, 0, &dm);CHKERRQ(ierr);
+            ierr = DMDASetFieldName(dm, 0, "u");CHKERRQ(ierr);
+            PetscFunctionReturn(0);
+        }
+
+        #undef __FUNCT__
         #define __FUNCT__ "createMesh"
         template<int Dimensions>
         PetscErrorCode createMesh(DM& dm, std::array<int, Dimensions> const& npoints, std::array<PetscBool, Dimensions> const& period)
@@ -236,6 +270,27 @@ namespace cafes
             PetscFunctionReturn(0);
         }
 
+        #undef __FUNCT__
+        #define __FUNCT__ "createLaplacianMesh"
+        template<int Dimensions>
+        PetscErrorCode createLaplacianMesh(DM& dm, std::array<int, Dimensions> const& npoints, std::array<PetscBool, Dimensions> const& period)
+        {
+            PetscErrorCode   ierr;
+            auto mvel{npoints};
+            std::array<DMBoundaryType, Dimensions> b_type;
+            PetscFunctionBeginUser;
+
+            b_type.fill(DM_BOUNDARY_NONE);
+
+            for(std::size_t i=0; i<Dimensions; ++i)
+                if(period[i]){
+                    b_type[i] = DM_BOUNDARY_PERIODIC;
+                    --mvel[i];
+                }
+
+            ierr = createDMDA(dm, mvel, b_type, period);CHKERRQ(ierr);
+            PetscFunctionReturn(0);
+        }
     }
 }
 
