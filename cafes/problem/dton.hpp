@@ -170,6 +170,7 @@ namespace cafes
           ctx->compute_rhs = true;
           ctx->add_rigid_motion = true;
           ctx->compute_singularity = use_sing;
+          //ctx->compute_singularity = false;
         }
 
         ierr = MatMult(A, sol, rhs);CHKERRQ(ierr);
@@ -266,7 +267,8 @@ namespace cafes
         {
           ctx->compute_rhs = false;
           ctx->add_rigid_motion = false;
-          ctx->compute_singularity = false;
+          //ctx->compute_singularity = false;
+          ctx->compute_singularity = true;
         }
 
         ierr = KSPSolve(ksp, rhs, sol);CHKERRQ(ierr);

@@ -379,6 +379,123 @@ namespace cafes
       if (ctx.compute_singularity)
       {
         ierr = singularity::add_singularity_in_fluid<Dimensions, Ctx>(ctx);CHKERRQ(ierr);
+
+        if (!ctx.compute_rhs)
+        {
+        auto sol = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, ctx.problem.rhs, 0, false);
+        ierr = sol.fill(0.);CHKERRQ(ierr);
+
+        using position_type = geometry::position<Dimensions, double>;
+
+        auto box = fem::get_DM_bounds<Dimensions>(ctx.problem.ctx->dm, 0);
+        auto& h = ctx.problem.ctx->h;
+
+        for (std::size_t ipart=0; ipart<ctx.particles.size()-1; ++ipart)
+        {
+          auto p1 = ctx.particles[ipart];
+          for (std::size_t jpart=ipart+1; jpart<ctx.particles.size(); ++jpart)
+          {
+            auto p2 = ctx.particles[jpart];
+
+            using shape_type = typename decltype(p1)::shape_type;
+            auto sing = singularity::singularity<Dimensions, shape_type>(p1, p2, h[0]);
+
+            std::array<double, Dimensions> hs = {{h[0]/sing.scale, h[1]/sing.scale}};
+            double coef = 1./(sing.scale*sing.scale);
+
+            if (sing.is_singularity_)
+            {
+              auto pbox = p1.bounding_box(ctx.problem.ctx->h);
+              if (geometry::intersect(box, pbox)){
+                auto new_box = geometry::overlap_box(box, pbox);
+                auto pts = find_fluid_points_insides(p1, new_box, ctx.problem.ctx->h);
+                for(auto& ind: pts){
+                  auto ielem = fem::get_element(ind);
+
+                  for(std::size_t js=0; js<sing.scale; ++js)
+                  {
+                    for(std::size_t is=0; is<sing.scale; ++is)
+                    {
+                      position_type pts = {ind[0]*h[0] + is*hs[0], ind[1]*h[1] + js*hs[1]};
+
+                      if (p1.contains(pts))
+                      {
+                        auto pos_ref_part = sing.get_pos_in_part_ref(pts);
+
+                        if (std::abs(pos_ref_part[1]) <= sing.cutoff_dist_)
+                        {
+                          position_type pts_loc = {is*hs[0], js*hs[1]};
+
+                          auto bfunc = fem::P1_integration_grad(pts_loc, h);
+
+                          auto gradUsing = sing.get_grad_u_sing(pts);
+                          auto psing = sing.get_p_sing(pts);
+                          
+                          for (std::size_t je=0; je<bfunc.size(); ++je)
+                          {
+                            auto u = sol.at(ielem[je]);
+
+                            for (std::size_t d1=0; d1<Dimensions; ++d1)
+                            {
+                              for (std::size_t d2=0; d2<Dimensions; ++d2)
+                                u[d1] -= coef*gradUsing[d1][d2]*bfunc[je][d2];
+                            u[d1] += coef*psing*bfunc[je][d1];
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                auto pbox = p2.bounding_box(ctx.problem.ctx->h);
+                if (geometry::intersect(box, pbox)){
+                  auto new_box = geometry::overlap_box(box, pbox);
+                  auto pts = find_fluid_points_insides(p2, new_box, ctx.problem.ctx->h);
+                  for(auto& ind: pts){
+                    auto ielem = fem::get_element(ind);
+
+                    for(std::size_t js=0; js<sing.scale; ++js)
+                    {
+                      for(std::size_t is=0; is<sing.scale; ++is)
+                      {
+                        position_type pts = {ind[0]*h[0] + is*hs[0], ind[1]*h[1] + js*hs[1]};
+
+                        if (p2.contains(pts))
+                        {
+                          auto pos_ref_part = sing.get_pos_in_part_ref(pts);
+
+                          if (std::abs(pos_ref_part[1]) <= sing.cutoff_dist_)
+                          {
+                            position_type pts_loc = {is*hs[0], js*hs[1]};
+
+                            auto bfunc = fem::P1_integration_grad(pts_loc, h);
+
+                            auto gradUsing = sing.get_grad_u_sing(pts);
+                            auto psing = sing.get_p_sing(pts);
+                            
+                            for (std::size_t je=0; je<bfunc.size(); ++je)
+                            {
+                              auto u = sol.at(ielem[je]);
+
+                              for (std::size_t d1=0; d1<Dimensions; ++d1)
+                              {
+                                for (std::size_t d2=0; d2<Dimensions; ++d2)
+                                  u[d1] -= coef*gradUsing[d1][d2]*bfunc[je][d2];
+                              u[d1] += coef*psing*bfunc[je][d1];
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        ierr = sol.global_to_local(ADD_VALUES);CHKERRQ(ierr);
+      }
       }
 
       ierr = set_rhs_problem<Dimensions, Ctx>(ctx, x, apply_forces);CHKERRQ(ierr);
