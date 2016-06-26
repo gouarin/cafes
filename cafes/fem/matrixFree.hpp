@@ -74,10 +74,10 @@ namespace cafes
 
 
     #undef __FUNCT__
-    #define __FUNCT__ "diag_block_matrix_diag"
+    #define __FUNCT__ "diag_diag_block_matrix"
     template<typename CTX, typename Dimensions = typename CTX::dimension_type>
     typename std::enable_if<CTX::ndm_type::value==1, PetscErrorCode>::type
-    diag_block_matrix_diag(Mat A, Vec x)
+    diag_diag_block_matrix(Mat A, Vec x)
     {
       CTX *ctx;
       PetscErrorCode ierr;
@@ -97,10 +97,10 @@ namespace cafes
     }
 
     #undef __FUNCT__
-    #define __FUNCT__ "diag_block_matrix_diag"
+    #define __FUNCT__ "diag_diag_block_matrix"
     template<typename CTX, typename Dimensions = typename CTX::dimension_type>
     typename std::enable_if<(CTX::ndm_type::value>1), PetscErrorCode>::type
-    diag_block_matrix_diag(Mat A, Vec x)
+    diag_diag_block_matrix(Mat A, Vec x)
     {
       CTX *ctx;
       PetscErrorCode ierr;
@@ -169,7 +169,7 @@ namespace cafes
     template<typename CTX>
     Mat make_matrix(CTX *ctx, 
                     PetscErrorCode(*method)(Mat, Vec, Vec) = diag_block_matrix<CTX>, 
-                    PetscErrorCode(*method_diag)(Mat, Vec) = diag_block_matrix_diag<CTX>)
+                    PetscErrorCode(*method_diag)(Mat, Vec) = diag_diag_block_matrix<CTX>)
     {
       Mat A;
       int localsize, totalsize;

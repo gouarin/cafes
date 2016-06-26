@@ -113,7 +113,7 @@ namespace cafes
       ierr = MatSetType(Alevel, MATSHELL);CHKERRQ(ierr);
       ierr = MatShellSetContext(Alevel, ctx);CHKERRQ(ierr);
       ierr = MatShellSetOperation(Alevel, MATOP_MULT, (void(*)())fem::diag_block_matrix<CTX>);CHKERRQ(ierr);
-      ierr = MatShellSetOperation(Alevel, MATOP_GET_DIAGONAL, (void(*)())fem::diag_block_matrix_diag<CTX>);CHKERRQ(ierr);
+      ierr = MatShellSetOperation(Alevel, MATOP_GET_DIAGONAL, (void(*)())fem::diag_diag_block_matrix<CTX>);CHKERRQ(ierr);
       ierr = MatSetDM(Alevel, dm);CHKERRQ(ierr);
       ierr = MatSetFromOptions(Alevel);CHKERRQ(ierr);
 
@@ -179,11 +179,11 @@ namespace cafes
         DMSetMatType(dav, MATSHELL);
         DMSetMatType(dap, MATSHELL);
 
-        Ctx *slap = new Ctx{dav, hu, method, fem::laplacian_mult_diag};
+        Ctx *slap = new Ctx{dav, hu, method, fem::diag_laplacian_mult};
         slap->set_dirichlet_bc(bc);
         auto A11 = fem::make_matrix<Ctx>(slap);
 
-        Ctx *smass = new Ctx{dap, hp, fem::mass_mult, fem::mass_mult_diag};
+        Ctx *smass = new Ctx{dap, hp, fem::mass_mult, fem::diag_mass_mult};
         auto A22 = fem::make_matrix<Ctx>(smass);
         
         Mat bA[2][2];
@@ -270,7 +270,7 @@ namespace cafes
               auto mg_h{ctx->h};
               std::for_each(mg_h.begin(), mg_h.end(), [&](auto& x){x*=(1<<(MGlevels-1-i));});
 
-              auto *mg_ctx = new Ctx{dav, mg_h, method, fem::laplacian_mult_diag};
+              auto *mg_ctx = new Ctx{dav, mg_h, method, fem::diag_laplacian_mult};
               mg_ctx->set_dirichlet_bc(ctx->bc_);
 
               PC pcsmoother;

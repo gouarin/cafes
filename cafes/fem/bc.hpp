@@ -78,7 +78,6 @@ namespace cafes
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
-      // warning: we assume that both u and v on a border have a Dirichlet condition
       auto bd_type = get_boundary_type<Dimensions>(y.dm_);
       auto gbounds = get_global_bounds<Dimensions>(y.dm_);
       auto box = get_DM_bounds<Dimensions>(y.dm_, false);
