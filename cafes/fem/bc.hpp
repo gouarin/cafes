@@ -137,14 +137,13 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "SetNullDirichletOnRHS"
     template<std::size_t Dimensions>
-    PetscErrorCode SetDirichletOnRHS(petsc::petsc_vec<Dimensions>& x, 
-                                     petsc::petsc_vec<Dimensions>& y,
-                                     dirichlet_conditions<Dimensions> bc)
+    PetscErrorCode SetNullDirichletOnRHS(petsc::petsc_vec<Dimensions>& x,
+                                         dirichlet_conditions<Dimensions> bc)
     {
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
-      set_dirichlet_impl(0., y, bc, nullptr, kernel_const_on_bc);
+      set_dirichlet_impl(0., x, bc, nullptr, kernel_const_on_bc);
 
       PetscFunctionReturn(0);
     }
