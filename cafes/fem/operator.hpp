@@ -51,7 +51,7 @@ namespace cafes
           for(std::size_t k2=0; k2<nbasis; ++k2){
             auto ux = x.at(ielem[k2]);
             for(std::size_t d=0; d<x.dof_; ++d){
-                uy[d] += ux[d]*matelem[k1*nbasis+k2];
+                uy[d] += ux[d]*matelem[k1][k2];
             }
           }
         }
@@ -74,7 +74,7 @@ namespace cafes
             {
               for(std::size_t d2=0; d2<x.dof_; ++d2)
               {
-                uy[d1] += ux[d2]*matelem[k1*nbasis+k2][d1*x.dof_ + d2];
+                uy[d1] += ux[d2]*matelem[k1][k2][d1][d2];
               }
             }
           }
@@ -91,7 +91,7 @@ namespace cafes
         for(std::size_t ie=0; ie<nbasis; ++ie){
           auto u = x.at(ielem[ie]);
           for(std::size_t d=0; d<x.dof_; ++d){
-            u[d] += matelem[ie*nbasis+ie];
+            u[d] += matelem[ie][ie];
           }
         }
       };
@@ -112,8 +112,8 @@ namespace cafes
             auto uxp = x2.at(ielem_p[ie_p]);
             auto uyp = y2.at(ielem_p[ie_p]);
             for(std::size_t d=0; d<x1.dof_; ++d){
-              uyp[0] += ux[d]*matelem[ie_p*nbasis_v+ie_v][d];
-              uy[d] -= uxp[0]*matelem[ie_p*nbasis_v+ie_v][d];
+              uyp[0] += ux[d]*matelem[ie_p][ie_v][d];
+              uy[d] -= uxp[0]*matelem[ie_p][ie_v][d];
             }
           }
         }
