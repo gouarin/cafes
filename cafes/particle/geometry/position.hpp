@@ -19,6 +19,7 @@ namespace cafes
         using parent::operator[];
         using parent::begin;
         using parent::end;
+        static constexpr std::size_t dimensions = Dimensions;
 
         position() = default;
         position(position const&) = default;

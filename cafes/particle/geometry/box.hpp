@@ -21,6 +21,7 @@ namespace cafes
     template<std::size_t Dimensions, typename T> struct box
     {
       using position_type = position<Dimensions, T>;
+      static constexpr std::size_t dimensions = Dimensions;
 
       position_type bottom_left; //!< position of the bottom left corner of the box
       position_type upper_right; //!< position of the upper right corner of the box

@@ -156,10 +156,12 @@ namespace cafes
         }
 
         // set Stokes matrix
-        PetscErrorCode(*method)(DM, Vec, Vec, std::array<double, Dimensions> const&);
-        if (opt.strain_tensor){
+        PetscErrorCode(*method)(petsc::petsc_vec<Dimensions>&,
+                                petsc::petsc_vec<Dimensions>&,
+                                std::array<double, Dimensions> const&);
+
+        if (opt.strain_tensor)
           method = fem::strain_tensor_mult;
-        }
         else
           method = fem::laplacian_mult;
 
@@ -204,13 +206,9 @@ namespace cafes
           ierr = fem::set_rhs<Dimensions, 1>(ctx->dm, rhs, rhsc_, ctx->h);CHKERRQ(ierr);
         }
         
-        DM dav;
-        Vec rhsv;
-        ierr = DMCompositeGetEntries(ctx->dm, &dav, nullptr);CHKERRQ(ierr);
-        ierr = DMCompositeGetAccess(ctx->dm, rhs, &rhsv, nullptr);CHKERRQ(ierr);
-        ierr = SetDirichletOnRHS(dav, ctx->bc_, rhsv, ctx->h);CHKERRQ(ierr);
-        ierr = DMCompositeRestoreAccess(ctx->dm, rhs, &rhsv, nullptr);CHKERRQ(ierr);
-        
+        auto petsc_rhs = petsc::petsc_vec<Dimensions>(ctx->dm, rhs, 0);
+        ierr = SetDirichletOnRHS(petsc_rhs, ctx->bc_, ctx->h);CHKERRQ(ierr);
+
         PetscFunctionReturn(0);
       }
 
@@ -255,10 +253,12 @@ namespace cafes
 
           // if MG is set for fieldsplit_0
           if (same) {
-            PetscErrorCode(*method)(DM, Vec, Vec, std::array<double, Dimensions> const&);
-            if (opt.strain_tensor){
+            PetscErrorCode(*method)(petsc::petsc_vec<Dimensions>&,
+                                    petsc::petsc_vec<Dimensions>&,
+                                    std::array<double, Dimensions> const&);
+            
+            if (opt.strain_tensor)
               method = fem::strain_tensor_mult;
-            }
             else
               method = fem::laplacian_mult;
 
@@ -330,6 +330,7 @@ namespace cafes
         PC pc;
         PetscFunctionBeginUser;
 
+        std::cout << "solve Stokes\n";
         ierr = KSPSolve(ksp, rhs, sol);CHKERRQ(ierr);
 
         PetscFunctionReturn(0);

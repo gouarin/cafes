@@ -83,6 +83,55 @@ namespace cafes
             that[7] = {ix[0]+1, ix[1]+1, ix[2]+1};
             return that;
         }
+
+        auto get_element_4Q1(geometry::position<2, int> const& ix){
+            std::array<std::array<int, 2>, 9> that;
+
+            that[0] = {2*ix[0]  , 2*ix[1]  };
+            that[1] = {2*ix[0]+1, 2*ix[1]  };
+            that[2] = {2*ix[0]+2, 2*ix[1]  };
+            that[3] = {2*ix[0]  , 2*ix[1]+1};
+            that[4] = {2*ix[0]+1, 2*ix[1]+1};
+            that[5] = {2*ix[0]+2, 2*ix[1]+1};
+            that[6] = {2*ix[0]  , 2*ix[1]+2};
+            that[7] = {2*ix[0]+1, 2*ix[1]+2};
+            that[8] = {2*ix[0]+2, 2*ix[1]+2};
+            return that;
+        }
+
+        auto get_element_4Q1(geometry::position<3, int> const& ix){
+            std::array<std::array<int, 3>, 27> that;
+
+            that[0]  = {2*ix[0]  , 2*ix[1]  , 2*ix[2]  };
+            that[1]  = {2*ix[0]+1, 2*ix[1]  , 2*ix[2]  };
+            that[2]  = {2*ix[0]+2, 2*ix[1]  , 2*ix[2]  };
+            that[3]  = {2*ix[0]  , 2*ix[1]+1, 2*ix[2]  };
+            that[4]  = {2*ix[0]+1, 2*ix[1]+1, 2*ix[2]  };
+            that[5]  = {2*ix[0]+2, 2*ix[1]+1, 2*ix[2]  };
+            that[6]  = {2*ix[0]  , 2*ix[1]+2, 2*ix[2]  };
+            that[7]  = {2*ix[0]+1, 2*ix[1]+2, 2*ix[2]  };
+            that[8]  = {2*ix[0]+2, 2*ix[1]+2, 2*ix[2]  };
+            that[9]  = {2*ix[0]  , 2*ix[1]  , 2*ix[2]+1};
+            that[10] = {2*ix[0]+1, 2*ix[1]  , 2*ix[2]+1};
+            that[11] = {2*ix[0]+2, 2*ix[1]  , 2*ix[2]+1};
+            that[12] = {2*ix[0]  , 2*ix[1]+1, 2*ix[2]+1};
+            that[13] = {2*ix[0]+1, 2*ix[1]+1, 2*ix[2]+1};
+            that[14] = {2*ix[0]+2, 2*ix[1]+1, 2*ix[2]+1};
+            that[15] = {2*ix[0]  , 2*ix[1]+2, 2*ix[2]+1};
+            that[16] = {2*ix[0]+1, 2*ix[1]+2, 2*ix[2]+1};
+            that[17] = {2*ix[0]+2, 2*ix[1]+2, 2*ix[2]+1};
+            that[18] = {2*ix[0]  , 2*ix[1]  , 2*ix[2]+2};
+            that[19] = {2*ix[0]+1, 2*ix[1]  , 2*ix[2]+2};
+            that[20] = {2*ix[0]+2, 2*ix[1]  , 2*ix[2]+2};
+            that[21] = {2*ix[0]  , 2*ix[1]+1, 2*ix[2]+2};
+            that[22] = {2*ix[0]+1, 2*ix[1]+1, 2*ix[2]+2};
+            that[23] = {2*ix[0]+2, 2*ix[1]+1, 2*ix[2]+2};
+            that[24] = {2*ix[0]  , 2*ix[1]+2, 2*ix[2]+2};
+            that[25] = {2*ix[0]+1, 2*ix[1]+2, 2*ix[2]+2};
+            that[26] = {2*ix[0]+2, 2*ix[1]+2, 2*ix[2]+2};
+
+            return that;
+        }
     }
 }
 

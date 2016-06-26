@@ -1,7 +1,9 @@
 #ifndef CAFES_FEM_BC_HPP_INCLUDED
 #define CAFES_FEM_BC_HPP_INCLUDED
 
-#include <petsc.h>
+#include <fem/mesh.hpp>
+#include <petsc/vec.hpp>
+
 #include <array>
 
 namespace cafes
@@ -27,505 +29,122 @@ namespace cafes
 
     };
 
-    void set_vec_with_vec_on_bc(std::array<std::array<PetscInt, 2>, 2> const& index, 
-                                PetscScalar ***px, PetscScalar ***py, 
-                                std::size_t const& ndof, std::array<condition_fn, 2> const& bc_conditions)
-    {
-      for (std::size_t j=index[1][0]; j<index[1][1]; ++j)
-        for (std::size_t i=index[0][0]; i<index[0][1]; ++i)
-          for(std::size_t dof=0; dof<ndof; ++dof)
-            if (bc_conditions[dof])
-              py[j][i][dof] = px[j][i][dof];
-    }
+    auto const kernel_vec_on_bc = [](auto const& x, auto& y, auto const& bc_conditions, auto const& h){
+      auto const kernel_pos = [&](auto const& pos){
+        auto ux = x.at_g(pos);
+        auto uy = y.at_g(pos);
+        for(std::size_t dof=0; dof<y.dof_; ++dof)
+          if (bc_conditions[dof])
+            uy[dof] = ux[dof];
+      };
+      return kernel_pos;
+    };
 
-    void set_vec_with_vec_on_bc(std::array<std::array<PetscInt, 2>, 3> const& index, 
-                                PetscScalar ****px, PetscScalar ****py, 
-                                std::size_t const& ndof, std::array<condition_fn, 3> const& bc_conditions)
-    {
-      for (std::size_t k=index[2][0]; k<index[2][1]; ++k)
-        for (std::size_t j=index[1][0]; j<index[1][1]; ++j)
-          for (std::size_t i=index[0][0]; i<index[0][1]; ++i)
-            for(std::size_t dof=0; dof<ndof; ++dof)
-              if (bc_conditions[dof])
-                py[k][j][i][dof] = px[k][j][i][dof];
-    }
+    auto const kernel_const_on_bc = [](auto const& x, auto& y, auto const& bc_conditions, auto const& h){
+      auto const kernel_pos = [&](auto const& pos){
+        auto uy = y.at_g(pos);
+        for(std::size_t dof=0; dof<y.dof_; ++dof)
+          if (bc_conditions[dof])
+            uy[dof] = x;
+      };
+      return kernel_pos;
+    };
 
-    void set_vec_with_const_on_bc(std::array<std::array<PetscInt, 2>, 2> const& index, 
-                                  PetscScalar ***px, PetscScalar const value, 
-                                  std::size_t const& ndof, std::array<condition_fn, 2> const& bc_conditions)
-    {
-      for (std::size_t j=index[1][0]; j<index[1][1]; ++j)
-        for (std::size_t i=index[0][0]; i<index[0][1]; ++i)
-          for(std::size_t dof=0; dof<ndof; ++dof)
-            if (bc_conditions[dof])
-              px[j][i][dof] = value;
-    }
+    auto const kernel_func_on_bc = [](auto const& x, auto& y, auto const& bc_conditions, auto const& h){
+      auto const kernel_pos = [&](auto const& pos){
+        auto uy = y.at_g(pos);
+        double coord[pos.dimensions];
 
-    void set_vec_with_const_on_bc(std::array<std::array<PetscInt, 2>, 3> const& index, 
-                                  PetscScalar ****px, PetscScalar const value, 
-                                  std::size_t const& ndof, std::array<condition_fn, 3> const& bc_conditions)
-    {
-      for (std::size_t k=index[2][0]; k<index[2][1]; ++k)
-        for (std::size_t j=index[1][0]; j<index[1][1]; ++j)
-          for (std::size_t i=index[0][0]; i<index[0][1]; ++i)
-            for(std::size_t dof=0; dof<ndof; ++dof)
-              if (bc_conditions[dof])
-                px[k][j][i][dof] = value;
-    }
+        for(std::size_t i=0; i<pos.dimensions; ++i)
+          coord[i] = pos[i]*h[i];
 
-    void set_vec_with_func_on_bc(std::array<std::array<PetscInt, 2>, 2> const& index, 
-                                 PetscScalar ***px, std::array<double, 2> const& h,
-                                 std::size_t const& ndof, std::array<condition_fn, 2> const& bc_conditions)
-    {
-      PetscReal coord[2];
-      for (std::size_t j=index[1][0]; j<index[1][1]; ++j){
-        coord[1] = j*h[1];
-        for (std::size_t i=index[0][0]; i<index[0][1]; ++i){
-          coord[0] = i*h[0];
-          for(std::size_t dof=0; dof<ndof; ++dof)
-            if (bc_conditions[dof])
-              bc_conditions[dof](coord, &px[j][i][dof]);
-        }
-      }
-    }
+        for(std::size_t dof=0; dof<y.dof_; ++dof)
+          if (bc_conditions[dof])
+            bc_conditions[dof](coord, &uy[dof]);
+      };
+      return kernel_pos;
+    };
 
-    void set_vec_with_func_on_bc(std::array<std::array<PetscInt, 2>, 3> const& index, 
-                                 PetscScalar ****px, std::array<double, 3> const& h,
-                                 std::size_t const& ndof, std::array<condition_fn, 3> const& bc_conditions)
+    #undef __FUNCT__
+    #define __FUNCT__ "set_dirichlet_impl"
+    template<std::size_t Dimensions, typename Function>
+    PetscErrorCode set_dirichlet_impl(auto const& x, 
+                                      petsc::petsc_vec<Dimensions>& y,
+                                      dirichlet_conditions<Dimensions> bc,
+                                      auto const& h,
+                                      Function&& kernel)
     {
-      PetscReal coord[3];
-      for (std::size_t k=index[2][0]; k<index[2][1]; ++k){
-        coord[2] = k*h[2];
-        for (std::size_t j=index[1][0]; j<index[1][1]; ++j){
-          coord[1] = j*h[1];
-          for (std::size_t i=index[0][0]; i<index[0][1]; ++i){
-            coord[0] = i*h[0];
-            for(std::size_t dof=0; dof<ndof; ++dof)
-              if (bc_conditions[dof])
-                bc_conditions[dof](coord, &px[k][j][i][dof]);
+      PetscErrorCode ierr;
+      PetscFunctionBeginUser;
+
+      // warning: we assume that both u and v on a border have a Dirichlet condition
+      auto bd_type = get_boundary_type<Dimensions>(y.dm_);
+      auto gbounds = get_global_bounds<Dimensions>(y.dm_);
+      auto box = get_DM_bounds<Dimensions>(y.dm_, false);
+
+      for(std::size_t d=0; d<Dimensions; ++d)
+      {
+        if (bd_type[d] != DM_BOUNDARY_PERIODIC)
+        {
+          if (box.bottom_left[d] == 0)
+          {
+            auto new_box{box};
+            new_box.upper_right[d] = 1;
+            iterate(new_box, kernel(x, y, bc.conditions_[2*d], h));
           }
+
+          if (box.upper_right[d] == gbounds[d])
+          {
+            auto new_box{box};
+            new_box.bottom_left[d] = gbounds[d]-1;
+            iterate(new_box, kernel(x, y, bc.conditions_[2*d+1], h));
+          }
+
         }
       }
     }
 
     #undef __FUNCT__
     #define __FUNCT__ "SetDirichletOnVec"
-    PetscErrorCode SetDirichletOnVec(DM dm, dirichlet_conditions<2> bc, Vec x, Vec y){
+    template<std::size_t Dimensions>
+    PetscErrorCode SetDirichletOnVec(petsc::petsc_vec<Dimensions>& x, 
+                                     petsc::petsc_vec<Dimensions>& y,
+                                     dirichlet_conditions<Dimensions> bc)
+    {
       PetscErrorCode ierr;
-      PetscScalar ***px, ***py;
-      DMDALocalInfo info;
       PetscFunctionBeginUser;
 
-      // warning: we assume that both u and v on a border have a Dirichlet condition
-
-      ierr = DMDAGetLocalInfo(dm, &info);CHKERRQ(ierr);
-
-      ierr = DMDAVecGetArrayDOFRead(dm, x, &px);
-      ierr = DMDAVecGetArrayDOF(dm, y, &py);
-
-      using array2d = std::array<std::array<PetscInt, 2>, 2>;
-
-      if (info.bx != DM_BOUNDARY_PERIODIC){
-        // left border
-        if (info.xs == 0){
-          array2d index{{ {{       0,               1 }}, 
-                          {{ info.ys, info.ys+info.ym }} 
-                       }};
-          set_vec_with_vec_on_bc(index, px, py, info.dof, bc.conditions_[0]);
-        }
-
-        // right border
-        if (info.xs + info.xm == info.mx){
-          array2d index{{ {{ info.mx - 1,         info.mx }}, 
-                          {{     info.ys, info.ys+info.ym }} 
-                       }};
-          set_vec_with_vec_on_bc(index, px, py, info.dof, bc.conditions_[1]);
-        }
-      }
-
-      if (info.by != DM_BOUNDARY_PERIODIC){
-        // bottom border
-        if (info.ys == 0){
-          array2d index{{ {{ info.xs, info.xs+info.xm }}, 
-                          {{       0,               1 }} 
-                        }};
-          set_vec_with_vec_on_bc(index, px, py, info.dof, bc.conditions_[2]);
-        }
-
-        // top border
-        if (info.ys + info.ym == info.my){
-          array2d index{{ {{     info.xs, info.xs+info.xm }}, 
-                          {{ info.my - 1,         info.my }} 
-                        }};
-          set_vec_with_vec_on_bc(index, px, py, info.dof, bc.conditions_[3]);
-        }
-      }
-
-      // Restore x and y
-      ierr = DMDAVecRestoreArrayDOF(dm, x, &px);CHKERRQ(ierr);
-      ierr = DMDAVecRestoreArrayDOF(dm, y, &py);CHKERRQ(ierr);
-
-      PetscFunctionReturn(0);
-    }
-
-    #undef __FUNCT__
-    #define __FUNCT__ "SetDirichletOnVec"
-    PetscErrorCode SetDirichletOnVec(DM dm, dirichlet_conditions<3> bc, Vec x, Vec y){
-      PetscErrorCode ierr;
-      PetscScalar ****px, ****py;
-      DMDALocalInfo info;
-      PetscFunctionBeginUser;
-
-      ierr = DMDAGetLocalInfo(dm, &info);CHKERRQ(ierr);
-
-      ierr = DMDAVecGetArrayDOFRead(dm, x, &px);
-      ierr = DMDAVecGetArrayDOF(dm, y, &py);
-
-      using array3d = std::array<std::array<PetscInt, 2>, 3>;
-
-      if (info.bx != DM_BOUNDARY_PERIODIC){
-        // left border
-        if (info.xs == 0){
-          array3d index{{ {{       0,               1 }}, 
-                          {{ info.ys, info.ys+info.ym }},
-                          {{ info.zs, info.zs+info.zm }}
-                        }};
-          set_vec_with_vec_on_bc(index, px, py, info.dof, bc.conditions_[0]);
-        }
-
-        // right border
-        if (info.xs + info.xm == info.mx){
-          array3d index{{ {{ info.mx - 1,         info.mx }}, 
-                          {{     info.ys, info.ys+info.ym }},
-                          {{     info.zs, info.zs+info.zm }}
-                        }};
-          set_vec_with_vec_on_bc(index, px, py, info.dof, bc.conditions_[1]);
-        }
-      }
-
-      if (info.by != DM_BOUNDARY_PERIODIC){
-        // bottom border
-        if (info.ys == 0){
-          array3d index{{ {{ info.xs, info.xs+info.xm }},
-                          {{       0,               1 }}, 
-                          {{ info.zs, info.zs+info.zm }}
-                        }};
-          set_vec_with_vec_on_bc(index, px, py, info.dof, bc.conditions_[2]);
-        }
-
-        // top border
-        if (info.ys + info.ym == info.my){
-          array3d index{{ {{     info.xs, info.xs+info.xm }},
-                          {{ info.my - 1,         info.my }}, 
-                          {{     info.zs, info.zs+info.zm }}
-                        }};
-          set_vec_with_vec_on_bc(index, px, py, info.dof, bc.conditions_[3]);
-        }
-      }
-
-      if (info.bz != DM_BOUNDARY_PERIODIC){
-        // front border
-        if (info.zs == 0){
-          array3d index{{ {{ info.xs, info.xs+info.xm }},
-                          {{ info.ys, info.ys+info.ym }},
-                          {{       0,               1 }}
-                        }};
-          set_vec_with_vec_on_bc(index, px, py, info.dof, bc.conditions_[4]);
-        }
-
-        // back border
-        if (info.zs + info.zm == info.mz){
-          array3d index{{ {{     info.xs, info.xs+info.xm }},
-                          {{     info.ys, info.ys+info.ym }},
-                          {{ info.mz - 1,         info.mz }} 
-                        }};
-          set_vec_with_vec_on_bc(index, px, py, info.dof, bc.conditions_[5]);
-        }
-      }
-
-      // Restore x and y
-      ierr = DMDAVecRestoreArrayDOF(dm, x, &px);CHKERRQ(ierr);
-      ierr = DMDAVecRestoreArrayDOF(dm, y, &py);CHKERRQ(ierr);
+      set_dirichlet_impl(x, y, bc, nullptr, kernel_vec_on_bc);
 
       PetscFunctionReturn(0);
     }
 
     #undef __FUNCT__
     #define __FUNCT__ "SetDirichletOnRHS"
-    PetscErrorCode SetDirichletOnRHS(DM dm, dirichlet_conditions<2> const& bc, Vec x, std::array<double, 2> const& h){
+    template<std::size_t Dimensions>
+    PetscErrorCode SetDirichletOnRHS(petsc::petsc_vec<Dimensions>& x,
+                                     dirichlet_conditions<Dimensions> bc,
+                                     std::array<double, Dimensions> const& h)
+    {
       PetscErrorCode ierr;
-      PetscScalar ***px;
-      DMDALocalInfo info;
       PetscFunctionBeginUser;
 
-      // warning: we assume that both u and v on a border have a Dirichlet condition
-
-      ierr = DMDAGetLocalInfo(dm, &info);CHKERRQ(ierr);
-
-      ierr = DMDAVecGetArrayDOF(dm, x, &px);
-
-      using array2d = std::array<std::array<PetscInt, 2>, 2>;
-
-      if (info.bx != DM_BOUNDARY_PERIODIC){
-        // left border
-        if (info.xs == 0){
-          array2d index{{ {{       0,               1 }}, 
-                          {{ info.ys, info.ys+info.ym }} 
-                        }};
-          set_vec_with_func_on_bc(index, px, h, info.dof, bc.conditions_[0]);
-        }
-
-        // right border
-        if (info.xs + info.xm == info.mx){
-          array2d index{{ {{ info.mx - 1,         info.mx }}, 
-                          {{     info.ys, info.ys+info.ym }} 
-                        }};
-          set_vec_with_func_on_bc(index, px, h, info.dof, bc.conditions_[1]);
-        }
-      }
-
-      if (info.by != DM_BOUNDARY_PERIODIC){
-        // bottom border
-        if (info.ys == 0){
-          array2d index{{ {{ info.xs, info.xs+info.xm }}, 
-                          {{       0,               1 }} 
-                        }};
-          set_vec_with_func_on_bc(index, px, h, info.dof, bc.conditions_[2]);
-        }
-
-        // top border
-        if (info.ys + info.ym == info.my){
-          array2d index{{ {{     info.xs, info.xs+info.xm }}, 
-                          {{ info.my - 1,         info.my }} 
-                       }};
-          set_vec_with_func_on_bc(index, px, h, info.dof, bc.conditions_[3]);
-        }
-      }
-
-      // Restore x
-      ierr = DMDAVecRestoreArrayDOF(dm, x, &px);CHKERRQ(ierr);
-
-      PetscFunctionReturn(0);
-    }
-
-    #undef __FUNCT__
-    #define __FUNCT__ "SetDirichletOnRHS"
-    PetscErrorCode SetDirichletOnRHS(DM dm, dirichlet_conditions<3> const& bc, Vec x, std::array<double, 3> const& h){
-      PetscErrorCode ierr;
-      PetscScalar ****px;
-      DMDALocalInfo info;
-      PetscFunctionBeginUser;
-
-      // warning: we assume that both u and v on a border have a Dirichlet condition
-
-      ierr = DMDAGetLocalInfo(dm, &info);CHKERRQ(ierr);
-
-      ierr = DMDAVecGetArrayDOF(dm, x, &px);
-
-      using array3d = std::array<std::array<PetscInt, 2>, 3>;
-
-      if (info.bx != DM_BOUNDARY_PERIODIC){
-        // left border
-        if (info.xs == 0){
-          array3d index{{ {{       0,               1 }}, 
-                          {{ info.ys, info.ys+info.ym }},
-                          {{ info.zs, info.zs+info.zm }}
-                        }};
-          set_vec_with_func_on_bc(index, px, h, info.dof, bc.conditions_[0]);
-        }
-
-        // right border
-        if (info.xs + info.xm == info.mx){
-          array3d index{{ {{ info.mx - 1,         info.mx }}, 
-                          {{     info.ys, info.ys+info.ym }},
-                          {{     info.zs, info.zs+info.zm }}
-                        }};
-          set_vec_with_func_on_bc(index, px, h, info.dof, bc.conditions_[1]);
-        }
-      }
-
-      if (info.by != DM_BOUNDARY_PERIODIC){
-        // bottom border
-        if (info.ys == 0){
-          array3d index{{ {{ info.xs, info.xs+info.xm }},
-                          {{       0,               1 }}, 
-                          {{ info.zs, info.zs+info.zm }}
-                        }};
-          set_vec_with_func_on_bc(index, px, h, info.dof, bc.conditions_[2]);
-        }
-
-        // top border
-        if (info.ys + info.ym == info.my){
-          array3d index{{ {{     info.xs, info.xs+info.xm }},
-                          {{ info.my - 1,         info.my }}, 
-                          {{     info.zs, info.zs+info.zm }}
-                        }};
-          set_vec_with_func_on_bc(index, px, h, info.dof, bc.conditions_[3]);
-        }
-      }
-
-      if (info.bz != DM_BOUNDARY_PERIODIC){
-        // front border
-        if (info.zs == 0){
-          array3d index{{ {{ info.xs, info.xs+info.xm }},
-                          {{ info.ys, info.ys+info.ym }},
-                          {{       0,               1 }}
-                        }};
-          set_vec_with_func_on_bc(index, px, h, info.dof, bc.conditions_[4]);
-        }
-
-        // back border
-        if (info.zs + info.zm == info.mz){
-          array3d index{{ {{     info.xs, info.xs+info.xm }},
-                          {{     info.ys, info.ys+info.ym }},
-                          {{ info.mz - 1,         info.mz }} 
-                        }};
-          set_vec_with_func_on_bc(index, px, h, info.dof, bc.conditions_[5]);
-        }
-      }
-
-      // Restore x
-      ierr = DMDAVecRestoreArrayDOF(dm, x, &px);CHKERRQ(ierr);
+      set_dirichlet_impl(nullptr, x, bc, h, kernel_func_on_bc);
 
       PetscFunctionReturn(0);
     }
 
     #undef __FUNCT__
     #define __FUNCT__ "SetNullDirichletOnRHS"
-    PetscErrorCode SetNullDirichletOnRHS(DM dm, dirichlet_conditions<2> const& bc, Vec x, std::array<double, 2> const& h){
+    template<std::size_t Dimensions>
+    PetscErrorCode SetDirichletOnRHS(petsc::petsc_vec<Dimensions>& x, 
+                                     petsc::petsc_vec<Dimensions>& y,
+                                     dirichlet_conditions<Dimensions> bc)
+    {
       PetscErrorCode ierr;
-      PetscScalar ***px;
-      DMDALocalInfo info;
       PetscFunctionBeginUser;
 
-      // warning: we assume that both u and v on a border have a Dirichlet condition
-
-      ierr = DMDAGetLocalInfo(dm, &info);CHKERRQ(ierr);
-
-      ierr = DMDAVecGetArrayDOF(dm, x, &px);
-
-      using array2d = std::array<std::array<PetscInt, 2>, 2>;
-
-      if (info.bx != DM_BOUNDARY_PERIODIC){
-        // left border
-        if (info.xs == 0){
-          array2d index{{ {{       0,               1 }}, 
-                          {{ info.ys, info.ys+info.ym }} 
-                        }};
-          set_vec_with_const_on_bc(index, px, 0., info.dof, bc.conditions_[0]);
-        }
-
-        // right border
-        if (info.xs + info.xm == info.mx){
-          array2d index{{ {{ info.mx - 1,         info.mx }}, 
-                          {{     info.ys, info.ys+info.ym }} 
-                        }};
-          set_vec_with_const_on_bc(index, px, 0., info.dof, bc.conditions_[1]);
-        }
-      }
-
-      if (info.by != DM_BOUNDARY_PERIODIC){
-        // bottom border
-        if (info.ys == 0){
-          array2d index{{ {{ info.xs, info.xs+info.xm }}, 
-                          {{       0,               1 }} 
-                        }};
-          set_vec_with_const_on_bc(index, px, 0., info.dof, bc.conditions_[2]);
-        }
-
-        // top border
-        if (info.ys + info.ym == info.my){
-          array2d index{{ {{     info.xs, info.xs+info.xm }}, 
-                          {{ info.my - 1,         info.my }} 
-                       }};
-          set_vec_with_const_on_bc(index, px, 0., info.dof, bc.conditions_[3]);
-        }
-      }
-
-      // Restore x
-      ierr = DMDAVecRestoreArrayDOF(dm, x, &px);CHKERRQ(ierr);
-
-      PetscFunctionReturn(0);
-    }
-
-    #undef __FUNCT__
-    #define __FUNCT__ "SetNullDirichletOnRHS"
-    PetscErrorCode SetNullDirichletOnRHS(DM dm, dirichlet_conditions<3> const& bc, Vec x, std::array<double, 3> const& h){
-      PetscErrorCode ierr;
-      PetscScalar ****px;
-      DMDALocalInfo info;
-      PetscFunctionBeginUser;
-
-      // warning: we assume that both u and v on a border have a Dirichlet condition
-
-      ierr = DMDAGetLocalInfo(dm, &info);CHKERRQ(ierr);
-
-      ierr = DMDAVecGetArrayDOF(dm, x, &px);
-
-      using array3d = std::array<std::array<PetscInt, 2>, 3>;
-
-      if (info.bx != DM_BOUNDARY_PERIODIC){
-        // left border
-        if (info.xs == 0){
-          array3d index{{ {{       0,               1 }}, 
-                          {{ info.ys, info.ys+info.ym }},
-                          {{ info.zs, info.zs+info.zm }}
-                        }};
-          set_vec_with_const_on_bc(index, px, 0., info.dof, bc.conditions_[0]);
-        }
-
-        // right border
-        if (info.xs + info.xm == info.mx){
-          array3d index{{ {{ info.mx - 1,         info.mx }}, 
-                          {{     info.ys, info.ys+info.ym }},
-                          {{     info.zs, info.zs+info.zm }}
-                        }};
-          set_vec_with_const_on_bc(index, px, 0., info.dof, bc.conditions_[1]);
-        }
-      }
-
-      if (info.by != DM_BOUNDARY_PERIODIC){
-        // bottom border
-        if (info.ys == 0){
-          array3d index{{ {{ info.xs, info.xs+info.xm }},
-                          {{       0,               1 }}, 
-                          {{ info.zs, info.zs+info.zm }}
-                        }};
-          set_vec_with_const_on_bc(index, px, 0., info.dof, bc.conditions_[2]);
-        }
-
-        // top border
-        if (info.ys + info.ym == info.my){
-          array3d index{{ {{     info.xs, info.xs+info.xm }},
-                          {{ info.my - 1,         info.my }}, 
-                          {{     info.zs, info.zs+info.zm }}
-                        }};
-          set_vec_with_const_on_bc(index, px, 0., info.dof, bc.conditions_[3]);
-        }
-      }
-
-      if (info.bz != DM_BOUNDARY_PERIODIC){
-        // front border
-        if (info.zs == 0){
-          array3d index{{ {{ info.xs, info.xs+info.xm }},
-                          {{ info.ys, info.ys+info.ym }},
-                          {{       0,               1 }}
-                        }};
-          set_vec_with_const_on_bc(index, px, 0., info.dof, bc.conditions_[4]);
-        }
-
-        // back border
-        if (info.zs + info.zm == info.mz){
-          array3d index{{ {{     info.xs, info.xs+info.xm }},
-                          {{     info.ys, info.ys+info.ym }},
-                          {{ info.mz - 1,         info.mz }} 
-                        }};
-          set_vec_with_const_on_bc(index, px, 0., info.dof, bc.conditions_[5]);
-        }
-      }
-
-      // Restore x
-      ierr = DMDAVecRestoreArrayDOF(dm, x, &px);CHKERRQ(ierr);
+      set_dirichlet_impl(0., y, bc, nullptr, kernel_const_on_bc);
 
       PetscFunctionReturn(0);
     }

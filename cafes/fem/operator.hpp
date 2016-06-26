@@ -3,7 +3,11 @@
 
 #include <fem/matElem.hpp>
 #include <fem/mesh.hpp>
+#include <fem/quadrature.hpp>
+#include <particle/geometry/position.hpp>
+#include <petsc/vec.hpp>
 #include <array>
+#include <cmath>
 #include <iostream>
 #include <petsc.h>
 
@@ -12,588 +16,245 @@ namespace cafes
   namespace fem
   {
 
-    /////////////////////////////////////////////////////////////////////////////
-    //
-    //  2D operators
-    //
-    /////////////////////////////////////////////////////////////////////////////
-    #undef __FUNCT__
-    #define __FUNCT__ "diag_block_mult"
-    PetscErrorCode diag_block_mult(DM dm, Vec x, Vec y, std::array<double, 2> h, int dof,
-                                   PetscErrorCode(*matelem)(PetscReal*, std::array<double, 2> const&))
+    template<typename Box, typename Function, typename Position>
+    void iterate_impl(Box const& b, Function&& f, Position& p, std::integral_constant<std::size_t,0> const&)
     {
-      PetscErrorCode ierr;
-      PetscScalar tmp[4][2];
-      PetscScalar val[4][2];
-      PetscReal MatElem[16];
-      PetscScalar ***px, ***py;
+      std::forward<Function>(f)(p);
+    }
 
-      PetscFunctionBeginUser;
+    template<typename Box, typename Function, typename Position, typename Index>
+    void iterate_impl(Box const& b, Function&& f, Position& p, Index const&)
+    {
+      static constexpr std::size_t n = Index::value-1;
 
-      ierr = (*matelem)(MatElem, h);
+      for( p[n] = b.bottom_left[n]; p[n] < b.upper_right[n]; ++p[n] )
+      {
+        iterate_impl(b, std::forward<Function>(f), p, std::integral_constant<std::size_t,n>{});
+      }
+    }
 
-      auto box = get_DM_bounds<2>(dm);
+    template<typename Box, typename Function>
+    void iterate(Box const& b, Function&& f)
+    {
+      typename Box::position_type pos;
+      iterate_impl(b, f, pos, std::integral_constant<std::size_t,Box::dimensions>{});
+    }
 
-      ierr = DMDAVecGetArrayDOFRead(dm, x, &px);CHKERRQ(ierr);
-      ierr = DMDAVecGetArrayDOF(dm, y, &py);CHKERRQ(ierr);
 
-      for (std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j){
-        for (std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i){
-          for(std::size_t k1=0; k1<4; k1++){
-            std::size_t l1 = i + ind2d[k1][0];
-            std::size_t p1 = j + ind2d[k1][1];
-            for(std::size_t k2=0; k2<dof; ++k2){
-              tmp[k1][k2] = px[p1][l1][k2];
-              val[k1][k2] = 0.;
+    auto const kernel_1 = [](auto const& x, auto& y, auto const& matelem){
+      auto const kernel_pos = [&](auto const& pos){
+        auto const ielem = get_element(pos);
+        auto const nbasis = ielem.size();
+
+        for(std::size_t k1=0; k1<nbasis; ++k1){
+          auto uy = y.at(ielem[k1]);
+          for(std::size_t k2=0; k2<nbasis; ++k2){
+            auto ux = x.at(ielem[k2]);
+            for(std::size_t d=0; d<x.dof_; ++d){
+                uy[d] += ux[d]*matelem[k1*nbasis+k2];
             }
-          }
-
-          for(std::size_t k1=0; k1<4; ++k1){
-            for(std::size_t k2=0; k2<4; ++k2){
-                for(std::size_t k3=0; k3<dof; ++k3){
-                    val[k1][k3] += tmp[k2][k3]*MatElem[k1*4+k2];
-                }
-            }
-          }
-
-          for(std::size_t k1=0; k1<4; ++k1){
-            std::size_t l1 = i + ind2d[k1][0];
-            std::size_t p1 = j + ind2d[k1][1];
-            for(std::size_t k2=0; k2<dof; ++k2)
-              py[p1][l1][k2] += val[k1][k2];
           }
         }
-      }
-      ierr = DMDAVecRestoreArrayDOFRead(dm, x, &px);CHKERRQ(ierr);
-      ierr = DMDAVecRestoreArrayDOF(dm, y, &py);CHKERRQ(ierr);
+      };
+      return kernel_pos;
+    };
+
+    auto const kernel_11 = [](auto const& x, auto& y, auto const& matelem){
+      auto const kernel_pos = [&](auto const& pos){
+        auto const ielem = get_element(pos);
+        auto const nbasis = ielem.size();
+
+        for(std::size_t k1=0; k1<nbasis; ++k1)
+        {
+          auto uy = y.at(ielem[k1]);
+          for(std::size_t k2=0; k2<nbasis; ++k2)
+          {
+            auto ux = x.at(ielem[k2]);
+            for(std::size_t d1=0; d1<x.dof_; ++d1)
+            {
+              for(std::size_t d2=0; d2<x.dof_; ++d2)
+              {
+                uy[d1] += ux[d2]*matelem[k1*nbasis+k2][d1*x.dof_ + d2];
+              }
+            }
+          }
+        }
+      };
+      return kernel_pos;
+    };
+
+    auto const kernel_2 = [](auto& x, auto const& matelem){
+      auto const kernel_pos = [&](auto const& pos){
+        auto const ielem = get_element(pos);
+        auto const nbasis = ielem.size();
+
+        for(std::size_t ie=0; ie<nbasis; ++ie){
+          auto u = x.at(ielem[ie]);
+          for(std::size_t d=0; d<x.dof_; ++d){
+            u[d] += matelem[ie*nbasis+ie];
+          }
+        }
+      };
+      return kernel_pos;
+    };
+
+    auto const kernel_3 = [](auto const& x1, auto const& x2, auto& y1, auto& y2, auto const& matelem){
+      auto const kernel_pos = [&](auto const& pos){
+        auto const ielem_p = get_element(pos);
+        auto const ielem_v = get_element_4Q1(pos);
+        auto const nbasis_p = ielem_p.size();
+        auto const nbasis_v = ielem_v.size();
+
+        for(std::size_t ie_v=0; ie_v<nbasis_v; ++ie_v){
+          auto ux = x1.at(ielem_v[ie_v]);
+          auto uy = y1.at(ielem_v[ie_v]);
+          for(std::size_t ie_p=0; ie_p<nbasis_p; ++ie_p){
+            auto uxp = x2.at(ielem_p[ie_p]);
+            auto uyp = y2.at(ielem_p[ie_p]);
+            for(std::size_t d=0; d<x1.dof_; ++d){
+              uyp[0] += ux[d]*matelem[ie_p*nbasis_v+ie_v][d];
+              uy[d] -= uxp[0]*matelem[ie_p*nbasis_v+ie_v][d];
+            }
+          }
+        }
+      };
+      return kernel_pos;
+    };
+
+    #undef __FUNCT__
+    #define __FUNCT__ "diag_block_mult"
+    template<typename MatElem, typename Function, std::size_t Dimensions>
+    PetscErrorCode diag_block_mult(petsc::petsc_vec<Dimensions>& x, petsc::petsc_vec<Dimensions>& y,
+                                   MatElem const& matelem, Function&& kernel)
+    {
+      PetscErrorCode ierr;
+      PetscFunctionBeginUser;
+
+      auto box = get_DM_bounds<Dimensions>(x.dm_);
+
+      iterate(box, kernel(x, y, matelem));
 
       PetscFunctionReturn(0);
     }
 
     #undef __FUNCT__
     #define __FUNCT__ "diag_block_mult_diag"
-    PetscErrorCode diag_block_mult_diag(DM dm, Vec x, std::array<double, 2> h, int dof,
-                                        PetscErrorCode(*matelem)(PetscReal*, std::array<double, 2> const&))
+    template<typename MatElem, typename Function, std::size_t Dimensions>
+    PetscErrorCode diag_block_mult_diag(petsc::petsc_vec<Dimensions>& x,
+                                        MatElem const& matelem, Function&& kernel)
     {
       PetscErrorCode ierr;
-      PetscReal MatElem[16];
-      PetscScalar ***px;
-
       PetscFunctionBeginUser;
 
-      ierr = (*matelem)(MatElem, h);
+      auto box = get_DM_bounds<Dimensions>(x.dm_);
 
-      auto box = get_DM_bounds<2>(dm);
+      iterate(box, kernel(x, matelem));
 
-      ierr = DMDAVecGetArrayDOF(dm, x, &px);CHKERRQ(ierr);
+      PetscFunctionReturn(0);
+    }
 
-      for (std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j){
-        for (std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i){
-          for(std::size_t k1=0; k1<4; k1++){
-            std::size_t l1 = i + ind2d[k1][0];
-            std::size_t p1 = j + ind2d[k1][1];
-            for(std::size_t k2=0; k2<dof; ++k2){
-                px[p1][l1][k2] += MatElem[k1*4+k1];
-            }
-          }
-        }
-      }
-      ierr = DMDAVecRestoreArrayDOF(dm, x, &px);CHKERRQ(ierr);
+    #undef __FUNCT__
+    #define __FUNCT__ "offset_block_mult"
+    template<typename MatElem, typename Function, std::size_t Dimensions>
+    PetscErrorCode offset_block_mult(petsc::petsc_vec<Dimensions> const& x1,
+                                     petsc::petsc_vec<Dimensions> const& x2,
+                                     petsc::petsc_vec<Dimensions>& y1,
+                                     petsc::petsc_vec<Dimensions>& y2,
+                                     MatElem const& matelem, Function&& kernel)
+    {
+      PetscErrorCode ierr;
+      PetscFunctionBeginUser;
+
+      auto box = get_DM_bounds<Dimensions>(x2.dm_);
+
+      iterate(box, kernel(x1, x2, y1, y2, matelem));
 
       PetscFunctionReturn(0);
     }
 
     #undef __FUNCT__
     #define __FUNCT__ "laplacian_mult"
-    PetscErrorCode laplacian_mult(DM dm, Vec x, Vec y, std::array<double, 2> const& h)
+    template<std::size_t Dimensions>
+    PetscErrorCode laplacian_mult(petsc::petsc_vec<Dimensions>& x, 
+                                  petsc::petsc_vec<Dimensions>& y, 
+                                  std::array<double, Dimensions> const& h)
     {
       PetscErrorCode ierr;
-      DMDALocalInfo info;
       PetscFunctionBeginUser;
 
-      ierr = DMDAGetLocalInfo(dm, &info);CHKERRQ(ierr);
-      ierr = diag_block_mult(dm, x, y, h, info.dof, getMatElemLaplacian2d);CHKERRQ(ierr);
+      ierr = diag_block_mult(x, y, getMatElemLaplacian(h), kernel_1);CHKERRQ(ierr);
 
       PetscFunctionReturn(0);
     }
 
     #undef __FUNCT__
     #define __FUNCT__ "laplacian_mult_diag"
-    PetscErrorCode laplacian_mult_diag(DM dm, Vec x, std::array<double, 2> const& h)
+    template<std::size_t Dimensions>
+    PetscErrorCode laplacian_mult_diag(petsc::petsc_vec<Dimensions>& x, std::array<double, Dimensions> const& h)
     {
       PetscErrorCode ierr;
-      DMDALocalInfo info;
       PetscFunctionBeginUser;
 
-      ierr = DMDAGetLocalInfo(dm, &info);CHKERRQ(ierr);
-      ierr = diag_block_mult_diag(dm, x, h, info.dof, getMatElemLaplacian2d);CHKERRQ(ierr);
+      ierr = diag_block_mult_diag(x, getMatElemLaplacian(h), kernel_2);CHKERRQ(ierr);
 
       PetscFunctionReturn(0);
     }
 
     #undef __FUNCT__
     #define __FUNCT__ "mass_mult"
-    PetscErrorCode mass_mult(DM dm, Vec x, Vec y, std::array<double, 2> const& h)
+    template<std::size_t Dimensions>
+    PetscErrorCode mass_mult(petsc::petsc_vec<Dimensions>& x, petsc::petsc_vec<Dimensions>& y, std::array<double, Dimensions> const& h)
     {
       PetscErrorCode ierr;
-      DMDALocalInfo info;
       PetscFunctionBeginUser;
 
-      ierr = DMDAGetLocalInfo(dm, &info);CHKERRQ(ierr);
-      ierr = diag_block_mult(dm, x, y, h, info.dof, getMatElemMass2d);CHKERRQ(ierr);
+      ierr = diag_block_mult(x, y, getMatElemMass(h), kernel_1);CHKERRQ(ierr);
 
       PetscFunctionReturn(0);
     }
 
     #undef __FUNCT__
     #define __FUNCT__ "mass_mult_diag"
-    PetscErrorCode mass_mult_diag(DM dm, Vec x, std::array<double, 2> const& h)
+    template<std::size_t Dimensions>
+    PetscErrorCode mass_mult_diag(petsc::petsc_vec<Dimensions>& x, std::array<double, Dimensions> const& h)
     {
       PetscErrorCode ierr;
-      DMDALocalInfo info;
       PetscFunctionBeginUser;
 
-      ierr = DMDAGetLocalInfo(dm, &info);CHKERRQ(ierr);
-      ierr = diag_block_mult_diag(dm, x, h, info.dof, getMatElemMass2d);CHKERRQ(ierr);
+      ierr = diag_block_mult_diag(x, getMatElemMass(h), kernel_2);CHKERRQ(ierr);
 
       PetscFunctionReturn(0);
     }
 
     #undef __FUNCT__
     #define __FUNCT__ "strain_tensor_mult"
-    PetscErrorCode strain_tensor_mult(DM dm, Vec x, Vec y, std::array<double, 2> const& h)
+    template<std::size_t Dimensions>
+    PetscErrorCode strain_tensor_mult(petsc::petsc_vec<Dimensions>& x, petsc::petsc_vec<Dimensions>& y, std::array<double, Dimensions> const& h)
     {
       PetscErrorCode ierr;
-      PetscScalar tmp[4][2];
-      PetscScalar val[4][2];
-      PetscReal MatElem[16][4];
-      PetscScalar ***px, ***py;
-
       PetscFunctionBeginUser;
-      ierr = getMatElemStrainTensor2d(MatElem, h);
 
-      auto box = get_DM_bounds<2>(dm);
-
-      ierr = DMDAVecGetArrayDOFRead(dm, x, &px);CHKERRQ(ierr);
-      ierr = DMDAVecGetArrayDOF(dm, y, &py);CHKERRQ(ierr);
-
-      for (std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j){
-        for (std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i){
-          for(std::size_t k1=0; k1<4; k1++){
-            std::size_t l1 = i + ind2d[k1][0];
-            std::size_t p1 = j + ind2d[k1][1];
-            for(std::size_t k2=0; k2<2; ++k2){
-              tmp[k1][k2] = px[p1][l1][k2];
-              val[k1][k2] = 0.;
-            }
-          }
-
-          for(std::size_t k1=0; k1<4; ++k1){
-            for(std::size_t k2=0; k2<4; ++k2){
-              val[k1][0] += tmp[k2][0]*MatElem[k1*4+k2][0] 
-                          + tmp[k2][1]*MatElem[k1*4+k2][1];
-
-              val[k1][1] += tmp[k2][0]*MatElem[k1*4+k2][2] 
-                          + tmp[k2][1]*MatElem[k1*4+k2][3];
-            }
-          }
-
-          for(std::size_t k1=0; k1<4; ++k1){
-            std::size_t l1 = i + ind2d[k1][0];
-            std::size_t p1 = j + ind2d[k1][1];
-            for(std::size_t k2=0; k2<2; ++k2)
-              py[p1][l1][k2] += val[k1][k2];
-          }
-        }
-      }
-      ierr = DMDAVecRestoreArrayDOFRead(dm, x, &px);CHKERRQ(ierr);
-      ierr = DMDAVecRestoreArrayDOF(dm, y, &py);CHKERRQ(ierr);
+      ierr = diag_block_mult(x, y, getMatElemStrainTensor(h), kernel_11);CHKERRQ(ierr);
 
       PetscFunctionReturn(0);
     }
 
     #undef __FUNCT__
     #define __FUNCT__ "B_and_BT_mult"
-    PetscErrorCode B_and_BT_mult(DM dm, Vec xu, Vec xp, Vec yu, Vec yp, std::array<double, 2> const& h)
+    template<std::size_t Dimensions>
+    PetscErrorCode B_and_BT_mult(petsc::petsc_vec<Dimensions> const& x1,
+                                 petsc::petsc_vec<Dimensions> const& x2,
+                                 petsc::petsc_vec<Dimensions>& y1,
+                                 petsc::petsc_vec<Dimensions>& y2,
+                                 std::array<double, Dimensions> const& h)
     {
       PetscErrorCode ierr;
-      PetscScalar tmp[4];
-      PetscScalar val[4][2];
-      PetscReal MatElemOnu[36], MatElemOnv[36];
-      DM dav, dap;
-      PetscScalar ***pxu, ***pyu;
-      PetscScalar **pxp, **pyp;
-
       PetscFunctionBeginUser;
 
-      ierr = DMCompositeGetEntries(dm, &dav, &dap);CHKERRQ(ierr);
-      auto box = get_DM_bounds<2>(dap);
-
-      ierr = DMDAVecGetArrayDOFRead(dav, xu, &pxu);CHKERRQ(ierr);
-      ierr = DMDAVecGetArrayDOF(dav, yu, &pyu);CHKERRQ(ierr);
-      ierr = DMDAVecGetArrayRead(dap, xp, &pxp);CHKERRQ(ierr);
-      ierr = DMDAVecGetArray(dap, yp, &pyp);CHKERRQ(ierr);
-
-      ierr = getMatElemPressure2d(MatElemOnu, MatElemOnv, h);
-
-      for (std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j){
-        for (std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i){
-          for(std::size_t k1=0; k1<4; ++k1){
-            std::size_t l1 = i + ind2d[k1][0];
-            std::size_t p1 = j + ind2d[k1][1];
-            tmp[k1] = pxp[p1][l1];
-            val[k1][0] = 0.;
-            val[k1][1] = 0.;
-          }
-
-          for(std::size_t k1=0; k1<9; ++k1){
-            std::size_t l1 = 2*i + indpu2d[k1][0];
-            std::size_t p1 = 2*j + indpu2d[k1][1];
-
-            auto tmp1v = pxu[p1][l1][0];
-            auto tmp2v = pxu[p1][l1][1];
-
-            auto val1 = 0.;
-            auto val2 = 0.;
-
-            for(std::size_t k2=0; k2<4; ++k2){
-              val1 -= tmp[k2]*MatElemOnu[k2*9+k1];
-              val2 -= tmp[k2]*MatElemOnv[k2*9+k1];
-
-              val[k2][0] += tmp1v*MatElemOnu[k2*9+k1];
-              val[k2][1] += tmp2v*MatElemOnv[k2*9+k1];
-            }
-
-            pyu[p1][l1][0] += val1;
-            pyu[p1][l1][1] += val2;
-          }
-
-          for(std::size_t k1=0; k1<4; ++k1){
-            std::size_t l1 = i + ind2d[k1][0];
-            std::size_t p1 = j + ind2d[k1][1];
-            pyp[p1][l1] += val[k1][0] + val[k1][1];
-          }
-        }
-      }
-
-      ierr = DMDAVecRestoreArrayDOFRead(dav, xu, &pxu);CHKERRQ(ierr);
-      ierr = DMDAVecRestoreArrayDOF(dav, yu, &pyu);CHKERRQ(ierr);
-      ierr = DMDAVecRestoreArrayRead(dap, xp, &pxp);CHKERRQ(ierr);
-      ierr = DMDAVecRestoreArray(dap, yp, &pyp);CHKERRQ(ierr);
+      ierr = offset_block_mult(x1, x2, y1, y2, getMatElemPressure(h), kernel_3);CHKERRQ(ierr);
 
       PetscFunctionReturn(0);
     }
-
-    /////////////////////////////////////////////////////////////////////////////
-    //
-    //  3D operators
-    //
-    /////////////////////////////////////////////////////////////////////////////
-    #undef __FUNCT__
-    #define __FUNCT__ "diag_block_mult"
-    PetscErrorCode diag_block_mult(DM dm, Vec x, Vec y, std::array<double, 3> const& h, int ndof,
-                                   PetscErrorCode(*matelem)(PetscReal*, std::array<double, 3> const&))
-    {
-      PetscErrorCode ierr;
-      PetscInt nbasis = 8;
-      PetscScalar tmp[nbasis][3];
-      PetscScalar val[nbasis][3];
-      PetscReal MatElem[nbasis*nbasis];
-      PetscScalar ****px, ****py;
-
-      PetscFunctionBeginUser;
-
-      ierr = (*matelem)(MatElem, h);
-
-      auto box = get_DM_bounds<3>(dm);
-
-      ierr = DMDAVecGetArrayDOFRead(dm, x, &px);CHKERRQ(ierr);
-      ierr = DMDAVecGetArrayDOF(dm, y, &py);CHKERRQ(ierr);
-
-      for (std::size_t k=box.bottom_left[2]; k<box.upper_right[2]; ++k){
-          for (std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j){
-            for (std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i){
-              for(std::size_t k1=0; k1<nbasis; ++k1){
-                std::size_t l1 = i + ind3d[k1][0];
-                std::size_t p1 = j + ind3d[k1][1];
-                std::size_t r1 = k + ind3d[k1][2];
-                for(std::size_t dof=0; dof<ndof; ++dof){
-                  tmp[k1][dof] = px[r1][p1][l1][dof];
-                  val[k1][dof] = 0.;
-                }
-              }
-
-              for(std::size_t k1=0; k1<nbasis; ++k1){
-                for(std::size_t k2=0; k2<nbasis; ++k2){
-                    for(std::size_t dof=0; dof<ndof; ++dof){
-                        val[k1][dof] += tmp[k2][dof]*MatElem[k1*nbasis+k2];
-                    }
-                }
-              }
-
-              for(std::size_t k1=0; k1<nbasis; ++k1){
-                std::size_t l1 = i + ind3d[k1][0];
-                std::size_t p1 = j + ind3d[k1][1];
-                std::size_t r1 = k + ind3d[k1][2];
-                for(std::size_t dof=0; dof<ndof; ++dof)
-                  py[r1][p1][l1][dof] += val[k1][dof];
-
-                //std::cout << i << " " << j << " " << k << " " << py[r1][p1][l1][0] <<"\n";
-
-              }
-            }
-          }
-      }
-      ierr = DMDAVecRestoreArrayDOFRead(dm, x, &px);CHKERRQ(ierr);
-      ierr = DMDAVecRestoreArrayDOF(dm, y, &py);CHKERRQ(ierr);
-
-      PetscFunctionReturn(0);
-    }
-
-    #undef __FUNCT__
-    #define __FUNCT__ "diag_block_mult_diag"
-    PetscErrorCode diag_block_mult_diag(DM dm, Vec x, std::array<double, 3> const& h, int dof,
-                                        PetscErrorCode(*matelem)(PetscReal*, std::array<double, 3> const&))
-    {
-      PetscErrorCode ierr;
-      PetscInt nbasis = 8;
-      PetscReal MatElem[nbasis*nbasis];
-      PetscScalar ****px;
-
-      PetscFunctionBeginUser;
-
-      ierr = (*matelem)(MatElem, h);
-
-      auto box = get_DM_bounds<3>(dm);
-
-      ierr = DMDAVecGetArrayDOF(dm, x, &px);CHKERRQ(ierr);
-
-      for (std::size_t k=box.bottom_left[2]; k<box.upper_right[2]; ++k){
-          for (std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j){
-            for (std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i){
-              for(std::size_t k1=0; k1<nbasis; k1++){
-                std::size_t l1 = i + ind3d[k1][0];
-                std::size_t p1 = j + ind3d[k1][1];
-                std::size_t r1 = k + ind3d[k1][2];
-                for(std::size_t k2=0; k2<dof; ++k2){
-                    px[r1][p1][l1][k2] += MatElem[k1*nbasis+k1];
-                }
-              }
-            }
-          }
-      }
-      ierr = DMDAVecRestoreArrayDOF(dm, x, &px);CHKERRQ(ierr);
-
-      PetscFunctionReturn(0);
-    }
-
-    #undef __FUNCT__
-    #define __FUNCT__ "laplacian_mult"
-    PetscErrorCode laplacian_mult(DM dm, Vec x, Vec y, std::array<double, 3> const& h)
-    {
-      PetscErrorCode ierr;
-      DMDALocalInfo info;
-      PetscFunctionBeginUser;
-
-      ierr = DMDAGetLocalInfo(dm, &info);CHKERRQ(ierr);
-      ierr = diag_block_mult(dm, x, y, h, info.dof, getMatElemLaplacian3d);CHKERRQ(ierr);
-
-      PetscFunctionReturn(0);
-    }
-
-    #undef __FUNCT__
-    #define __FUNCT__ "laplacian_mult_diag"
-    PetscErrorCode laplacian_mult_diag(DM dm, Vec x, std::array<double, 3> const& h)
-    {
-      PetscErrorCode ierr;
-      DMDALocalInfo info;
-      PetscFunctionBeginUser;
-
-      ierr = DMDAGetLocalInfo(dm, &info);CHKERRQ(ierr);
-      ierr = diag_block_mult_diag(dm, x, h, info.dof, getMatElemLaplacian3d);CHKERRQ(ierr);
-
-      PetscFunctionReturn(0);
-    }
-
-    #undef __FUNCT__
-    #define __FUNCT__ "mass_mult"
-    PetscErrorCode mass_mult(DM dm, Vec x, Vec y, std::array<double, 3> const& h)
-    {
-      PetscErrorCode ierr;
-      DMDALocalInfo info;
-      PetscFunctionBeginUser;
-
-      ierr = DMDAGetLocalInfo(dm, &info);CHKERRQ(ierr);
-      ierr = diag_block_mult(dm, x, y, h, info.dof, getMatElemMass3d);CHKERRQ(ierr);
-
-      PetscFunctionReturn(0);
-    }
-
-    #undef __FUNCT__
-    #define __FUNCT__ "mass_mult_diag"
-    PetscErrorCode mass_mult_diag(DM dm, Vec x, std::array<double, 3> const& h)
-    {
-      PetscErrorCode ierr;
-      DMDALocalInfo info;
-      PetscFunctionBeginUser;
-
-      ierr = DMDAGetLocalInfo(dm, &info);CHKERRQ(ierr);
-      ierr = diag_block_mult_diag(dm, x, h, info.dof, getMatElemMass3d);CHKERRQ(ierr);
-
-      PetscFunctionReturn(0);
-    }
-
-    #undef __FUNCT__
-    #define __FUNCT__ "strain_tensor_mult"
-    PetscErrorCode strain_tensor_mult(DM dm, Vec x, Vec y, std::array<double, 3> const& h)
-    {
-      PetscErrorCode ierr;
-      PetscInt nbasisfunc = 8, nbasis2 = nbasisfunc*nbasisfunc;
-      PetscScalar tmp[nbasisfunc][3];
-      PetscScalar val[nbasisfunc][3];
-      PetscScalar ****px, ****py;
-      PetscReal MatElem[nbasis2][9];
-
-      PetscFunctionBeginUser;
-
-      ierr = getMatElemStrainTensor3d(MatElem, h);
-
-      auto box = get_DM_bounds<3>(dm);
-
-      ierr = DMDAVecGetArrayDOFRead(dm, x, &px);CHKERRQ(ierr);
-      ierr = DMDAVecGetArrayDOF(dm, y, &py);CHKERRQ(ierr);
-
-      for (std::size_t k=box.bottom_left[2]; k<box.upper_right[2]; ++k){
-        for (std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j){
-          for (std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i){
-            for(std::size_t k1=0; k1<nbasisfunc; ++k1){
-              std::size_t l1 = i + ind3d[k1][0];
-              std::size_t p1 = j + ind3d[k1][1];
-              std::size_t r1 = k + ind3d[k1][2];
-              for(std::size_t k2=0; k2<3; ++k2){
-                tmp[k1][k2] = px[r1][p1][l1][k2];
-                val[k1][k2] = 0.;
-              }
-            }
-
-            for(std::size_t k1=0; k1<nbasisfunc; ++k1){
-              for(std::size_t k2=0; k2<nbasisfunc; ++k2){
-                val[k1][0] += tmp[k2][0]*MatElem[k1*nbasisfunc+k2][0] 
-                            + tmp[k2][1]*MatElem[k1*nbasisfunc+k2][1] 
-                            + tmp[k2][2]*MatElem[k1*nbasisfunc+k2][2];
-                
-                val[k1][1] += tmp[k2][0]*MatElem[k1*nbasisfunc+k2][3] 
-                            + tmp[k2][1]*MatElem[k1*nbasisfunc+k2][4] 
-                            + tmp[k2][2]*MatElem[k1*nbasisfunc+k2][5];
-                
-                val[k1][2] += tmp[k2][0]*MatElem[k1*nbasisfunc+k2][6] 
-                            + tmp[k2][1]*MatElem[k1*nbasisfunc+k2][7] 
-                            + tmp[k2][2]*MatElem[k1*nbasisfunc+k2][8];
-              }
-            }
-
-            for(std::size_t k1=0; k1<nbasisfunc; ++k1){
-              std::size_t l1 = i + ind3d[k1][0];
-              std::size_t p1 = j + ind3d[k1][1];
-              std::size_t r1 = k + ind3d[k1][2];
-              for(std::size_t k2=0; k2<3; ++k2)
-                py[r1][p1][l1][k2] += val[k1][k2];
-            }
-          }
-        }
-      }
-      ierr = DMDAVecRestoreArrayDOFRead(dm, x, &px);CHKERRQ(ierr);
-      ierr = DMDAVecRestoreArrayDOF(dm, y, &py);CHKERRQ(ierr);
-
-      PetscFunctionReturn(0);
-    }
-
-    #undef __FUNCT__
-    #define __FUNCT__ "B_and_BT_mult"
-    PetscErrorCode B_and_BT_mult(DM dm, Vec xu, Vec xp, Vec yu, Vec yp, std::array<double, 3> const& h)
-    {
-      PetscErrorCode ierr;
-      PetscScalar tmpu[27][3], tmpp[8], vv[8];
-      PetscReal MatElemOnu[216], MatElemOnv[216], MatElemOnw[216];
-      DM dav, dap;
-      DMDALocalInfo infop;
-      PetscScalar ****pxu, ****pyu;
-      PetscScalar ***pxp, ***pyp;
-
-      PetscFunctionBeginUser;
-
-      ierr = DMCompositeGetEntries(dm, &dav, &dap);CHKERRQ(ierr);
-
-      ierr = getMatElemPressure3d(MatElemOnu, MatElemOnv, MatElemOnw, h);
-
-      auto box = get_DM_bounds<3>(dap);
-
-
-      ierr = DMDAVecGetArrayDOFRead(dav, xu, &pxu);CHKERRQ(ierr);
-      ierr = DMDAVecGetArrayDOF(dav, yu, &pyu);CHKERRQ(ierr);
-      ierr = DMDAVecGetArrayRead(dap, xp, &pxp);CHKERRQ(ierr);
-      ierr = DMDAVecGetArray(dap, yp, &pyp);CHKERRQ(ierr);
-
-      for (std::size_t k=box.bottom_left[2]; k<box.upper_right[2]; ++k){
-        for (std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j){
-          for (std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i){
-            for(std::size_t k1=0; k1<27; ++k1){
-              std::size_t l1 = 2*i + indpu3d[k1][0];
-              std::size_t p1 = 2*j + indpu3d[k1][1];
-              std::size_t r1 = 2*k + indpu3d[k1][2];
-              for(std::size_t k2=0; k2<3; ++k2)
-                tmpu[k1][k2] = pxu[r1][p1][l1][k2];
-            }
-
-            for(std::size_t k1=0; k1<8; k1++){
-              std::size_t l1 = i + ind3d[k1][0];
-              std::size_t p1 = j + ind3d[k1][1];
-              std::size_t r1 = k + ind3d[k1][2];
-              tmpp[k1] = pxp[r1][p1][l1];
-              vv[k1] = 0.;
-            }
-
-            for(std::size_t k1=0; k1<27; k1++){
-              std::size_t l1 = 2*i + indpu3d[k1][0];
-              std::size_t p1 = 2*j + indpu3d[k1][1];
-              std::size_t r1 = 2*k + indpu3d[k1][2];
-              auto val1 = 0.;
-              auto val2 = 0.;
-              auto val3 = 0.;
-
-              for(std::size_t k2=0; k2<8; k2++){
-                val1 -= tmpp[k2]*MatElemOnu[k2*27+k1];
-                val2 -= tmpp[k2]*MatElemOnv[k2*27+k1];
-                val3 -= tmpp[k2]*MatElemOnw[k2*27+k1];
-
-                vv[k2] += tmpu[k1][0]*MatElemOnu[k2*27+k1]
-                         +tmpu[k1][1]*MatElemOnv[k2*27+k1]
-                         +tmpu[k1][2]*MatElemOnw[k2*27+k1];
-              }
-
-              pyu[r1][p1][l1][0] += val1;
-              pyu[r1][p1][l1][1] += val2;
-              pyu[r1][p1][l1][2] += val3;
-            }
-
-            for(std::size_t k1=0; k1<8; k1++){
-              std::size_t l1 = i + ind3d[k1][0];
-              std::size_t p1 = j + ind3d[k1][1];
-              std::size_t r1 = k + ind3d[k1][2];
-              pyp[r1][p1][l1] += vv[k1];
-            }
-          }
-        }
-      }
-
-      ierr = DMDAVecRestoreArrayDOFRead(dav, xu, &pxu);CHKERRQ(ierr);
-      ierr = DMDAVecRestoreArrayDOF(dav, yu, &pyu);CHKERRQ(ierr);
-      ierr = DMDAVecRestoreArrayRead(dap, xp, &pxp);CHKERRQ(ierr);
-      ierr = DMDAVecRestoreArray(dap, yp, &pyp);CHKERRQ(ierr);
-
-      PetscFunctionReturn(0);
-    }
-
   }
 }
 #endif
