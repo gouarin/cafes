@@ -1,6 +1,7 @@
 #ifndef CAFES_FEM_RHS_HPP_INCLUDED
 #define CAFES_FEM_RHS_HPP_INCLUDED
 
+#include <algorithm/iterate.hpp>
 #include <fem/matrixFree.hpp>
 #include <particle/geometry/position.hpp>
 #include <petsc.h>
@@ -50,7 +51,7 @@ namespace cafes
 
       // warning: we assume that both u and v on a border have a Dirichlet condition
       auto box = get_DM_bounds<Dimensions>(x.dm_, false);
-      iterate(box, kernel(x, rhs, h));
+      algorithm::iterate(box, kernel(x, rhs, h));
     }
 
     #undef __FUNCT__

@@ -1,6 +1,7 @@
 #ifndef CAFES_FEM_OPERATOR_HPP_INCLUDED
 #define CAFES_FEM_OPERATOR_HPP_INCLUDED
 
+#include <algorithm/iterate.hpp>
 #include <fem/matElem.hpp>
 #include <fem/mesh.hpp>
 #include <fem/quadrature.hpp>
@@ -15,32 +16,6 @@ namespace cafes
 {
   namespace fem
   {
-
-    template<typename Box, typename Function, typename Position>
-    void iterate_impl(Box const& b, Function&& f, Position& p, std::integral_constant<std::size_t,0> const&)
-    {
-      std::forward<Function>(f)(p);
-    }
-
-    template<typename Box, typename Function, typename Position, typename Index>
-    void iterate_impl(Box const& b, Function&& f, Position& p, Index const&)
-    {
-      static constexpr std::size_t n = Index::value-1;
-
-      for( p[n] = b.bottom_left[n]; p[n] < b.upper_right[n]; ++p[n] )
-      {
-        iterate_impl(b, std::forward<Function>(f), p, std::integral_constant<std::size_t,n>{});
-      }
-    }
-
-    template<typename Box, typename Function>
-    void iterate(Box const& b, Function&& f)
-    {
-      typename Box::position_type pos;
-      iterate_impl(b, f, pos, std::integral_constant<std::size_t,Box::dimensions>{});
-    }
-
-
     auto const kernel_1 = [](auto const& x, auto& y, auto const& matelem){
       auto const kernel_pos = [&](auto const& pos){
         auto const ielem = get_element(pos);
@@ -132,7 +107,7 @@ namespace cafes
 
       auto box = get_DM_bounds<Dimensions>(x.dm_);
 
-      iterate(box, kernel(x, y, matelem));
+      algorithm::iterate(box, kernel(x, y, matelem));
 
       PetscFunctionReturn(0);
     }
@@ -148,7 +123,7 @@ namespace cafes
 
       auto box = get_DM_bounds<Dimensions>(x.dm_);
 
-      iterate(box, kernel(x, matelem));
+      algorithm::iterate(box, kernel(x, matelem));
 
       PetscFunctionReturn(0);
     }
@@ -167,7 +142,7 @@ namespace cafes
 
       auto box = get_DM_bounds<Dimensions>(x2.dm_);
 
-      iterate(box, kernel(x1, x2, y1, y2, matelem));
+      algorithm::iterate(box, kernel(x1, x2, y1, y2, matelem));
 
       PetscFunctionReturn(0);
     }
