@@ -44,9 +44,7 @@ namespace cafes
       ierr = interp_fluid_to_surf(*ctx, g);CHKERRQ(ierr);
 
       std::vector<std::array<double, Dimensions>> mean(ctx->particles.size());
-      std::vector<double> cross_prod;
-
-      cross_prod.resize(ctx->particles.size()*((Dimensions==2)?1:3));
+      std::vector<std::array<double, Dimensions==2?1:3>> cross_prod(ctx->particles.size());
 
       ierr = simple_layer(*ctx, g, mean, cross_prod);CHKERRQ(ierr);
 
