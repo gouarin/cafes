@@ -38,87 +38,36 @@ namespace cafes
     }
 
     #undef __FUNCT__
-    #define __FUNCT__ "set_rhs_problem_"
+    #define __FUNCT__ "set_rhs_problem_impl"
     template<std::size_t Dimensions, typename Ctx>
-    PetscErrorCode set_rhs_problem_(Ctx& ctx, Vec x, Vec out, bool apply_forces, std::integral_constant<int, 2>)
+    PetscErrorCode set_rhs_problem_impl(Ctx& ctx, Vec x, petsc::petsc_vec<Dimensions>& petsc_u, bool apply_forces)
     {
       PetscErrorCode ierr;
-      PetscFunctionBeginUser;      
-
-      Vec outu;
-      ierr = DMCompositeGetAccess(ctx.problem.ctx->dm, out, &outu, NULL);CHKERRQ(ierr);
+      PetscFunctionBeginUser;
 
       int num = 0;
       PetscScalar const *px;
       ierr = VecGetArrayRead(x, &px);CHKERRQ(ierr);
 
-      DM dau;
-      ierr = DMCompositeGetEntries(ctx.problem.ctx->dm , &dau, PETSC_NULL);CHKERRQ(ierr);
-
-      PetscScalar ***pout;
-      ierr = DMDAVecGetArrayDOF(dau, outu, &pout);CHKERRQ(ierr);
       auto box = fem::get_DM_bounds<Dimensions>(ctx.problem.ctx->dm, 0);
       for(auto& p: ctx.particles){
         auto pbox = p.bounding_box(ctx.problem.ctx->h);
         if (geometry::intersect(box, pbox)){
           auto new_box = geometry::overlap_box(box, pbox);
           auto pts = find_fluid_points_insides(p, new_box, ctx.problem.ctx->h);
-          for(auto& ind: pts){
+          for(auto& ind: pts)
+          {
+            auto u = petsc_u.at_g(ind);
             if (apply_forces)
-              for(std::size_t i=0; i<2; ++i)
-                pout[ind[1]][ind[0]][i] = px[num++] + p.rho_*p.force_[i];
+              for(std::size_t i=0; i<Dimensions; ++i)
+                u[i] = px[num++] + p.rho_*p.force_[i];
             else
-              for(std::size_t i=0; i<2; ++i)
-                pout[ind[1]][ind[0]][i] = px[num++];
+              for(std::size_t i=0; i<Dimensions; ++i)
+                u[i] = px[num++];
           }       
         }
       }
 
-      ierr = DMDAVecRestoreArrayDOF(dau, outu, &pout);CHKERRQ(ierr);
-      ierr = DMCompositeRestoreAccess(ctx.problem.ctx->dm, out, &outu, NULL);CHKERRQ(ierr);
-      ierr = VecRestoreArrayRead(x, &px);CHKERRQ(ierr);
-      PetscFunctionReturn(0);
-    }
-
-    #undef __FUNCT__
-    #define __FUNCT__ "set_rhs_problem_"
-    template<std::size_t Dimensions, typename Ctx>
-    PetscErrorCode set_rhs_problem_(Ctx& ctx, Vec x, Vec out, bool apply_forces, std::integral_constant<int, 3>)
-    {
-      PetscErrorCode ierr;
-      PetscFunctionBeginUser;      
-
-      Vec outu;
-      ierr = DMCompositeGetAccess(ctx.problem.ctx->dm, out, &outu, NULL);CHKERRQ(ierr);
-
-      int num = 0;
-      PetscScalar const *px;
-      ierr = VecGetArrayRead(x, &px);CHKERRQ(ierr);
-
-      DM dau;
-      ierr = DMCompositeGetEntries(ctx.problem.ctx->dm , &dau, PETSC_NULL);CHKERRQ(ierr);
-
-      PetscScalar ****pout;
-      ierr = DMDAVecGetArrayDOF(dau, outu, &pout);CHKERRQ(ierr);
-      auto box = fem::get_DM_bounds<Dimensions>(ctx.problem.ctx->dm, 0);
-      for(auto& p: ctx.particles){
-        auto pbox = p.bounding_box(ctx.problem.ctx->h);
-        if (geometry::intersect(box, pbox)){
-          auto new_box = geometry::overlap_box(box, pbox);
-          auto pts = find_fluid_points_insides(p, new_box, ctx.problem.ctx->h);
-          for(auto& ind: pts){
-            if (apply_forces)
-              for(std::size_t i=0; i<3; ++i)
-                pout[ind[2]][ind[1]][ind[0]][i] = px[num++] + p.rho_*p.force_[i];
-            else
-              for(std::size_t i=0; i<3; ++i)
-                pout[ind[2]][ind[1]][ind[0]][i] = px[num++];
-          }       
-        }
-      }
-
-      ierr = DMDAVecRestoreArrayDOF(dau, outu, &pout);CHKERRQ(ierr);
-      ierr = DMCompositeRestoreAccess(ctx.problem.ctx->dm, out, &outu, NULL);CHKERRQ(ierr);
       ierr = VecRestoreArrayRead(x, &px);CHKERRQ(ierr);
       PetscFunctionReturn(0);
     }
@@ -129,14 +78,17 @@ namespace cafes
     PetscErrorCode set_rhs_problem(Ctx& ctx, Vec x, bool apply_forces=false)
     {
       PetscErrorCode ierr;
-      PetscFunctionBeginUser;      
+      PetscFunctionBeginUser;
 
       Vec forces, mass_mult;
       ierr = DMGetGlobalVector(ctx.problem.ctx->dm, &forces);CHKERRQ(ierr);
       ierr = DMGetGlobalVector(ctx.problem.ctx->dm, &mass_mult);CHKERRQ(ierr);
-
       ierr = VecSet(forces, 0);CHKERRQ(ierr);
-      ierr = set_rhs_problem_<Dimensions, Ctx>(ctx, x, forces, apply_forces, std::integral_constant<int, Dimensions>{});CHKERRQ(ierr);
+
+      auto petsc_forces = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, forces, 0, false);
+      
+      ierr = set_rhs_problem_impl(ctx, x, petsc_forces, apply_forces);CHKERRQ(ierr);
+      
       ierr = fem::apply_mass_matrix(ctx.problem.ctx->dm, forces, mass_mult, ctx.problem.ctx->h);CHKERRQ(ierr);
       ierr = VecAXPY(ctx.problem.rhs, 1., mass_mult);CHKERRQ(ierr);
 
