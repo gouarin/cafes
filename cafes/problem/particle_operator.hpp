@@ -179,7 +179,7 @@ namespace cafes
             auto u = sol.at(ielem[j]);
             for (std::size_t d=0; d<Dimensions; ++d)
               g[ipart][i][d] += u[d]*bfunc[j];
-          }          
+          }
         }
         ipart++;
       }
@@ -200,24 +200,21 @@ namespace cafes
     #define __FUNCT__ "simple_layer"
     template<std::size_t Dimensions, typename Ctx>
     PetscErrorCode simple_layer(Ctx& ctx, std::vector<std::vector<std::array<double, Dimensions>>>& g,
-                                std::vector<double>& mean, std::vector<double>& cross_prod)
+                                std::vector<std::array<double, Dimensions>>& mean, std::vector<double>& cross_prod)
     {
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
-      std::vector<double> mean_local;
       std::vector<double> cross_prod_local;
 
-      mean_local.resize(mean.size());
       cross_prod_local.resize(cross_prod.size());
 
-      std::fill(mean_local.begin(), mean_local.end(), 0.);
       std::fill(cross_prod_local.begin(), cross_prod_local.end(), 0.);
 
       for(std::size_t ipart=0; ipart<g.size(); ++ipart)
         for(std::size_t isurf=0; isurf<g[ipart].size(); ++isurf){
           for (std::size_t d=0; d<Dimensions; ++d)
-            mean_local[ipart*Dimensions + d] += g[ipart][isurf][d];
+            mean[ipart][d] += g[ipart][isurf][d];
 
           if (Dimensions == 2)
             cross_prod_local[ipart] += geometry::cross_product(ctx.radial_vec[ipart][isurf], g[ipart][isurf]);
@@ -234,13 +231,13 @@ namespace cafes
           }
         }
 
-      MPI_Allreduce(mean_local.data(), mean.data(), mean.size(), MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, mean.data(), mean.size(), MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
       MPI_Allreduce(cross_prod_local.data(), cross_prod.data(), cross_prod.size(), MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
 
       for(std::size_t ipart=0; ipart<g.size(); ++ipart){
         auto& radius = ctx.particles[ipart].shape_factors_[0];
         for(std::size_t d=0; d<Dimensions; ++d)
-          mean[ipart*Dimensions + d] /= ctx.nb_surf_points[ipart];
+          mean[ipart][d] /= ctx.nb_surf_points[ipart];
         // fix for non circle shape
         if (Dimensions == 2)
           cross_prod[ipart] /= radius*radius*ctx.nb_surf_points[ipart];
@@ -250,21 +247,24 @@ namespace cafes
       }
 
       if (Dimensions == 2)
-        for(std::size_t ipart=0; ipart<g.size(); ++ipart)
-          for(std::size_t isurf=0; isurf<g[ipart].size(); ++isurf){
-              g[ipart][isurf][0] -= mean[ipart*Dimensions] - cross_prod[ipart]*ctx.radial_vec[ipart][isurf][1];
-              g[ipart][isurf][1] -= mean[ipart*Dimensions + 1] + cross_prod[ipart]*ctx.radial_vec[ipart][isurf][0];
+        for(std::size_t ipart=0; ipart<g.size(); ++ipart){
+          std::cout << ipart << ": " << mean[ipart][0] << ", " << mean[ipart][1] << "\n";
+          for(std::size_t isurf=0; isurf<g[ipart].size(); ++isurf)
+          {
+              g[ipart][isurf][0] -= mean[ipart][0] - cross_prod[ipart]*ctx.radial_vec[ipart][isurf][1];
+              g[ipart][isurf][1] -= mean[ipart][1] + cross_prod[ipart]*ctx.radial_vec[ipart][isurf][0];
           }
+        }
       else
         for(std::size_t ipart=0; ipart<g.size(); ++ipart)
           for(std::size_t isurf=0; isurf<g[ipart].size(); ++isurf){
-              g[ipart][isurf][0] -= mean[ipart*Dimensions] 
+              g[ipart][isurf][0] -= mean[ipart][0] 
                                   + cross_prod[ipart*Dimensions + 1]*ctx.radial_vec[ipart][isurf][2]
                                   - cross_prod[ipart*Dimensions + 2]*ctx.radial_vec[ipart][isurf][1];
-              g[ipart][isurf][1] -= mean[ipart*Dimensions + 1]
+              g[ipart][isurf][1] -= mean[ipart][1]
                                   + cross_prod[ipart*Dimensions + 2]*ctx.radial_vec[ipart][isurf][0]
                                   - cross_prod[ipart*Dimensions    ]*ctx.radial_vec[ipart][isurf][2];
-              g[ipart][isurf][2] -= mean[ipart*Dimensions + 2] 
+              g[ipart][isurf][2] -= mean[ipart][2] 
                                   + cross_prod[ipart*Dimensions    ]*ctx.radial_vec[ipart][isurf][1]
                                   - cross_prod[ipart*Dimensions + 1]*ctx.radial_vec[ipart][isurf][0];
           }
@@ -351,7 +351,7 @@ namespace cafes
                               DM dm, 
                               Vec sol,
                               geometry::box<2, int> const& box,
-                              std::vector<double>& mean, 
+                              std::vector<std::array<double, 2>>& mean, 
                               std::vector<double>& cross_prod,
                               std::vector<int> const& num,
                               std::size_t scale,
@@ -396,8 +396,8 @@ namespace cafes
                     cross += (pts[0] - p.center_[0])*solv - (pts[1] - p.center_[1])*solu;
                   }
                 }
-          mean[ipart*Dimensions] = meanu/num[ipart];
-          mean[ipart*Dimensions + 1] = meanv/num[ipart];
+          mean[ipart][0] = meanu/num[ipart];
+          mean[ipart][1] = meanv/num[ipart];
           cross_prod[ipart] = cross/num[ipart];
         }
       }
@@ -413,7 +413,7 @@ namespace cafes
                               DM dm, 
                               Vec sol,
                               geometry::box<3, int> const& box,
-                              std::vector<double>& mean, 
+                              std::vector<std::array<double, 3>>& mean, 
                               std::vector<double>& cross_prod,
                               std::vector<int> const& num,
                               std::size_t scale,
@@ -463,7 +463,7 @@ namespace cafes
                       }
                     }
           for(std::size_t d=0; d<Dimensions; ++d){
-            mean[ipart*Dimensions + d ] = mean_tmp[d]/num[ipart];
+            mean[ipart][d] = mean_tmp[d]/num[ipart];
             cross_prod[ipart*Dimensions + d ] = cross_tmp[d]/num[ipart];
           }
         }
@@ -476,7 +476,7 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "projection"
     template<std::size_t Dimensions, typename Ctx>
-    PetscErrorCode projection(Ctx& ctx, std::vector<double>& mean, std::vector<double>& cross_prod)
+    PetscErrorCode projection(Ctx& ctx, std::vector<std::array<double, Dimensions>>& mean, std::vector<double>& cross_prod)
     {
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
@@ -487,13 +487,10 @@ namespace cafes
       auto box = fem::get_DM_bounds<Dimensions>(ctx.problem.ctx->dm, 0);
       auto& h = ctx.problem.ctx->h;
 
-      std::vector<double> mean_local;
       std::vector<double> cross_prod_local;
 
-      mean_local.resize(mean.size());
       cross_prod_local.resize(cross_prod.size());
 
-      std::fill(mean_local.begin(), mean_local.end(), 0.);
       std::fill(cross_prod_local.begin(), cross_prod_local.end(), 0.);
 
       DM dav;
@@ -506,9 +503,9 @@ namespace cafes
       ierr = DMGlobalToLocalBegin(dav, sol, INSERT_VALUES, sol_local);CHKERRQ(ierr);
       ierr = DMGlobalToLocalEnd(dav, sol, INSERT_VALUES, sol_local);CHKERRQ(ierr);
 
-      ierr = projection(ctx.particles, dav, sol_local, box, mean_local, cross_prod_local, ctx.num, ctx.scale, h);
+      ierr = projection(ctx.particles, dav, sol_local, box, mean, cross_prod_local, ctx.num, ctx.scale, h);
 
-      MPI_Allreduce(mean_local.data(), mean.data(), mean.size(), MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, mean.data(), mean.size(), MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
       MPI_Allreduce(cross_prod_local.data(), cross_prod.data(), cross_prod.size(), MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
 
       ierr = DMRestoreLocalVector(dav, &sol_local);CHKERRQ(ierr);
@@ -524,7 +521,7 @@ namespace cafes
                              Vec y, 
                              Vec sol,
                              geometry::box<2, int> const& box,
-                             std::vector<double> const& mean, 
+                             std::vector<std::array<double, 2>> const& mean, 
                              std::vector<double> const& cross_prod,
                              std::array<double, 2> const& h)
     {
@@ -549,8 +546,8 @@ namespace cafes
           auto new_box = geometry::box_inside(box, pbox);
           auto pts = find_fluid_points_insides(p, new_box, h);
           for(auto& ind: pts){
-            py[num++] = psol[ind[1]][ind[0]][0] - mean[ipart*Dimensions  ] + Cr*(ind[1]*h[1] - p.center_[1])*cross_prod[ipart];
-            py[num++] = psol[ind[1]][ind[0]][1] - mean[ipart*Dimensions+1] - Cr*(ind[0]*h[0] - p.center_[0])*cross_prod[ipart];
+            py[num++] = psol[ind[1]][ind[0]][0] - mean[ipart][0] + Cr*(ind[1]*h[1] - p.center_[1])*cross_prod[ipart];
+            py[num++] = psol[ind[1]][ind[0]][1] - mean[ipart][1] - Cr*(ind[0]*h[0] - p.center_[0])*cross_prod[ipart];
           }
         }
       }
@@ -569,7 +566,7 @@ namespace cafes
                              Vec y, 
                              Vec sol,
                              geometry::box<3, int> const& box,
-                             std::vector<double> const& mean, 
+                             std::vector<std::array<double, 3>> const& mean, 
                              std::vector<double> const& cross_prod,
                              std::array<double, 3> const& h)
     {
@@ -596,13 +593,13 @@ namespace cafes
           auto pts = find_fluid_points_insides(p, new_box, h);
           for(auto& ind: pts){
             position_type pos { ind[0]*h[0] - p.center_[0], ind[1]*h[1] - p.center_[1], ind[2]*h[2] - p.center_[2] };
-            py[num++] = psol[ind[2]][ind[1]][ind[0]][0] - mean[ipart*Dimensions] 
+            py[num++] = psol[ind[2]][ind[1]][ind[0]][0] - mean[ipart][0] 
                       - Cr*( cross_prod[ipart*Dimensions + 1]*pos[2] 
                            - cross_prod[ipart*Dimensions + 2]*pos[1]);
-            py[num++] = psol[ind[2]][ind[1]][ind[0]][1] - mean[ipart*Dimensions+1] 
+            py[num++] = psol[ind[2]][ind[1]][ind[0]][1] - mean[ipart][1]
                       - Cr*( cross_prod[ipart*Dimensions    ]*pos[2] 
                            - cross_prod[ipart*Dimensions + 2]*pos[0]);
-            py[num++] = psol[ind[2]][ind[1]][ind[0]][2] - mean[ipart*Dimensions+2] 
+            py[num++] = psol[ind[2]][ind[1]][ind[0]][2] - mean[ipart][2] 
                       - Cr*( cross_prod[ipart*Dimensions + 1]*pos[2] 
                            - cross_prod[ipart*Dimensions + 2]*pos[1]);
           }
@@ -618,7 +615,7 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "compute_y"
     template<std::size_t Dimensions, typename Ctx>
-    PetscErrorCode compute_y(Ctx& ctx, Vec y, std::vector<double> const& mean, std::vector<double> const& cross_prod)
+    PetscErrorCode compute_y(Ctx& ctx, Vec y, std::vector<std::array<double, Dimensions>> const& mean, std::vector<double> const& cross_prod)
     {
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
