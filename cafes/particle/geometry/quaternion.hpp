@@ -25,9 +25,9 @@ namespace cafes
 
     struct quaternion
     {
-            using vector_type   = vector<3, double>;
+      using vector_type   = vector<double, 3>;
 
-      vector<4, double> components_;
+      vector<double, 4> components_;
 
       quaternion() = default;
 
@@ -82,7 +82,7 @@ namespace cafes
       // }
 
       //todo : proper interface for quaternion compositon and application
-      position<2, double> rotate(position<2, double> pos) const
+      position<double, 2> rotate(position<double, 2> pos) const
       {
         auto& x = components_[0];
         auto& y = components_[1];
@@ -93,7 +93,7 @@ namespace cafes
                };
       }
 
-      position<3, double> rotate(position<3, double> pos) const
+      position<double, 3> rotate(position<double, 3> pos) const
       {
         auto& x = components_[0];
         auto& y = components_[1];

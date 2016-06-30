@@ -6,26 +6,26 @@
 namespace cafes
 {
     void set_torques(std::vector<double>& torques, std::size_t ipart,
-                     cafes::geometry::position<3, double> const& center,
-                     cafes::geometry::position<3, int> const& ind,
+                     cafes::geometry::position<double, 3> const& center,
+                     cafes::geometry::position<int, 3> const& ind,
                      std::array<double, 3> const& g,
                      std::array<double, 3> const& h
                      )
     {
-      cafes::geometry::position<3, double> pos { ind[0]*h[0] - center[0], ind[1]*h[1] - center[1], ind[2]*h[2] - center[2] };
+      cafes::geometry::position<double, 3> pos { ind[0]*h[0] - center[0], ind[1]*h[1] - center[1], ind[2]*h[2] - center[2] };
       torques[ipart*3    ] += pos[1]*g[2] - pos[2]*g[1];
       torques[ipart*3 + 1] += pos[2]*g[0] - pos[0]*g[2];
       torques[ipart*3 + 2] += pos[0]*g[1] - pos[1]*g[0];
     }
 
     void set_torques(std::vector<double>& torques, std::size_t ipart,
-                     cafes::geometry::position<2, double> const& center,
-                     cafes::geometry::position<2, int> const& ind,
+                     cafes::geometry::position<double, 2> const& center,
+                     cafes::geometry::position<int, 2> const& ind,
                      std::array<double, 2> const& g,
                      std::array<double, 2> const& h
                      )
     {
-      cafes::geometry::position<2, double> pos { ind[0]*h[0] - center[0], ind[1]*h[1] - center[1]};
+      cafes::geometry::position<double, 2> pos { ind[0]*h[0] - center[0], ind[1]*h[1] - center[1]};
       torques[ipart] += pos[0]*g[1] - pos[1]*g[0];
     }
 
@@ -34,7 +34,7 @@ namespace cafes
     template<std::size_t Dimensions, typename Shape>
     PetscErrorCode forces_torques_with_control(std::vector<particle<Shape>> const& particles,
                                                Vec control,
-                                               geometry::box<Dimensions, int> const& box,
+                                               geometry::box<int, Dimensions> const& box,
                                                std::vector<double>& forces,
                                                std::vector<double>& torques,
                                                std::vector<int> const& integration_points_size,

@@ -15,7 +15,7 @@ namespace cafes
   namespace geometry
   {
 
-    std::vector<std::array<int, 3>> triangulation_(std::vector<position<2, double>> points){
+    std::vector<std::array<int, 3>> triangulation_(std::vector<position<double, 2>> points){
       orgQhull::Qhull qhull;
       std::vector<std::array<int, 3>> triangles;
 
@@ -48,7 +48,7 @@ namespace cafes
       return triangles;
     }
 
-    std::vector<std::array<int, 3>> triangulation_(std::vector<position<3, double>> points){
+    std::vector<std::array<int, 3>> triangulation_(std::vector<position<double, 3>> points){
       orgQhull::Qhull qhull;
       std::vector<std::array<int, 3>> triangles;
 
@@ -81,7 +81,7 @@ namespace cafes
     }
 
     template<std::size_t Dimensions>
-    std::vector<std::array<int, 3>> triangulation(std::vector<position<Dimensions, double>> points){
+    std::vector<std::array<int, 3>> triangulation(std::vector<position<double, Dimensions>> points){
       return triangulation_(points);
     }
   }

@@ -10,9 +10,9 @@ namespace cafes
   namespace physics
   {
       template<std::size_t Dimensions>
-      struct force : private std::array<double,Dimensions>
+      struct force : private std::array<double, Dimensions>
       {
-        using parent = std::array<double,Dimensions>;
+        using parent = std::array<double, Dimensions>;
         using parent::operator[];
 
         force() = default;

@@ -17,7 +17,7 @@ namespace cafes
       DMDALocalInfo info;
       DMDAGetLocalInfo(dm, &info);
       
-      geometry::box<2, int> box{ { info.xs          , info.ys           },
+      geometry::box<int, 2> box{ { info.xs          , info.ys           },
                                  { info.xs + info.xm, info.ys + info.ym }
                                 };
 
@@ -37,7 +37,7 @@ namespace cafes
       DMDALocalInfo info;
       DMDAGetLocalInfo(dm, &info);
 
-      geometry::box<3, int> box{ { info.xs          , info.ys          , info.zs           },
+      geometry::box<int, 3> box{ { info.xs          , info.ys          , info.zs           },
                                  { info.xs + info.xm, info.ys + info.ym, info.zs + info.zm }
                                 };
       

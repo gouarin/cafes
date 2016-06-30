@@ -18,8 +18,8 @@ namespace cafes
   namespace singularity
   {
 
-    using position2d = geometry::position<2, double>;
-    using position3d = geometry::position<3, double>;
+    using position2d = geometry::position<double, 2>;
+    using position3d = geometry::position<double, 3>;
 
     PetscScalar p_sing_withT_normalMvt2D(position2d X, PetscReal H, PetscReal M, PetscReal a, double U, PetscReal l, PetscReal eps, PetscReal* param  )
     {

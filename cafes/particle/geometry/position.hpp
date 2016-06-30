@@ -12,19 +12,22 @@ namespace cafes
 {
   namespace geometry
   {
-      template<std::size_t Dimensions, typename T>
+      template<typename T, std::size_t Dimensions>
       struct position : private std::array<T, Dimensions>
       {
         using parent = std::array<T, Dimensions>;
         using parent::operator[];
         using parent::begin;
         using parent::end;
+        using parent::fill;
+        using parent::data;
+
         static constexpr std::size_t dimensions = Dimensions;
 
         position() = default;
         position(position const&) = default;
 
-        template<typename U> position(position<Dimensions, U> const& p)
+        template<typename U> position(position<U, Dimensions> const& p)
         {
           for(std::size_t i=0; i<Dimensions; ++i)
             (*this)[i] = static_cast<T>(p[i]);
@@ -57,7 +60,7 @@ namespace cafes
         //     return *this;
         // }
 
-        position& operator*=(position<Dimensions, T> const& p)
+        position& operator*=(position<T, Dimensions> const& p)
         {
             for(std::size_t i=0;i<Dimensions;++i) (*this)[i] *= p[i];
             return *this;
@@ -69,13 +72,13 @@ namespace cafes
             return *this;
         }
 
-        position& operator-=(position<Dimensions, T> const& p)
+        position& operator-=(position<T, Dimensions> const& p)
         {
             for(std::size_t i=0;i<Dimensions;++i) (*this)[i] -= p[i];
             return *this;
         }
 
-        position& operator+=(position<Dimensions, T> const& p)
+        position& operator+=(position<T, Dimensions> const& p)
         {
             for(std::size_t i=0;i<Dimensions;++i) (*this)[i] += p[i];
             return *this;
@@ -114,39 +117,39 @@ namespace cafes
 
       };
 
-      template<std::size_t Dimensions, typename T>
-      position<Dimensions, T> operator+( position<Dimensions, T> const& p
-                                    , physics::velocity<Dimensions> const& v
+      template<typename T, std::size_t Dimensions>
+      position<T, Dimensions> operator+( position<T, Dimensions> const& p
+                                       , physics::velocity<Dimensions> const& v
                                     )
       {
-          position<Dimensions, T> that{p};
+          position<T, Dimensions> that{p};
           return that += v;
       }
 
-      template<std::size_t Dimensions, typename T>
-      position<Dimensions, T> operator+( position<Dimensions, T> const& p
-                                    , T const& v
+      template<typename T, std::size_t Dimensions>
+      position<T, Dimensions> operator+( position<T, Dimensions> const& p
+                                       , T const& v
                                     )
       {
-          position<Dimensions, T> that{p};
+          position<T, Dimensions> that{p};
           return that += v;
       }
 
-      template<std::size_t Dimensions, typename T>
-      position<Dimensions, T> operator+( position<Dimensions, T> const& p1
-                                       , position<Dimensions, T> const& p2
+      template<typename T, std::size_t Dimensions>
+      position<T, Dimensions> operator+( position<T, Dimensions> const& p1
+                                       , position<T, Dimensions> const& p2
                                        )
       {
-          position<Dimensions, T> that{p1};
+          position<T, Dimensions> that{p1};
           return that += p2;
       }
 
-      template<std::size_t Dimensions, typename T>
-      position<Dimensions, T> operator-( position<Dimensions, T> const& p
+      template<typename T, std::size_t Dimensions>
+      position<T, Dimensions> operator-( position<T, Dimensions> const& p
                                     , T const& v
                                     )
       {
-          position<Dimensions, T> that{p};
+          position<T, Dimensions> that{p};
           return that -= v;
       }
 
@@ -159,73 +162,73 @@ namespace cafes
       //     return that *= q;
       // }
 
-      template<std::size_t Dimensions, typename T, typename U>
-      position<Dimensions, double> operator*( position<Dimensions, T> const& p1
-                                         ,    position<Dimensions, U> const& p2
+      template<typename T, typename U, std::size_t Dimensions>
+      position<double, Dimensions> operator*( position<T, Dimensions> const& p1
+                                         ,    position<U, Dimensions> const& p2
                                     )
       {
-          position<Dimensions, double> that{p1};
-          position<Dimensions, double> tmp{p2};
+          position<double, Dimensions> that{p1};
+          position<double, Dimensions> tmp{p2};
           return that *= p2;
       }
 
-      template<std::size_t Dimensions, typename T, typename U>
-      position<Dimensions, double> operator*( position<Dimensions, T> const& p
-                                    ,    std::array<U, Dimensions> const& v
-                                    )
+      template<typename T, typename U, std::size_t Dimensions>
+      position<double, Dimensions> operator*( position<T, Dimensions> const& p
+                                            , std::array<U, Dimensions> const& v
+                                            )
       {
-          position<Dimensions, double> that{p};
+          position<double, Dimensions> that{p};
           return that *= v;
       }
 
-      template<std::size_t Dimensions, typename T>
-      position<Dimensions, double> operator-( position<Dimensions, T> const& p1
-                                         ,    position<Dimensions, T> const& p2
-                                    )
+      template<typename T, std::size_t Dimensions>
+      position<double, Dimensions> operator-( position<T, Dimensions> const& p1
+                                            , position<T, Dimensions> const& p2
+                                            )
       {
-          position<Dimensions, T> that{p1};
+          position<T, Dimensions> that{p1};
           return that -= p2;
       }
 
-      template<std::size_t Dimensions, typename T>
-      position<Dimensions, T> operator*( position<Dimensions, T> const& p1
-                                    ,    position<Dimensions, T> const& p2
+      template<typename T, std::size_t Dimensions>
+      position<T, Dimensions> operator*( position<T, Dimensions> const& p1
+                                    ,    position<T, Dimensions> const& p2
                                     )
       {
-          position<Dimensions, T> that{p1};
+          position<T, Dimensions> that{p1};
           return that *= p2;
       }
 
-      template<std::size_t Dimensions, typename T>
-      position<Dimensions, T> operator/( position<Dimensions, T> const& p
-                                    , std::array<T, Dimensions> const& v
-                                    )
+      template<typename T, std::size_t Dimensions>
+      position<T, Dimensions> operator/( position<T, Dimensions> const& p
+                                       , std::array<T, Dimensions> const& v
+                                       )
       {
-          position<Dimensions, T> that{p};
+          position<T, Dimensions> that{p};
           return that /= v;
       }
 
-      template<std::size_t Dimensions, typename T>
-      position<Dimensions, T> operator/( position<Dimensions, T> const& p
-                                    , T const& v
-                                    )
+      template<typename T, std::size_t Dimensions>
+      position<T, Dimensions> operator/( position<T, Dimensions> const& p
+                                       , T const& v
+                                       )
       {
-          position<Dimensions, T> that{p};
+          position<T, Dimensions> that{p};
           return that /= v;
       }
 
       template<std::size_t Dimensions>
-      position<Dimensions, int> ceil(position<Dimensions, double> const& pos)
+      position<int, Dimensions> ceil(position<double, Dimensions> const& pos)
       {
-          position<Dimensions, double> that;
+          position<double, Dimensions> that;
           std::transform(pos.begin(), pos.end(), that.begin(), [](auto& p){return std::ceil(p);});
           return that;
       }
 
       template<std::size_t Dimensions>
-      position<Dimensions, int> floor(position<Dimensions, double> const& pos)
+      position<int, Dimensions> floor(position<double, Dimensions> const& pos)
       {
-          position<Dimensions, double> that;
+          position<double, Dimensions> that;
           std::transform(pos.begin(), pos.end(), that.begin(), [](auto& p){return std::floor(p);});
           return that;
       }

@@ -29,11 +29,11 @@ namespace cafes
 
 
     template<std::size_t Dimensions>
-    std::vector<position<Dimensions, double>> uniform_sampling(std::array<double, Dimensions> r, 
+    std::vector<position<double, Dimensions>> uniform_sampling(std::array<double, Dimensions> r, 
                                                           double const& eps, double const& k, 
                                                           double const& tol)
     {
-      std::vector<position<Dimensions, double>> that;
+      std::vector<position<double, Dimensions>> that;
       std::vector<double> save_eta;
       double eta = 0.;
 
@@ -70,12 +70,12 @@ namespace cafes
     }
 
     template<std::size_t Dimensions>
-    std::vector<position<Dimensions, double>> uniform_sampling(std::array<double, Dimensions> r, 
+    std::vector<position<double, Dimensions>> uniform_sampling(std::array<double, Dimensions> r, 
                                                           double const& eps, double const& k,
                                                           double const& z, double const& phi, 
                                                           double const& tol)
     {
-      std::vector<position<Dimensions, double>> that;
+      std::vector<position<double, Dimensions>> that;
       std::vector<double> save_eta;
       double eta = 0.;
 

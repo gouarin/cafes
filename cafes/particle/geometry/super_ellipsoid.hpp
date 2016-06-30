@@ -17,13 +17,13 @@ namespace cafes
   namespace geometry
   {
 
-      template<std::size_t Dimensions, typename T=double>
+      template<typename T, std::size_t Dimensions>
       struct super_ellipsoid
       {
-        template<std::size_t N> using int_ = std::integral_constant<std::size_t,N>;
+        template<std::size_t N> using int_ = std::integral_constant<std::size_t, N>;
         using dimension_type = int_<Dimensions>;
 
-        using position_type = position<Dimensions, T>;
+        using position_type = position<T, Dimensions>;
         using shapes_type   = std::array<double, Dimensions>;
 
         position_type  center_;
@@ -55,7 +55,7 @@ namespace cafes
         super_ellipsoid& operator=(super_ellipsoid const&) = default;
         super_ellipsoid& operator=(super_ellipsoid&&)      = default;
 
-        box<Dimensions, double> bounding_box() const
+        box<double, Dimensions> bounding_box() const
         {
           position_type bl{center_}, ur{center_};
 
@@ -65,7 +65,7 @@ namespace cafes
             ur[i] += shape_factors_[i];
           }
 
-          box<Dimensions, double> that{bl, ur};
+          box<double, Dimensions> that{bl, ur};
 
           if (q_.is_rotate())
           {
@@ -92,9 +92,9 @@ namespace cafes
           return that;
         }
 
-        box<Dimensions, int> bounding_box(std::array<double, Dimensions> const& h) const
+        box<int, Dimensions> bounding_box(std::array<double, Dimensions> const& h) const
         {
-            box<Dimensions, double> b = bounding_box();
+            box<double, Dimensions> b = bounding_box();
             return {(b.bottom_left/h - 1.), b.upper_right/h + 1.};
         }
 
@@ -322,13 +322,13 @@ namespace cafes
       };
   }
   template<std::size_t N>
-  geometry::super_ellipsoid<N> make_ellipsoid(geometry::position<N,double> const& a, std::array<double, N> const& b, double d, geometry::quaternion q)
+  geometry::super_ellipsoid<double, N> make_ellipsoid(geometry::position<double, N> const& a, std::array<double, N> const& b, double d, geometry::quaternion q)
   {
     return {a,b,d, q};
   }
 
   template<std::size_t N>
-  geometry::super_ellipsoid<N> make_ellipsoid(geometry::position<N,double> const& a, std::array<double, N> const& b, double d, double e, geometry::quaternion q)
+  geometry::super_ellipsoid<double, N> make_ellipsoid(geometry::position<double, N> const& a, std::array<double, N> const& b, double d, double e, geometry::quaternion q)
   {
     return {a, b, d, e, q};
   }

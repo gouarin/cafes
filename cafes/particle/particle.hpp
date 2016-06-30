@@ -9,16 +9,20 @@
 #include <particle/physics/velocity.hpp>
 #include <particle/geometry/box.hpp>
 #include <particle/geometry/position.hpp>
+#include <particle/geometry/vector.hpp>
 
 namespace cafes
 {
   template<typename Shape>
   struct particle : private Shape
   {
-      using shape_type     = Shape;
-      using dimension_type = typename Shape::dimension_type;
-      using velocity_type  = physics::velocity<dimension_type::value>;
-      using force_type     = physics::force<dimension_type::value>;
+      using shape_type             = Shape;
+      using dimension_type         = typename Shape::dimension_type;
+      using velocity_type          = physics::velocity<dimension_type::value>;
+      using angular_velocity_type  = typename std::conditional<dimension_type::value==2,
+                                                               double, 
+                                                               geometry::vector<double, 3>>::type;
+      using force_type             = physics::force<dimension_type::value>;
 
       force_type force_{};
       double rho_;
@@ -26,7 +30,7 @@ namespace cafes
       : Shape(s), force_(f), rho_(r)
       {}
 
-      particle( Shape const& s, velocity_type const& v, physics::velocity<3> const& ang_v)
+      particle( Shape const& s, velocity_type const& v, angular_velocity_type const& ang_v)
       : Shape(s), velocity_(v), angular_velocity_(ang_v)
       {}
 
@@ -37,16 +41,20 @@ namespace cafes
       using Shape::shape_factors_;
       using Shape::surface_area;
       using Shape::volume;
+      using Shape::Cd_R;
+      using Shape::Ci_R;
 
       velocity_type velocity_;
-      physics::velocity<3> angular_velocity_{};
-      
+      angular_velocity_type angular_velocity_;
+      // std::conditional<dimension_type::value==2,
+      //                  double, 
+      //                  geometry::vector<double, 3>> angular_velocity_;
   };
 
   template<typename Shape>
-  auto find_fluid_points_insides( particle<Shape> const& p, cafes::geometry::box<2, int> const& b, std::array<double,2> const& h)
+  auto find_fluid_points_insides( particle<Shape> const& p, cafes::geometry::box<int, 2> const& b, std::array<double, 2> const& h)
   {
-      std::vector<geometry::position<2, int>> that;
+      std::vector<geometry::position<int, 2>> that;
       that.reserve(b.length());
 
       double x, y;
@@ -54,7 +62,7 @@ namespace cafes
       for(y=b.bottom_left[1]*h[1], iy=b.bottom_left[1]; iy<b.upper_right[1]; y+=h[1], ++iy)
           for(x=b.bottom_left[0]*h[0], ix=b.bottom_left[0]; ix<b.upper_right[0]; x+=h[0], ++ix)
           {
-              cafes::geometry::position<2, double> pt {x,y};
+              cafes::geometry::position<double, 2> pt {x,y};
               if(p.contains(pt)) that.push_back({ix, iy});
           }
 
@@ -62,9 +70,9 @@ namespace cafes
   }
 
   template<typename Shape>
-  auto find_fluid_points_insides( particle<Shape> const& p, cafes::geometry::box<3, int> const& b, std::array<double,3> const& h)
+  auto find_fluid_points_insides( particle<Shape> const& p, cafes::geometry::box<int, 3> const& b, std::array<double, 3> const& h)
   {
-    std::vector<geometry::position<3, int>> that;
+    std::vector<geometry::position<int, 3>> that;
     that.reserve(b.length());
 
     double x, y, z;
@@ -73,7 +81,7 @@ namespace cafes
         for(y=b.bottom_left[1]*h[1], iy=b.bottom_left[1]; iy<b.upper_right[1]; y+=h[1], ++iy)
             for(x=b.bottom_left[0]*h[0], ix=b.bottom_left[0]; ix<b.upper_right[0]; x+=h[0], ++ix)
             {
-               cafes::geometry::position<3, double> pt {x, y, z};
+               cafes::geometry::position<double, 3> pt {x, y, z};
                if(p.contains(pt)) that.push_back({ix, iy, iz});
             }   
 
@@ -81,13 +89,13 @@ namespace cafes
   }
 
   template<std::size_t Dimensions>
-  auto find_surf_points_insides( std::vector<geometry::position<Dimensions, double>> const& surf_p, cafes::geometry::box<Dimensions, int> const& b, std::array<double,Dimensions> const& h)
+  auto find_surf_points_insides( std::vector<geometry::position<double, Dimensions>> const& surf_p, cafes::geometry::box<int, Dimensions> const& b, std::array<double, Dimensions> const& h)
   {
-    std::vector<std::pair<geometry::position<Dimensions, int>, geometry::position<Dimensions, double>>> that;
+    std::vector<std::pair<geometry::position<int, Dimensions>, geometry::position<double, Dimensions>>> that;
     that.reserve(surf_p.size());
 
     for(std::size_t i=0; i<surf_p.size(); ++i){
-        auto surf_pi = static_cast<geometry::position<Dimensions, int>>(surf_p[i]/h);
+        auto surf_pi = static_cast<geometry::position<int, Dimensions>>(surf_p[i]/h);
         if (cafes::geometry::point_inside(b, surf_pi)){
             that.push_back(std::make_pair(surf_pi, surf_p[i] - surf_pi*h));
         }
@@ -96,16 +104,16 @@ namespace cafes
   }
 
   template<std::size_t Dimensions>
-  auto find_radial_surf_points_insides( std::vector<geometry::position<Dimensions, double>> const& surf_p, 
-                                       cafes::geometry::box<Dimensions, int> const& b, 
+  auto find_radial_surf_points_insides( std::vector<geometry::position<double, Dimensions>> const& surf_p, 
+                                       cafes::geometry::box<int, Dimensions> const& b, 
                                        std::array<double,Dimensions> const& h,
-                                       geometry::position<Dimensions, double> center)
+                                       geometry::position<double, Dimensions> center)
   {
-    std::vector<geometry::position<Dimensions, double>> that;
+    std::vector<geometry::vector<double, Dimensions>> that;
     that.reserve(surf_p.size());
 
     for(std::size_t i=0; i<surf_p.size(); ++i){
-        auto surf_pi = static_cast<geometry::position<Dimensions, int>>(surf_p[i]/h);
+        auto surf_pi = static_cast<geometry::position<int, Dimensions>>(surf_p[i]/h);
         if (cafes::geometry::point_inside(b, surf_pi)){
             that.push_back(surf_p[i] - center);
         }
@@ -116,7 +124,7 @@ namespace cafes
   template<typename Shape, std::size_t Dimensions>
   auto position_diff(particle<Shape> const& p1, particle<Shape> const& p2)
   {
-    geometry::position<Dimensions, double> pos_diff;
+    geometry::position<double, Dimensions> pos_diff;
     auto diff = [](double x, double y){return x-y;};
     std::transform(p1.center_.begin(), p1.center_.end(), p2.center_.begin(), pos_diff.begin(), diff);
     return pos_diff;
@@ -142,19 +150,84 @@ namespace cafes
     return std::sqrt(dist);
   }
 
+    auto kernel_num_count = [](auto const& p, auto const& h, auto const& hs, auto scale, auto& num)
+    {
+      auto const kernel_pos = [&](auto const& pos){
+        auto const kernel = [&](auto const& pos_scale)
+        {
+          using position_type = geometry::position<double, pos.dimensions>;
+          position_type pts = pos*h + pos_scale*hs;
+          if (p.contains(pts))
+            num++;
+        };
+        using position_type = geometry::position<int, pos.dimensions>;
+        position_type p1, p2;
+        p1.fill(0);
+        p2.fill(scale);
+        geometry::box<int, pos.dimensions> box{ p1, p2};
+        algorithm::iterate(box, kernel);
+      };
+      return kernel_pos;
+    };
+
+  template<std::size_t Dimensions>
+  auto set_materials(auto& parts, auto& surf_points, auto& radial_vec,
+                     auto& nb_surf_points, auto& num, auto const& box,
+                     std::array<double, Dimensions> const &h, auto const& dpart, auto const& scale)
+  {
+    surf_points.resize(parts.size());
+    radial_vec.resize(parts.size());
+    nb_surf_points.resize(parts.size());
+    num.resize(parts.size());
+
+    std::size_t size = 0;
+    std::size_t ipart = 0;
+
+    std::array<double, Dimensions> hs;
+    for(std::size_t d=0; d<Dimensions; ++d)
+      hs[d] = h[d]/scale;
+
+    for(auto& p: parts){
+      auto pbox = p.bounding_box(h);
+      if (geometry::intersect(box, pbox)){
+        auto new_box = geometry::box_inside(box, pbox);
+        auto pts = find_fluid_points_insides(p, new_box, h);
+        size += pts.size();
+
+        auto spts = p.surface(dpart);
+        auto spts_valid = find_surf_points_insides(spts, new_box, h);
+        surf_points[ipart].assign(spts_valid.begin(), spts_valid.end());
+        nb_surf_points[ipart] = surf_points[ipart].size();
+        
+        auto radial_valid = find_radial_surf_points_insides(spts, new_box, h, p.center_);
+        radial_vec[ipart].assign(radial_valid.begin(), radial_valid.end());
+        
+        algorithm::iterate(new_box, kernel_num_count(p, h, hs, scale, num[ipart]));
+
+      }
+      ipart++;
+    }
+
+    MPI_Allreduce(MPI_IN_PLACE, nb_surf_points.data(), parts.size(), MPI_INT, MPI_SUM, PETSC_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, num.data(), parts.size(), MPI_INT, MPI_SUM, PETSC_COMM_WORLD);
+
+    return size;
+  }
+
   template<typename ST>
-  particle<ST> make_particle(ST const& se, physics::force<ST::dimension_type::value> const& a, double d)
+  particle<ST> make_particle_with_force(ST const& se, physics::force<ST::dimension_type::value> const& a, double d)
   {
     return {se,a,d};
   }
 
   template<typename ST>
-  particle<ST> make_particle(ST const& se, physics::velocity<ST::dimension_type::value> const& v, physics::velocity<3> const& ang_v)
+  particle<ST> make_particle_with_velocity(ST const& se,
+                                           physics::velocity<ST::dimension_type::value> const& v,
+                                           typename std::conditional<ST::dimension_type::value==2,
+                                                                     double, 
+                                                                     physics::velocity<3>>::type const& ang_v)
   {
     return {se, v, ang_v};
   }
 }
-
-
-
 #endif

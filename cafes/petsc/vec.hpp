@@ -52,7 +52,10 @@ namespace cafes
       typename std::conditional<Dimensions==2, PetscScalar ***, PetscScalar ****>::type pv_;
       typename std::conditional<Dimensions==2, PetscScalar ***, PetscScalar ****>::type pvg_;
 
-      petsc_vec(petsc_vec const &) = default;
+      // no copy
+      petsc_vec(petsc_vec const& ) = delete;
+      petsc_vec& operator=(petsc_vec const& ) = delete;
+
       petsc_vec(petsc_vec &&) = default;
 
       petsc_vec(DM dm, Vec v, std::size_t entry, bool readonly=true):
@@ -102,35 +105,35 @@ namespace cafes
         return pv_[indices[2]][indices[1]][indices[0]];
       }
 
-      double* at(geometry::position<2, int> indices){
+      double* at(geometry::position<int, 2> indices){
         return pv_[indices[1]][indices[0]];
       }
 
-      double* at(geometry::position<3, int> indices){
+      double* at(geometry::position<int, 3> indices){
         return pv_[indices[2]][indices[1]][indices[0]];
       }
 
-      double const* at(geometry::position<2, int> indices) const{
+      double const* at(geometry::position<int, 2> indices) const{
         return pv_[indices[1]][indices[0]];
       }
 
-      double const* at(geometry::position<3, int> indices) const{
+      double const* at(geometry::position<int, 3> indices) const{
         return pv_[indices[2]][indices[1]][indices[0]];
       }
 
-      double* at_g(geometry::position<2, int> indices){
+      double* at_g(geometry::position<int, 2> indices){
         return pvg_[indices[1]][indices[0]];
       }
 
-      double* at_g(geometry::position<3, int> indices){
+      double* at_g(geometry::position<int, 3> indices){
         return pvg_[indices[2]][indices[1]][indices[0]];
       }
 
-      double const* at_g(geometry::position<2, int> indices) const{
+      double const* at_g(geometry::position<int, 2> indices) const{
         return pvg_[indices[1]][indices[0]];
       }
 
-      double const* at_g(geometry::position<3, int> indices) const{
+      double const* at_g(geometry::position<int, 3> indices) const{
         return pvg_[indices[2]][indices[1]][indices[0]];
       }
       

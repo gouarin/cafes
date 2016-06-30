@@ -1,6 +1,7 @@
 #ifndef PARTICLE_GEOMETRY_VECTOR_HPP_INCLUDED
 #define PARTICLE_GEOMETRY_VECTOR_HPP_INCLUDED
 
+#include <particle/geometry/position.hpp>
 #include <particle/physics/velocity.hpp>
 #include <array>
 #include <iostream>
@@ -10,19 +11,26 @@ namespace cafes
 {
   namespace geometry
   {
-    template<std::size_t Dimensions, typename T>
+    template<typename T, std::size_t Dimensions>
     struct vector : private std::array<T, Dimensions>
     {
       using parent = std::array<T, Dimensions>;
       using parent::operator[];
+      using parent::fill;
       using parent::begin;
       using parent::end;
 
       vector() = default;
       vector(vector const&) = default;
 
+      template<template<typename, std::size_t> class T1, typename U>
+      vector(T1<U, Dimensions> const& p)
+      {
+        for(std::size_t i=0; i<Dimensions; ++i)
+          (*this)[i] = static_cast<T>(p[i]);
+      } 
 
-      template<typename U> vector(vector<Dimensions, U> const& v)
+      vector(physics::velocity<Dimensions> const& v)
       {
         for(std::size_t i=0; i<Dimensions; ++i)
           (*this)[i] = static_cast<T>(v[i]);
@@ -55,7 +63,7 @@ namespace cafes
       //     return *this;
       // }
 
-      vector& operator*=(vector<Dimensions, T> const& v)
+      vector& operator*=(vector<T, Dimensions> const& v)
       {
           for(std::size_t i=0;i<Dimensions;++i) (*this)[i] *= v[i];
           return *this;
@@ -67,9 +75,21 @@ namespace cafes
           return *this;
       }
 
-      vector& operator+=(vector<Dimensions, T> const& v)
+      vector& operator+=(vector<T, Dimensions> const& v)
       {
           for(std::size_t i=0;i<Dimensions;++i) (*this)[i] += v[i];
+          return *this;
+      }
+
+      vector& operator-=(vector<T, Dimensions> const& v)
+      {
+          for(std::size_t i=0;i<Dimensions;++i) (*this)[i] -= v[i];
+          return *this;
+      }
+
+      vector& operator+=(physics::velocity<Dimensions> const& v)
+      {
+          for(std::size_t i=0;i<Dimensions;++i) (*this)[i] -= v[i];
           return *this;
       }
 
@@ -87,31 +107,63 @@ namespace cafes
 
     };
     
-    template<std::size_t Dimensions, typename T>
-    auto operator*(vector<Dimensions, T> const& v, T const& c)
+    template<typename T, std::size_t Dimensions>
+    auto operator*(vector<T, Dimensions> const& v, T const& c)
     {
-      vector<Dimensions, T> that{v};
+      vector<T, Dimensions> that{v};
       return that*=c;
     }
 
-    template<std::size_t Dimensions, typename T>
-    auto operator*(T const& c, vector<Dimensions, T> const& v)
+    template<typename T, std::size_t Dimensions>
+    auto operator*(T const& c, vector<T, Dimensions> const& v)
     {
       return v*c;
     }
 
-    template<std::size_t Dimensions, typename T>
-    auto operator+(vector<Dimensions, T> const& v1, vector<Dimensions, T> const& v2)
+    template<typename T, std::size_t Dimensions>
+    auto operator+(vector<T, Dimensions> const& v1, vector<T, Dimensions> const& v2)
     {
-      vector<Dimensions, T> that{v1};
+      vector<T, Dimensions> that{v1};
       return that+=v2;
     }
 
-    template<std::size_t Dimensions, typename T>
-    auto operator-(vector<Dimensions, T> const& v)
+    template<typename T, std::size_t Dimensions>
+    auto operator-(vector<T, Dimensions> const& v)
     {
-      vector<Dimensions, T> that{v};
+      vector<T, Dimensions> that{v};
       return that *= -1;
+    }
+
+    template<typename T, std::size_t Dimensions>
+    vector<T, Dimensions> operator-( vector<T, Dimensions> const& p
+                                   , physics::velocity<Dimensions> const& v
+                                  )
+    {
+        vector<T, Dimensions> that{p};
+        return that -= v;
+    }
+
+    template<typename T, std::size_t Dimensions>
+    vector<T, Dimensions> operator-( physics::velocity<Dimensions> const& v
+                                   , vector<T, Dimensions> const& p
+                                  )
+    {
+        vector<T, Dimensions> that{p};
+        return that -= v;
+    }
+
+    template<typename T, std::size_t Dimensions>
+    auto operator/(vector<T, Dimensions> const& v, T const& c)
+    {
+      vector<T, Dimensions> that{v};
+      return that/=c;
+    }
+
+    template<typename T, std::size_t Dimensions>
+    auto operator/(vector<T, Dimensions> const& v, int const& c)
+    {
+      vector<T, Dimensions> that{v};
+      return that/=c;
     }
 
   }

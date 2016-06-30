@@ -7,7 +7,7 @@ namespace cafes
 {
     namespace fem
     {
-        auto P1_integration(geometry::position<2, double> const& x, std::array<double, 2> const& h)
+        auto P1_integration(geometry::position<double, 2> const& x, std::array<double, 2> const& h)
         {
             std::array<double, 4> that;    
             double c = 1./(h[0]*h[1]);
@@ -18,7 +18,7 @@ namespace cafes
             return that;
         }
 
-        auto P1_integration_grad(geometry::position<2, double> const& x, std::array<double, 2> const& h)
+        auto P1_integration_grad(geometry::position<double, 2> const& x, std::array<double, 2> const& h)
         {
             std::array< std::array<double, 2>, 4> that;
             //double c = 1./(h[0]*h[1]);
@@ -29,7 +29,7 @@ namespace cafes
             return that;
         }
 
-        auto P1_integration(geometry::position<3, double> const& x, std::array<double, 3> const& h)
+        auto P1_integration(geometry::position<double, 3> const& x, std::array<double, 3> const& h)
         {
             std::array<double, 8> that; 
             double c = 1./(h[0]*h[1]*h[2]);
@@ -45,7 +45,7 @@ namespace cafes
             return that;
         }
 
-        auto P1_integration_grad(geometry::position<3, double> const& x, std::array<double, 3> const& h)
+        auto P1_integration_grad(geometry::position<double, 3> const& x, std::array<double, 3> const& h)
         {
             std::array<std::array<double, 3>, 8> that; 
 
@@ -60,7 +60,7 @@ namespace cafes
             return that;
         }
 
-        auto get_element(geometry::position<2, int> const& ix){
+        auto get_element(geometry::position<int, 2> const& ix){
             std::array<std::array<int, 2>, 4> that;
 
             that[0] = {ix[0]  , ix[1]  };
@@ -70,7 +70,7 @@ namespace cafes
             return that;
         }
 
-        auto get_element(geometry::position<3, int> const& ix){
+        auto get_element(geometry::position<int, 3> const& ix){
             std::array<std::array<int, 3>, 8> that;
 
             that[0] = {ix[0]  , ix[1]  , ix[2]  };
@@ -84,7 +84,7 @@ namespace cafes
             return that;
         }
 
-        auto get_element_4Q1(geometry::position<2, int> const& ix){
+        auto get_element_4Q1(geometry::position<int, 2> const& ix){
             std::array<std::array<int, 2>, 9> that;
 
             that[0] = {2*ix[0]  , 2*ix[1]  };
@@ -99,7 +99,7 @@ namespace cafes
             return that;
         }
 
-        auto get_element_4Q1(geometry::position<3, int> const& ix){
+        auto get_element_4Q1(geometry::position<int, 3> const& ix){
             std::array<std::array<int, 3>, 27> that;
 
             that[0]  = {2*ix[0]  , 2*ix[1]  , 2*ix[2]  };

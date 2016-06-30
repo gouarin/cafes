@@ -21,7 +21,7 @@ namespace cafes
       return (0. <= val) - (val < 0.);
     }
 
-    template<std::size_t Dimensions, typename Shape>
+    template<typename Shape, std::size_t Dimensions>
     struct singularity
     {
       double alpha_;
@@ -36,7 +36,7 @@ namespace cafes
       double UN_, UT_;
       bool is_singularity_;
 
-      using position_type = geometry::position<Dimensions, double>;
+      using position_type = geometry::position<double, Dimensions>;
       std::array<position_type, Dimensions> base_;
       position_type origin_;
       
@@ -83,7 +83,7 @@ namespace cafes
         }
       }
 
-      geometry::box<Dimensions, int> get_box(std::array<double, 2> h)
+      geometry::box<int, Dimensions> get_box(std::array<double, 2> h)
       {
         double theta1 = std::asin(cutoff_dist_*H1_);
         double theta2 = std::asin(cutoff_dist_*H2_);
@@ -111,7 +111,7 @@ namespace cafes
                };
       }
 
-      geometry::box<Dimensions, int> get_box(std::array<double, 3> h)
+      geometry::box<int, Dimensions> get_box(std::array<double, 3> h)
       {
         double theta1 = std::asin(cutoff_dist_*H1_);
         double theta2 = std::asin(cutoff_dist_*H2_);
@@ -274,7 +274,7 @@ namespace cafes
 
       auto get_u_sing_ref(position_type const& pos_ref_part, std::integral_constant<int, 3>)
       {
-        std::array< double, 3 > UsingRefPart{};
+        std::array< double, 3> UsingRefPart{};
 
         UsingRefPart[0] = ux_sing_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
                         //+ ux_sing_tangMvt3D(pos_ref_part, H1_, H2_, contact_length_, UT_, param_, param_, NULL);
@@ -313,8 +313,8 @@ namespace cafes
       auto get_u_sing(position_type const& pos, std::integral_constant<int, 3>)
       {
         auto pos_ref_part = get_pos_in_part_ref(pos);
-        std::array< double, 3 > Using{};
-        std::array< double, 3 > UsingRefPart{};
+        std::array< double, 3> Using{};
+        std::array< double, 3> UsingRefPart{};
 
         UsingRefPart[0] = ux_sing_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
                         //+ ux_sing_tangMvt3D(pos_ref_part, H1_, H2_, contact_length_, UT_, param_, param_, NULL);
@@ -384,7 +384,7 @@ namespace cafes
       /////////////////////////////////////////////////////////////////////////////
       auto get_grad_u_sing_ref(position_type pos, std::integral_constant<int, 2>)
       {
-        std::array< std::array<double, 2>, 2 > gradUsingRefPart{};
+        std::array< std::array<double, 2>, 2> gradUsingRefPart{};
 
         gradUsingRefPart[0][0] = dxux_sing_normalMvt2D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
         gradUsingRefPart[0][1] = dzux_sing_normalMvt2D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
@@ -396,7 +396,7 @@ namespace cafes
 
       auto get_grad_u_sing_ref(position_type& pos, std::integral_constant<int, 3>)
       {
-        std::array< std::array<double, 3>, 3 > gradUsingRefPart{};
+        std::array< std::array<double, 3>, 3> gradUsingRefPart{};
 
         gradUsingRefPart[0][0] = dxux_sing_normalMvt3D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
         gradUsingRefPart[0][1] = dyux_sing_normalMvt3D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);

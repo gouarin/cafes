@@ -18,9 +18,10 @@ namespace cafes
     *
     * These corners could be of any type T. 
     */
-    template<std::size_t Dimensions, typename T> struct box
+    template<typename T, std::size_t Dimensions>
+    struct box
     {
-      using position_type = position<Dimensions, T>;
+      using position_type = position<T, Dimensions>;
       static constexpr std::size_t dimensions = Dimensions;
 
       position_type bottom_left; //!< position of the bottom left corner of the box
@@ -130,8 +131,8 @@ namespace cafes
     /**
     * return the intersection between two boxes
     */
-    template<std::size_t Dimensions, typename T>
-    bool intersect(box<Dimensions, T> const& b1, box<Dimensions, T> const& b2)
+    template<typename T, std::size_t Dimensions>
+    bool intersect(box<T, Dimensions> const& b1, box<T, Dimensions> const& b2)
     {
       for(std::size_t i=0; i<Dimensions; ++i){
         if (b1.bottom_left[i] > b2.upper_right[i]) return false;
@@ -140,64 +141,61 @@ namespace cafes
       return true;
     }
 
-    template<std::size_t Dimensions, typename T>
-    box<Dimensions, T> overlap_box(box<Dimensions, T> const& b1, box<Dimensions, T> const& b2)
+    template<typename T, std::size_t Dimensions>
+    box<T, Dimensions> overlap_box(box<T, Dimensions> const& b1, box<T, Dimensions> const& b2)
     {
-
-        box<Dimensions, T> bout{};
-        for(std::size_t i=0; i<Dimensions; ++i){
-            bout.bottom_left[i] = std::max( b1.bottom_left[i], b2.bottom_left[i]);
-            bout.upper_right[i] = std::min( b1.upper_right[i], b2.upper_right[i]);
-        }
-        return bout;
+      box<T, Dimensions> bout{};
+      for(std::size_t i=0; i<Dimensions; ++i){
+        bout.bottom_left[i] = std::max( b1.bottom_left[i], b2.bottom_left[i]);
+        bout.upper_right[i] = std::min( b1.upper_right[i], b2.upper_right[i]);
+      }
+      return bout;
     }
 
-    template<std::size_t Dimensions, typename T>
-    box<Dimensions, T> union_box(box<Dimensions, T> const& b1, box<Dimensions, T> const& b2)
+    template<typename T, std::size_t Dimensions>
+    box<T, Dimensions> union_box(box<T, Dimensions> const& b1, box<T, Dimensions> const& b2)
     {
-
-        box<Dimensions, T> bout{};
-        for(std::size_t i=0; i<Dimensions; ++i){
-            bout.bottom_left[i] = std::min( b1.bottom_left[i], b2.bottom_left[i]);
-            bout.upper_right[i] = std::max( b1.upper_right[i], b2.upper_right[i]);
-        }
-        return bout;
+      box<T, Dimensions> bout{};
+      for(std::size_t i=0; i<Dimensions; ++i){
+        bout.bottom_left[i] = std::min( b1.bottom_left[i], b2.bottom_left[i]);
+        bout.upper_right[i] = std::max( b1.upper_right[i], b2.upper_right[i]);
+      }
+      return bout;
     }
 
-    template<std::size_t Dimensions, typename T>
-    box<Dimensions, T> box_inside(box<Dimensions, T> const& b1, box<Dimensions, T> const& b2)
+    template<typename T, std::size_t Dimensions>
+    box<T, Dimensions> box_inside(box<T, Dimensions> const& b1, box<T, Dimensions> const& b2)
     {
-
-        box<Dimensions, T> bout{b1};
-        for(std::size_t i=0; i<Dimensions; ++i){
-          if (b2.bottom_left[i] > b1.bottom_left[i])
-            bout.bottom_left[i] = b2.bottom_left[i];
-          if (b2.upper_right[i] < b1.upper_right[i])
-            bout.upper_right[i] = b2.upper_right[i];
-        }
-        return bout;
+      box<T, Dimensions> bout{b1};
+      for(std::size_t i=0; i<Dimensions; ++i){
+        if (b2.bottom_left[i] > b1.bottom_left[i])
+          bout.bottom_left[i] = b2.bottom_left[i];
+        if (b2.upper_right[i] < b1.upper_right[i])
+          bout.upper_right[i] = b2.upper_right[i];
+      }
+      return bout;
     }
 
-    template<std::size_t Dimensions, typename T>
-    bool point_inside(box<Dimensions, T> const& b, position<Dimensions, T> p){
+    template<typename T, std::size_t Dimensions>
+    bool point_inside(box<T, Dimensions> const& b, position<T, Dimensions> p){
       for(std::size_t i=0; i<Dimensions; ++i)
         if (p[i] < b.bottom_left[i] || p[i] >= b.upper_right[i]) // don't take the last point (fix for the border domain)
           return false;
       return true;
     }
 
-    template<std::size_t Dimensions, typename T>
-    bool check_box_inside(box<Dimensions, T> const& b1, box<Dimensions, T> const& b2)
+    template<typename T, std::size_t Dimensions>
+    bool check_box_inside(box<T, Dimensions> const& b1, box<T, Dimensions> const& b2)
     // check if a part of box b2 is inside the box b1
     {
-        int count = 0;
-        for(std::size_t i=0; i<Dimensions; ++i){
-          if (b2.bottom_left[i] >= b1.bottom_left[i] && b2.bottom_left[i] <= b1.upper_right[i])
-            count++;
-          if (b2.upper_right[i] >= b1.bottom_left[i] && b2.upper_right[i] <= b1.upper_right[i])
-            count++;
-        }
-        return (count>0)?true:false;
+      int count = 0;
+      for(std::size_t i=0; i<Dimensions; ++i){
+        if (b2.bottom_left[i] >= b1.bottom_left[i] && b2.bottom_left[i] <= b1.upper_right[i])
+          count++;
+        if (b2.upper_right[i] >= b1.bottom_left[i] && b2.upper_right[i] <= b1.upper_right[i])
+          count++;
+      }
+      return (count>0)?true:false;
     }
 
   }

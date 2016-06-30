@@ -48,8 +48,8 @@ namespace cafes
       // ierr = KSPSetDM(sub_ksp[0], dav);CHKERRQ(ierr);
       // ierr = KSPSetDMActive(sub_ksp[0], PETSC_FALSE);CHKERRQ(ierr);
 
-      ierr = KSPSetType(sub_ksp[0], KSPCG);CHKERRQ(ierr);
-      //ierr = KSPSetType(sub_ksp[0], KSPFGMRES);CHKERRQ(ierr);
+      //ierr = KSPSetType(sub_ksp[0], KSPCG);CHKERRQ(ierr);
+      ierr = KSPSetType(sub_ksp[0], KSPFGMRES);CHKERRQ(ierr);
       ierr = KSPSetTolerances(sub_ksp[0], 1e-2, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);CHKERRQ(ierr);
       ierr = PCSetType(pc_i, PCMG);CHKERRQ(ierr);
 
@@ -330,7 +330,6 @@ namespace cafes
         PC pc;
         PetscFunctionBeginUser;
 
-        std::cout << "solve Stokes\n";
         ierr = KSPSolve(ksp, rhs, sol);CHKERRQ(ierr);
 
         PetscFunctionReturn(0);

@@ -53,14 +53,14 @@ namespace cafes
       template<std::size_t N> using int_ = std::integral_constant<std::size_t, N>;
       using dimension_type = int_<Dimensions>;
  
-      using position_type   = geometry::position<Dimensions, double>;
-      using position_type_i = geometry::position<Dimensions, int>;
+      using position_type   = geometry::position<double, Dimensions>;
+      using position_type_i = geometry::position<int, Dimensions>;
       using force_type   = physics::force<Dimensions>;
 
       Problem_type& problem;
       std::vector<particle<Shape>>& particles;
       std::vector<std::vector<std::pair<position_type_i, position_type>>> const& surf_points;
-      std::vector<std::vector<position_type>> const& radial_vec;
+      std::vector<std::vector<geometry::vector<double, Dimensions>>> const& radial_vec;
       std::vector<int> const& nb_surf_points;
       std::vector<int> const& num;
       std::size_t scale;

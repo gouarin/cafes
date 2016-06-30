@@ -9,6 +9,7 @@
 #include <particle/particle.hpp>
 #include <particle/geometry/box.hpp>
 #include <particle/geometry/position.hpp>
+#include <particle/geometry/vector.hpp>
 
 #include <petsc.h>
 #include <iostream>
@@ -32,19 +33,22 @@ namespace cafes
 
       ierr = VecSet(ctx->problem.rhs, 0.);CHKERRQ(ierr);
 
-      ierr = init_problem_1<Dimensions, Ctx>(*ctx, x, ctx->compute_rhs);CHKERRQ(ierr);
+      ierr = init_problem<Dimensions, Ctx>(*ctx, x, ctx->compute_rhs);CHKERRQ(ierr);
       ierr = ctx->problem.solve();CHKERRQ(ierr);
 
-      std::vector<std::vector<std::array<double, Dimensions>>> g;
+      std::vector<std::vector<geometry::vector<double, Dimensions>>> g;
       g.resize(ctx->particles.size());
-      for(std::size_t ipart=0; ipart<ctx->surf_points.size(); ++ipart)       
+      for(std::size_t ipart=0; ipart<ctx->surf_points.size(); ++ipart)
         g[ipart].resize(ctx->surf_points[ipart].size());
 
       // interpolation
       ierr = interp_fluid_to_surf(*ctx, g);CHKERRQ(ierr);
 
-      std::vector<std::array<double, Dimensions>> mean(ctx->particles.size());
-      std::vector<std::array<double, Dimensions==2?1:3>> cross_prod(ctx->particles.size());
+      std::vector<geometry::vector<double, Dimensions>> mean(ctx->particles.size());
+      using cross_type  = typename std::conditional<Dimensions==2,
+                                                    double, 
+                                                    geometry::vector<double, 3>>::type;
+      std::vector<cross_type> cross_prod(ctx->particles.size());
 
       ierr = simple_layer(*ctx, g, mean, cross_prod);CHKERRQ(ierr);
 
@@ -54,11 +58,10 @@ namespace cafes
 
       ierr = projection<Dimensions, Ctx>(*ctx, mean, cross_prod);CHKERRQ(ierr);
 
-      ierr = compute_y<Dimensions, Ctx>(*ctx, y, mean, cross_prod);CHKERRQ(ierr);
+      ierr = compute_y(*ctx, y, mean, cross_prod);CHKERRQ(ierr);
 
       PetscFunctionReturn(0);
     }
-
 
 
     template<typename Shape, std::size_t Dimensions, typename Problem_type>
@@ -67,21 +70,21 @@ namespace cafes
       std::vector<particle<Shape>> parts_;
       Problem_type problem_;
 
-      using position_type   = geometry::position<Dimensions, double>;
-      using position_type_i = geometry::position<Dimensions, int>;
+      using position_type   = geometry::position<double, Dimensions>;
+      using position_type_i = geometry::position<int, Dimensions>;
 
       using Ctx = particle_context<Dimensions, Shape, Problem_type>;
       Ctx *ctx;
 
       std::vector<std::vector<std::pair<position_type_i, position_type>>> surf_points_;
-      std::vector<std::vector<position_type>> radial_vec_;
+      std::vector<std::vector<geometry::vector<double, Dimensions>>> radial_vec_;
       std::vector<int> nb_surf_points_;
       std::vector<int> num_;
       Vec sol;
       Vec rhs;
       Mat A;
       KSP ksp;
-      std::size_t scale_=4;
+      std::size_t scale_ = 4;
 
       using dpart_type = typename std::conditional<Dimensions == 2, 
                                   double, 
@@ -101,72 +104,12 @@ namespace cafes
         PetscErrorCode ierr;
         PetscFunctionBeginUser;
 
-
-        surf_points_.resize(parts_.size());
-        radial_vec_.resize(parts_.size());
-        nb_surf_points_.resize(parts_.size());
-
-        std::vector<int> nb_surf_points_local;
-        nb_surf_points_local.resize(parts_.size());
-
         auto box = fem::get_DM_bounds<Dimensions>(problem_.ctx->dm, 0);
-        std::size_t size = 0;
-        std::size_t ipart = 0;
-
-        std::vector<int> num_local;
-        num_local.resize(parts_.size());
-        num_.resize(parts_.size());
-
         auto& h = problem_.ctx->h;
-        std::array<double, Dimensions> hs;
-        for(std::size_t d=0; d<Dimensions; ++d)
-          hs[d] = h[d]/scale_;
 
-        for(auto& p: parts_){
-          auto pbox = p.bounding_box(h);
-          if (geometry::intersect(box, pbox)){
-            auto new_box = geometry::box_inside(box, pbox);
-            auto pts = find_fluid_points_insides(p, new_box, h);
-            size += pts.size();
-
-            auto spts = p.surface(dpart_);   
-            auto spts_valid = find_surf_points_insides(spts, new_box, h);
-            surf_points_[ipart].assign(spts_valid.begin(), spts_valid.end());
-            nb_surf_points_local[ipart] = surf_points_[ipart].size();
-            
-            auto radial_valid = find_radial_surf_points_insides(spts, new_box, h, p.center_);
-            radial_vec_[ipart].assign(radial_valid.begin(), radial_valid.end());
-            
-            if (Dimensions == 2)
-            {
-              for(std::size_t j=new_box.bottom_left[1]; j<new_box.upper_right[1]; ++j)
-                for(std::size_t i=new_box.bottom_left[0]; i<new_box.upper_right[0]; ++i)
-                  for(std::size_t js=0; js<scale_; ++js)
-                    for(std::size_t is=0; is<scale_; ++is){
-                      position_type pts_2 = {i*h[0] + is*hs[0], j*h[1] + js*hs[1]};
-                        if (p.contains(pts_2)) 
-                          num_local[ipart]++;
-                      }
-            }
-            // else
-            // {
-            //   for(std::size_t k=new_box.bottom_left[2]; k<new_box.upper_right[2]; ++k)
-            //     for(std::size_t j=new_box.bottom_left[1]; j<new_box.upper_right[1]; ++j)
-            //       for(std::size_t i=new_box.bottom_left[0]; i<new_box.upper_right[0]; ++i)
-            //         for(std::size_t ks=0; ks<scale_; ++ks)
-            //           for(std::size_t js=0; js<scale_; ++js)
-            //             for(std::size_t is=0; is<scale_; ++is){
-            //               position_type pts_2 = {i*h[0] + is*hs[0], j*h[1] + js*hs[1], k*h[2] + ks*hs[2]};
-            //                 if (p.contains(pts_2)) 
-            //                   num_local[ipart]++;
-            //               }
-            // }
-          }
-          ipart++;
-        }
-
-        MPI_Allreduce(nb_surf_points_local.data(), nb_surf_points_.data(), parts_.size(), MPI_INT, MPI_SUM, PETSC_COMM_WORLD);
-        MPI_Allreduce(num_local.data(), num_.data(), parts_.size(), MPI_INT, MPI_SUM, PETSC_COMM_WORLD);
+        auto size = set_materials(parts_, surf_points_, radial_vec_,
+                                  nb_surf_points_, num_, box,
+                                  h, dpart_, scale_);
 
         ctx = new Ctx{problem_, parts_, surf_points_, radial_vec_, nb_surf_points_, num_, scale_, false, false};
 
@@ -226,7 +169,7 @@ namespace cafes
 
         // solve the problem with the right control
         ctx->compute_rhs = true;
-        ierr = init_problem_1<Dimensions, Ctx>(*ctx, sol, true);CHKERRQ(ierr);
+        ierr = init_problem<Dimensions, Ctx>(*ctx, sol, true);CHKERRQ(ierr);
         ierr = ctx->problem.solve();CHKERRQ(ierr);
 
         PetscFunctionReturn(0);

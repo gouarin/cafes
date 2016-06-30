@@ -26,9 +26,8 @@ int main(int argc, char **argv)
     auto rhs = cafes::make_rhs<dim>({{ ones, zeros, zeros }});
     auto st = cafes::make_stokes<dim>(bc, rhs);
 
-    auto se = cafes::make_ellipsoid<dim>( {.5,.5, .5}, {.1,.1, .1}, 1., 1.);
-    std::vector<cafes::particle<decltype(se)>> pt{ cafes::make_particle(se, {0.,150., 1.}, 0.25)
-                                                 
+    auto se = cafes::make_sphere( {.5, .5, .5}, .1);
+    std::vector<cafes::particle<decltype(se)>> pt{ cafes::make_particle_with_force(se, {0.,150., 1.}, 0.25)
                                                  };
 
     auto s = cafes::make_SEM(pt, st, {{.1, .1}});

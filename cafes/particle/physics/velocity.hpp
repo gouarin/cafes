@@ -1,7 +1,7 @@
 #ifndef PARTICLE_PHYSICS_VELOCITY_HPP_INCLUDED
 #define PARTICLE_PHYSICS_VELOCITY_HPP_INCLUDED
 
-#include <particle/geometry/vector.hpp>
+//#include <particle/geometry/vector.hpp>
 #include <array>
 
 namespace cafes
@@ -33,11 +33,11 @@ namespace cafes
             return *this;
         }
 
-        velocity& operator-=(geometry::vector<Dimensions, double> const& v)
-        {
-            for(std::size_t i=0;i<Dimensions;++i) (*this)[i] += v[i];
-            return *this;
-        }
+        // velocity& operator-=(geometry::vector<double, Dimensions> const& v)
+        // {
+        //     for(std::size_t i=0;i<Dimensions;++i) (*this)[i] += v[i];
+        //     return *this;
+        // }
       };
 
       template<std::size_t Dimensions>
@@ -49,14 +49,14 @@ namespace cafes
           return that += v2;
       }
 
-      template<std::size_t Dimensions>
-      velocity<Dimensions> operator-( velocity<Dimensions> const& v1
-                                    , geometry::vector<Dimensions, double> const& v2
-                                    )
-      {
-          velocity<Dimensions> that{v1};
-          return that -= v2;
-      }
+      // template<std::size_t Dimensions>
+      // velocity<Dimensions> operator-( velocity<Dimensions> const& v1
+      //                               , geometry::vector<double, Dimensions> const& v2
+      //                               )
+      // {
+      //     velocity<Dimensions> that{v1};
+      //     return that -= v2;
+      // }
   }
 }
 
