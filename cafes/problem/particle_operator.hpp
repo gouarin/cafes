@@ -232,10 +232,10 @@ namespace cafes
         }
       }
 
-      if (ctx.compute_singularity)
-      { 
-        ierr = singularity::add_singularity_to_surf<Dimensions, Ctx>(ctx, sol);CHKERRQ(ierr);
-      }
+      // if (ctx.compute_singularity)
+      // { 
+      //   ierr = singularity::add_singularity_to_surf<Dimensions, Ctx>(ctx, sol);CHKERRQ(ierr);
+      // }
 
       ierr = sol.local_to_global(ADD_VALUES);CHKERRQ(ierr);
 
