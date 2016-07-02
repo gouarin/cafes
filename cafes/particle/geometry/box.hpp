@@ -16,7 +16,7 @@ namespace cafes
     * - bottom left
     * - upper right
     *
-    * These corners could be of any type T. 
+    * These corners could be of any type T.
     */
     template<typename T, std::size_t Dimensions>
     struct box
@@ -129,7 +129,7 @@ namespace cafes
     };
 
     /**
-    * return the intersection between two boxes
+    * return true if two boxes have a non null intersection, false otherwise.
     */
     template<typename T, std::size_t Dimensions>
     bool intersect(box<T, Dimensions> const& b1, box<T, Dimensions> const& b2)
@@ -141,6 +141,9 @@ namespace cafes
       return true;
     }
 
+    /**
+    * return the overlapping box between two boxes.
+    */
     template<typename T, std::size_t Dimensions>
     box<T, Dimensions> overlap_box(box<T, Dimensions> const& b1, box<T, Dimensions> const& b2)
     {
@@ -152,6 +155,9 @@ namespace cafes
       return bout;
     }
 
+    /**
+    * return the box included the two boxes.
+    */
     template<typename T, std::size_t Dimensions>
     box<T, Dimensions> union_box(box<T, Dimensions> const& b1, box<T, Dimensions> const& b2)
     {
@@ -176,6 +182,9 @@ namespace cafes
       return bout;
     }
 
+    /**
+    * Check if a point is in the box.
+    */
     template<typename T, std::size_t Dimensions>
     bool point_inside(box<T, Dimensions> const& b, position<T, Dimensions> p){
       for(std::size_t i=0; i<Dimensions; ++i)
