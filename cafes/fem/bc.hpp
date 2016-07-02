@@ -68,11 +68,11 @@ namespace cafes
 
     #undef __FUNCT__
     #define __FUNCT__ "set_dirichlet_impl"
-    template<std::size_t Dimensions, typename Function>
-    PetscErrorCode set_dirichlet_impl(auto const& x, 
+    template<std::size_t Dimensions, typename Function, typename x_type, typename h_type>
+    PetscErrorCode set_dirichlet_impl(x_type&& x, 
                                       petsc::petsc_vec<Dimensions>& y,
                                       dirichlet_conditions<Dimensions> bc,
-                                      auto const& h,
+                                      h_type&& h,
                                       Function&& kernel)
     {
       PetscErrorCode ierr;
@@ -102,6 +102,7 @@ namespace cafes
 
         }
       }
+      PetscFunctionReturn(0);
     }
 
     #undef __FUNCT__

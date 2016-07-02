@@ -41,9 +41,9 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "set_rhs_impl"
     template<std::size_t Dimensions, typename Function>
-    PetscErrorCode set_rhs_impl(petsc::petsc_vec<Dimensions>& x, 
+    PetscErrorCode set_rhs_impl(petsc::petsc_vec<Dimensions>& x,
                                 rhs_conditions<Dimensions> rhs,
-                                auto const& h,
+                                std::array<double, Dimensions> const& h,
                                 Function&& kernel)
     {
       PetscErrorCode ierr;
@@ -52,6 +52,8 @@ namespace cafes
       // warning: we assume that both u and v on a border have a Dirichlet condition
       auto box = get_DM_bounds<Dimensions>(x.dm_, false);
       algorithm::iterate(box, kernel(x, rhs, h));
+
+      PetscFunctionReturn(0);
     }
 
     #undef __FUNCT__

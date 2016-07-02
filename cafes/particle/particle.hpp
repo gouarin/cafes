@@ -46,6 +46,8 @@ namespace cafes
 
       velocity_type velocity_;
       angular_velocity_type angular_velocity_;
+
+      static constexpr std::size_t dimensions = dimension_type::value;
       // std::conditional<dimension_type::value==2,
       //                  double, 
       //                  geometry::vector<double, 3>> angular_velocity_;
@@ -150,30 +152,51 @@ namespace cafes
     return std::sqrt(dist);
   }
 
-    auto kernel_num_count = [](auto const& p, auto const& h, auto const& hs, auto scale, auto& num)
-    {
-      auto const kernel_pos = [&](auto const& pos){
-        auto const kernel = [&](auto const& pos_scale)
-        {
-          using position_type = geometry::position<double, pos.dimensions>;
-          position_type pts = pos*h + pos_scale*hs;
-          if (p.contains(pts))
-            num++;
-        };
-        using position_type = geometry::position<int, pos.dimensions>;
-        position_type p1, p2;
-        p1.fill(0);
-        p2.fill(scale);
-        geometry::box<int, pos.dimensions> box{ p1, p2};
-        algorithm::iterate(box, kernel);
-      };
-      return kernel_pos;
-    };
+  // auto kernel_num_count = [](auto const& p, auto const& h, auto const& hs, auto scale, auto& num)
+  // {
+  //   auto const kernel_pos = [&](auto const& pos){
+  //     auto const kernel = [&](auto const& pos_scale)
+  //     {
+  //       using position_type = geometry::position<double, pos_scale.dimensions>;
+  //       position_type pts = pos*h + pos_scale*hs;
+  //       if (p.contains(pts))
+  //         num++;
+  //     };
+  //     using position_type = geometry::position<int, pos.dimensions>;
+  //     position_type p1, p2;
+  //     p1.fill(0);
+  //     p2.fill(scale);
+  //     geometry::box<int, pos.dimensions> box{ p1, p2};
+  //     algorithm::iterate(box, kernel);
+  //   };
+  //   return kernel_pos;
+  // };
 
-  template<std::size_t Dimensions>
-  auto set_materials(auto& parts, auto& surf_points, auto& radial_vec,
-                     auto& nb_surf_points, auto& num, auto const& box,
-                     std::array<double, Dimensions> const &h, auto const& dpart, auto const& scale)
+  auto kernel_num_count = [](auto const& p, auto const& h, auto const& hs, auto& box_scale, auto& num)
+  {
+    auto const kernel_pos = [&](auto const& pos){
+      auto const kernel = [&](auto const& pos_scale)
+      {
+        auto pts = pos*h + pos_scale*hs;
+        if (p.contains(pts))
+          num++;
+      };
+      algorithm::iterate(box_scale, kernel);
+    };
+    return kernel_pos;
+  };
+
+  template<std::size_t Dimensions,
+           typename part_type,
+           typename surf_type,
+           typename radial_type,
+           typename nb_type,
+           typename num_type,
+           typename box_type,
+           typename dpart_type>
+  auto set_materials(part_type& parts, surf_type& surf_points, radial_type& radial_vec,
+                     nb_type& nb_surf_points, num_type& num, box_type const& box,
+                     std::array<double, Dimensions> const &h, dpart_type const& dpart, std::size_t const scale)
   {
     surf_points.resize(parts.size());
     radial_vec.resize(parts.size());
@@ -186,6 +209,11 @@ namespace cafes
     std::array<double, Dimensions> hs;
     for(std::size_t d=0; d<Dimensions; ++d)
       hs[d] = h[d]/scale;
+
+    geometry::position<std::size_t, Dimensions> p1, p2;
+    p1.fill(0);
+    p2.fill(scale);
+    geometry::box<std::size_t, Dimensions> box_scale{ p1, p2};
 
     for(auto& p: parts){
       auto pbox = p.bounding_box(h);
@@ -202,7 +230,7 @@ namespace cafes
         auto radial_valid = find_radial_surf_points_insides(spts, new_box, h, p.center_);
         radial_vec[ipart].assign(radial_valid.begin(), radial_valid.end());
         
-        algorithm::iterate(new_box, kernel_num_count(p, h, hs, scale, num[ipart]));
+        algorithm::iterate(new_box, kernel_num_count(p, h, hs, box_scale, num[ipart]));
 
       }
       ipart++;

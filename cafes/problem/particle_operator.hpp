@@ -280,19 +280,19 @@ namespace cafes
 
     auto const kernel_projection = [](auto const& p, auto& sol, 
                             auto const& h, auto const& hs, 
-                            auto scale, auto& mean, auto& cross)
+                            auto& box_scale, auto& mean, auto& cross)
     {
       auto const kernel_pos = [&](auto const& pos){
         auto const kernel = [&](auto const& pos_scale)
         {
-          using position_type = geometry::position<double, pos.dimensions>;
-          position_type pts = pos*h + pos_scale*hs;
+          using mean_type = typename std::remove_reference<decltype(mean)>::type;
+          auto pts = pos*h + pos_scale*hs;
           if (p.contains(pts))
           {
-            position_type pts_corner = pos_scale*hs;
+            auto pts_corner = pos_scale*hs;
             auto bfunc = fem::P1_integration(pts_corner, h);
             auto ielem = fem::get_element(pos);
-            geometry::vector<double, pos.dimensions> tmp{};
+            mean_type tmp{};
 
             for(std::size_t ib=0; ib<bfunc.size(); ++ib)
             {
@@ -301,7 +301,7 @@ namespace cafes
                 tmp[d] += u[d]*bfunc[ib];
             }
 
-            geometry::vector<double, pos.dimensions> r;
+            mean_type r;
             for (std::size_t d=0; d<pos.dimensions; ++d)
               r[d] = pts[d] - p.center_[d];
 
@@ -309,12 +309,7 @@ namespace cafes
             cross += geometry::cross_product(r, tmp);
           }
         };
-        using position_type = geometry::position<int, pos.dimensions>;
-        position_type p1, p2;
-        p1.fill(0);
-        p2.fill(scale);
-        geometry::box<int, pos.dimensions> box{ p1, p2};
-        algorithm::iterate(box, kernel);
+        algorithm::iterate(box_scale, kernel);
       };
       return kernel_pos;
     };
@@ -339,6 +334,11 @@ namespace cafes
       for (std::size_t d=0; d<Dimensions; ++d)
         hs[d] = h[d]/scale;
 
+      geometry::position<std::size_t, Dimensions> p1, p2;
+      p1.fill(0);
+      p2.fill(scale);
+      geometry::box<std::size_t, Dimensions> box_scale{ p1, p2};
+
       for(std::size_t ipart=0; ipart<particles.size(); ++ipart){
         auto& p = particles[ipart];
         mean[ipart] = 0;
@@ -346,7 +346,7 @@ namespace cafes
         auto pbox = p.bounding_box(h);
         if (geometry::intersect(box, pbox)){
           auto new_box = geometry::box_inside(box, pbox);
-          algorithm::iterate(new_box, kernel_projection(p, sol, h, hs, scale, mean[ipart], cross_prod[ipart]));
+          algorithm::iterate(new_box, kernel_projection(p, sol, h, hs, box_scale, mean[ipart], cross_prod[ipart]));
         }
         mean[ipart] /= num[ipart];
         cross_prod[ipart] /= num[ipart];
