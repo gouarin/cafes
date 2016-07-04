@@ -1,3 +1,31 @@
+// Copyright (c) 2016, Loic Gouarin <loic.gouarin@math.u-psud.fr>
+// All rights reserved.
+
+// Redistribution and use in source and binary forms, with or without modification, 
+// are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, 
+//    this list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its contributors
+//    may be used to endorse or promote products derived from this software without
+//    specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+// IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+// NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+// OF SUCH DAMAGE.
+
 #ifndef PARTICLE_GEOMETRY_BOX_HPP_INCLUDED
 #define PARTICLE_GEOMETRY_BOX_HPP_INCLUDED
 
@@ -16,7 +44,7 @@ namespace cafes
     * - bottom left
     * - upper right
     *
-    * These corners could be of any type T.
+    * These corners must be position type of any type T.
     */
     template<typename T, std::size_t Dimensions>
     struct box
@@ -130,6 +158,10 @@ namespace cafes
 
     /**
     * return true if two boxes have a non null intersection, false otherwise.
+    *
+    *   \param b1 : the first box
+    *   \param b2 : the second box
+    *   \return a boolean
     */
     template<typename T, std::size_t Dimensions>
     bool intersect(box<T, Dimensions> const& b1, box<T, Dimensions> const& b2)
@@ -193,6 +225,9 @@ namespace cafes
       return true;
     }
 
+    /**
+    * Check if a part of the box b2 is inside the box b1
+    */
     template<typename T, std::size_t Dimensions>
     bool check_box_inside(box<T, Dimensions> const& b1, box<T, Dimensions> const& b2)
     // check if a part of box b2 is inside the box b1
