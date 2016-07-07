@@ -1,5 +1,6 @@
-sudo: required
-dist: trusty
+sudo: false
+# sudo: required
+# dist: trusty
 #os: linux
 language: cpp
 
@@ -18,14 +19,19 @@ addons:
       - libvtk5-dev
       - libvtk5.8
       - gcc-5
+      - g++-5
 
-cache: ccache
+cache:
+  directories:
+    - $HOME/cached_dependencies_$TRAVIS_OS_NAME
+
+env:
+   global:
+    - CACHE_DIRECTORY=$HOME/cached_dependencies_$TRAVIS_OS_NAME
 
 before_install:
   - export CC=gcc-5
   - export CXX=g++-5
-  - sudo apt-get -qq update
-  - apt-cache search gcc
   - travis_wait sh ./scripts/petsc.sh 3.6.4
   - export PETSC_DIR=$HOME/petsc
   - export PETSC_ARCH=arch-linux2-c-opt
