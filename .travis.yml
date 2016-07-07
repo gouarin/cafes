@@ -35,6 +35,8 @@ before_install:
   - export CXX=g++-5
   - travis_wait sh ./scripts/petsc.sh 3.6.4
 install:
+  - export PETSC_DIR=$PETSC_DIR
+  - export PETSC_ARCH=$PETSC_ARCH
   - mkdir build
   - cd build
   - cmake ..
