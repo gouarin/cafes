@@ -1,6 +1,6 @@
 sudo: required
 dist: trusty
-os: linux
+#os: linux
 language: cpp
 
 addons:
@@ -18,7 +18,12 @@ addons:
       - libvtk5-dev
       - libvtk5.8
       - gcc-5
+
+cache: ccache
+
 before_install:
+  - export CC=gcc-5
+  - export CXX=g++-5
   - sudo apt-get -qq update
   - apt-cache search gcc
   - travis_wait sh ./scripts/petsc.sh 3.6.4
