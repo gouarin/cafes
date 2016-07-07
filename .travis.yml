@@ -1,0 +1,28 @@
+sudo: required
+dist: trusty
+
+language:
+  cpp
+
+addons:
+  apt:
+    #sources:
+    #  - george-edison55-precise-backports
+    packages:
+      - libopenmpi-dev
+      - openmpi-bin
+      - liblapack-dev
+      - libatlas-base-dev
+      - libatlas-dev
+      - cmake
+      - cmake-data
+      - vtk
+
+before_install:
+  - sudo apt-get -qq update
+  - apt-cache search vtk
+  #- travis_wait sh ./scripts/petsc.sh 3.6.4
+install:
+  - mkdir build
+  - cd build
+  - cmake ..
