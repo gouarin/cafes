@@ -34,8 +34,12 @@ before_install:
   - export CC=gcc-5
   - export CXX=g++-5
   - travis_wait sh ./scripts/petsc.sh
+
 install:
   - mkdir build
   - cd build
   - cmake ..
   - make
+
+script:
+  - echo "OK"
