@@ -39,7 +39,7 @@ install:
   - mkdir build
   - cd build
   - cmake ..
-  - make
+  - make -j4
 
 script:
   - echo "OK"

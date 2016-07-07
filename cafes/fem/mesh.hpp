@@ -39,6 +39,12 @@ namespace cafes
 {
   namespace fem
   {
+    auto get_dof(DM const& dm)
+    {
+      DMDALocalInfo info;
+      DMDAGetLocalInfo(dm, &info);
+      return info.dof;
+    }
 
     auto get_DM_bounds_(DM const& dm, std::integral_constant<int, 2>, bool remove_final_points)
     {

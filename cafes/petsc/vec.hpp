@@ -103,7 +103,7 @@ namespace cafes
 
         DMGetLocalVector(dm_, &v_);
 
-        DMDAGetDof(dm_, &dof_);
+        dof_ = fem::get_dof(dm_);
 
         if (readonly_)
         {
