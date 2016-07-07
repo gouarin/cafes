@@ -3,7 +3,8 @@ set -ex
 
 CURRENT_DIR=`pwd`
 
-VERSION="3.6.4 3.7.2"
+#VERSION="3.6.4 3.7.2"
+VERSION="3.7.2"
 PETSC_ARCH=arch-linux2-c-opt
 
 for v in $VERSION
