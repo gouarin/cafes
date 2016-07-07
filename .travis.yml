@@ -1,6 +1,6 @@
-sudo: false
-#sudo: required
-#dist: trusty
+#sudo: false
+sudo: required
+dist: trusty
 os: linux
 language: cpp
 
