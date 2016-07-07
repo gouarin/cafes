@@ -6,7 +6,8 @@ language:
 
 addons:
   apt:
-    #sources:
+    sources:
+      - ubuntu-toolchain-r-test
     #  - george-edison55-precise-backports
     packages:
       - libopenmpi-dev
@@ -18,10 +19,10 @@ addons:
       - cmake-data
       - libvtk5-dev
       - libvtk5.8
-
+      - gcc5
 before_install:
   - sudo apt-get -qq update
-  - apt-cache search vtk
+  - apt-cache search gcc
   - travis_wait sh ./scripts/petsc.sh 3.6.4
   - export PETSC_DIR=$HOME/petsc
   - export PETSC_ARCH=arch-linux2-c-opt
@@ -30,4 +31,3 @@ install:
   - cd build
   - cmake ..
   - make
-  
