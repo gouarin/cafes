@@ -29,8 +29,7 @@ env:
 
 matrix:
   include:
-    - env:
-      CC=gcc-5 CXX=g++-5 PETSC_DIR=$CACHE_DIRECTORY/petsc-3.6.4
+    - env: CC=gcc-5 CXX=g++-5 PETSC_DIR=$CACHE_DIRECTORY/petsc-3.6.4
       os: linux
       addons: &gcc5
         apt:
@@ -38,13 +37,11 @@ matrix:
             - gcc-5
             - g++-5
 
-    - env:
-      CC=gcc-5 CXX=g++-5 PETSC_DIR=$CACHE_DIRECTORY/petsc-3.7.2
+    - env: CC=gcc-5 CXX=g++-5 PETSC_DIR=$CACHE_DIRECTORY/petsc-3.7.2
       os: linux
       addons: *gcc5
 
-    - env:
-      CC=gcc-6 CXX=g++-6 PETSC_DIR=$CACHE_DIRECTORY/petsc-3.6.4
+    - env: CC=gcc-6 CXX=g++-6 PETSC_DIR=$CACHE_DIRECTORY/petsc-3.6.4
       os: linux
       addons: &gcc6
         apt:
@@ -52,13 +49,11 @@ matrix:
             - gcc-6
             - g++-6
 
-    - env:
-      CC=gcc-6 CXX=g++-6 PETSC_DIR=$CACHE_DIRECTORY/petsc-3.7.2
+    - env: CC=gcc-6 CXX=g++-6 PETSC_DIR=$CACHE_DIRECTORY/petsc-3.7.2
       os: linux
       addons: *gcc6
 
-    - env:
-      CC=clang-3.7 CXX=clang++-3.7 PETSC_DIR=$CACHE_DIRECTORY/petsc-3.6.4
+    - env: CC=clang-3.7 CXX=clang++-3.7 PETSC_DIR=$CACHE_DIRECTORY/petsc-3.6.4
       os: linux
       addons: &clang37
         apt:
@@ -69,8 +64,7 @@ matrix:
             - ubuntu-toolchain-r-test
             - llvm-toolchain-precise-3.7
 
-    - env:
-      CC=clang-3.7 CXX=clang++-3.7 PETSC_DIR=$CACHE_DIRECTORY/petsc-3.7.2
+    - env: CC=clang-3.7 CXX=clang++-3.7 PETSC_DIR=$CACHE_DIRECTORY/petsc-3.7.2
       os: linux
       addons: *clang37
 
