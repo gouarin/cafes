@@ -1,16 +1,13 @@
 #!/bin/sh
 set -ex
 
-if [ ! -d $CACHE_DIRECTORY ]; then
-  CURRENT_DIR=`pwd`
+CURRENT_DIR=`pwd`
 
-  VERSION=$1
-  PETSC_DIR=$CACHE_DIRECTORY/petsc-$VERSION
-  PETSC_ARCH=arch-linux2-c-opt
+VERSION=$1
+PETSC_DIR=$CACHE_DIRECTORY/petsc-$VERSION
+PETSC_ARCH=arch-linux2-c-opt
 
-  echo $CURRENT_DIR
-  echo $1
-
+if [ ! -d $PETSC_DIR ]; then
   mkdir -p $PETSC_DIR
   wget http://ftp.mcs.anl.gov/pub/petsc/release-snapshots/petsc-lite-$1.tar.gz
   tar xzf petsc-lite-$1.tar.gz --strip-components=1 -C $PETSC_DIR
