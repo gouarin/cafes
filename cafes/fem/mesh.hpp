@@ -321,8 +321,8 @@ namespace cafes
     PetscErrorCode createMesh(DM& dm, std::array<int, Dimensions> const& npoints, std::array<PetscBool, Dimensions> const& period)
     {
         PetscErrorCode   ierr;
-        auto mpres{npoints};
-        auto mvel{npoints};
+        auto mpres = npoints;
+        auto mvel = npoints;
         std::array<DMBoundaryType, Dimensions> b_type;
         PetscFunctionBeginUser;
 
@@ -348,7 +348,7 @@ namespace cafes
     PetscErrorCode createLaplacianMesh(DM& dm, std::array<int, Dimensions> const& npoints, std::array<PetscBool, Dimensions> const& period)
     {
         PetscErrorCode   ierr;
-        auto mvel{npoints};
+        auto mvel = npoints;
         std::array<DMBoundaryType, Dimensions> b_type;
         PetscFunctionBeginUser;
 

@@ -118,7 +118,7 @@ namespace cafes
       auto petsc_forces = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, forces, 0, false);
       
       ierr = set_rhs_problem_impl(ctx, x, petsc_forces, apply_forces);CHKERRQ(ierr);
-      
+
       ierr = fem::apply_mass_matrix(ctx.problem.ctx->dm, forces, mass_mult, ctx.problem.ctx->h);CHKERRQ(ierr);
       ierr = VecAXPY(ctx.problem.rhs, 1., mass_mult);CHKERRQ(ierr);
 

@@ -62,6 +62,7 @@ namespace cafes
       ierr = VecSet(ctx->problem.rhs, 0.);CHKERRQ(ierr);
 
       ierr = init_problem<Dimensions, Ctx>(*ctx, x, ctx->compute_rhs);CHKERRQ(ierr);
+      //VecView(ctx->problem.rhs, 0);
       ierr = ctx->problem.solve();CHKERRQ(ierr);
 
       std::vector<std::vector<geometry::vector<double, Dimensions>>> g;
@@ -210,19 +211,19 @@ namespace cafes
         PetscErrorCode ierr;
         PetscFunctionBegin;
 
-        std::vector<std::vector<std::array<double, Dimensions>>> g;
+        std::vector<std::vector<geometry::vector<double, Dimensions>>> g;
         g.resize(ctx->particles.size());
-        for(std::size_t ipart=0; ipart<ctx->surf_points.size(); ++ipart)       
+        for(std::size_t ipart=0; ipart<ctx->surf_points.size(); ++ipart)
           g[ipart].resize(ctx->surf_points[ipart].size());
 
         // interpolation
         ierr = interp_fluid_to_surf(*ctx, g);CHKERRQ(ierr);
 
-        std::vector<double> mean;
-        std::vector<double> cross_prod;
-
-        mean.resize(ctx->particles.size()*Dimensions);
-        cross_prod.resize(ctx->particles.size()*((Dimensions==2)?1:3));
+        std::vector<geometry::vector<double, Dimensions>> mean(ctx->particles.size());
+        using cross_type  = typename std::conditional<Dimensions==2,
+                                                      double, 
+                                                      geometry::vector<double, 3>>::type;
+        std::vector<cross_type> cross_prod(ctx->particles.size());
 
         // simplify this part: we only need to compute mean to set 
         // the new velocity
@@ -230,7 +231,7 @@ namespace cafes
 
         for(std::size_t ipart=0; ipart<ctx->particles.size(); ++ipart)
           for(std::size_t d=0; d<Dimensions; ++d)
-            parts_[ipart].velocity_[d] = mean[ipart*Dimensions + d];
+            parts_[ipart].velocity_[d] = mean[ipart][d];
           
         PetscFunctionReturn(0);
       }
