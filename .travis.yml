@@ -16,7 +16,7 @@ addons:
       - libatlas-dev
       - cmake
       - cmake-data
-      - vtk
+      #- vtk
 
 before_install:
   - sudo apt-get -qq update
