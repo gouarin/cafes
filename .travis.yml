@@ -1,8 +1,8 @@
-sudo: required
-dist: trusty
-
-language:
-  cpp
+sudo: false
+#sudo: required
+#dist: trusty
+os: linux
+language: cpp
 
 addons:
   apt:
@@ -19,7 +19,7 @@ addons:
       - cmake-data
       - libvtk5-dev
       - libvtk5.8
-      - gcc5
+      #- gcc5
 before_install:
   - sudo apt-get -qq update
   - apt-cache search gcc
