@@ -17,8 +17,6 @@ addons:
       - cmake-data
       - libvtk5-dev
       - libvtk5.8
-      - gcc-5
-      - g++-5
 
 cache:
   directories:
@@ -28,17 +26,63 @@ env:
    global:
     - CACHE_DIRECTORY=$HOME/cached_dependencies_$TRAVIS_OS_NAME
     - PETSC_ARCH=arch-linux2-c-opt
-    - PETSC_DIR=$CACHE_DIRECTORY/petsc-3.7.2
+
+matrix:
+  include:
+    - env:
+      CC=gcc-5 CXX=g++-5 PETSC_DIR=$CACHE_DIRECTORY/petsc-3.6.4
+      os: linux
+      addons: &gcc5
+        apt:
+          packages:
+            - gcc-5
+            - g++-5
+
+    - env:
+      CC=gcc-5 CXX=g++-5 PETSC_DIR=$CACHE_DIRECTORY/petsc-3.7.2
+      os: linux
+      addons: *gcc5
+
+    - env:
+      CC=gcc-6 CXX=g++-6 PETSC_DIR=$CACHE_DIRECTORY/petsc-3.6.4
+      os: linux
+      addons: &gcc6
+        apt:
+          packages:
+            - gcc-6
+            - g++-6
+
+    - env:
+      CC=gcc-6 CXX=g++-6 PETSC_DIR=$CACHE_DIRECTORY/petsc-3.7.2
+      os: linux
+      addons: *gcc6
+
+    - env:
+      CC=clang-3.7 CXX=clang++-3.7 PETSC_DIR=$CACHE_DIRECTORY/petsc-3.6.4
+      os: linux
+      addons: &clang37
+        apt:
+          packages:
+            - util-linux
+            - clang-3.7
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-precise-3.7
+
+    - env:
+      CC=clang-3.7 CXX=clang++-3.7 PETSC_DIR=$CACHE_DIRECTORY/petsc-3.7.2
+      os: linux
+      addons: *clang37
 
 before_install:
-  - export CC=gcc-5
-  - export CXX=g++-5
   - travis_wait sh ./scripts/petsc.sh
 
 install:
+  - export PETSC_DIR=$PETSC_DIR 
+  - export PETSC_ARCH=$PETSC_ARCH 
   - mkdir build
   - cd build
-  - cmake ..
+  - CC=$CC CXX=$CXX cmake ..
   - make -j4
 
 script:
