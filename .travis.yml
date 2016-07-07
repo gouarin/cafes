@@ -62,7 +62,7 @@ matrix:
 
     - env: CC=clang-3.7 CXX=clang++-3.7 PETSC_DIR=$CACHE_DIRECTORY/petsc-3.6.4
       os: linux
-      addons: &clang3.7
+      addons: &clang37
         apt:
           sources:
             - ubuntu-toolchain-r-test
@@ -73,7 +73,7 @@ matrix:
 
     - env: CC=clang-3.7 CXX=clang++-3.7 PETSC_DIR=$CACHE_DIRECTORY/petsc-3.7.2
       os: linux
-      addons: *clang3.7
+      addons: *clang37
 
 before_install:
   - travis_wait sh ./scripts/petsc.sh
