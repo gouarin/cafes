@@ -1,4 +1,3 @@
-#sudo: false
 sudo: required
 dist: trusty
 os: linux
@@ -8,7 +7,6 @@ addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
-    #  - george-edison55-precise-backports
     packages:
       - libopenmpi-dev
       - openmpi-bin
@@ -19,7 +17,7 @@ addons:
       - cmake-data
       - libvtk5-dev
       - libvtk5.8
-      #- gcc5
+      - gcc-5
 before_install:
   - sudo apt-get -qq update
   - apt-cache search gcc
