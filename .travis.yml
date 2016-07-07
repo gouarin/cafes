@@ -16,12 +16,13 @@ addons:
       - libatlas-dev
       - cmake
       - cmake-data
-      #- vtk
+      - libvtk5-dev
+      - libvtk5.8
 
 before_install:
   - sudo apt-get -qq update
   - apt-cache search vtk
-  #- travis_wait sh ./scripts/petsc.sh 3.6.4
+  - travis_wait sh ./scripts/petsc.sh 3.6.4
 install:
   - mkdir build
   - cd build
