@@ -27,13 +27,13 @@ cache:
 env:
    global:
     - CACHE_DIRECTORY=$HOME/cached_dependencies_$TRAVIS_OS_NAME
+    - PETSC_ARCH=arch-linux2-c-opt
+    - PETSC_DIR=$CACHE_DIRECTORY/petsc-3.6.4
 
 before_install:
   - export CC=gcc-5
   - export CXX=g++-5
   - travis_wait sh ./scripts/petsc.sh 3.6.4
-  - export PETSC_DIR=$HOME/petsc
-  - export PETSC_ARCH=arch-linux2-c-opt
 install:
   - mkdir build
   - cd build
