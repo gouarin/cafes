@@ -60,6 +60,21 @@ matrix:
       os: linux
       addons: *gcc6
 
+    - env: CLANG_VERSION=3.5 PETSC_VERSION=3.6.4
+      os: linux
+      addons: &clang35
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-precise-3.5
+          packages:
+            - *default_packages
+            - clang-3.5
+
+    - env: CLANG_VERSION=3.5 PETSC_VERSION=3.7.2
+      os: linux
+      addons: *clang35
+
     - env: CLANG_VERSION=3.7 PETSC_VERSION=3.6.4
       os: linux
       addons: &clang37
@@ -74,6 +89,21 @@ matrix:
     - env: CLANG_VERSION=3.7 PETSC_VERSION=3.7.2
       os: linux
       addons: *clang37
+
+    - env: CLANG_VERSION=3.8 PETSC_VERSION=3.6.4
+      os: linux
+      addons: &clang38
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-precise-3.8
+          packages:
+            - *default_packages
+            - clang-3.8
+
+    - env: CLANG_VERSION=3.8 PETSC_VERSION=3.7.2
+      os: linux
+      addons: *clang38
 
 before_install:
   - travis_wait sh ./scripts/petsc.sh
