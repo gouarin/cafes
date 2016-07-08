@@ -212,8 +212,6 @@ namespace cafes
 
       MPI_Allreduce(MPI_IN_PLACE, mean.data(), mean.size()*Dimensions, MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
       MPI_Allreduce(MPI_IN_PLACE, cross_prod.data(), cross_prod.size()*(Dimensions==2?1:3), MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
-
-      std::cout << mean[0] << "\n";
       
       for(std::size_t ipart=0; ipart<g.size(); ++ipart)
       {
