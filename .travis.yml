@@ -79,9 +79,9 @@ before_install:
   - travis_wait sh ./scripts/petsc.sh
 
 install:
-  - export CC=${CC} CXX=${CXX}
-  - export PETSC_DIR=${PETSC_DIR} 
-  - export PETSC_ARCH=${PETSC_ARCH} 
+  - export CC="${CC}" CXX="${CXX}"
+  - export PETSC_DIR="${PETSC_DIR}"
+  - export PETSC_ARCH="${PETSC_ARCH}"
   - mkdir build
   - cd build
   - cmake ..
