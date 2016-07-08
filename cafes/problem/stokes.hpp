@@ -295,7 +295,7 @@ namespace cafes
             ierr = PCMGGetLevels(pc, &MGlevels);CHKERRQ(ierr);
 
             for(std::size_t i=0; i<MGlevels; ++i){
-              auto mg_h{ctx->h};
+              auto mg_h = ctx->h;
               std::for_each(mg_h.begin(), mg_h.end(), [&](auto& x){x*=(1<<(MGlevels-1-i));});
 
               auto *mg_ctx = new Ctx{dav, mg_h, method, fem::diag_laplacian_mult};

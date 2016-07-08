@@ -39,6 +39,12 @@ namespace cafes
 {
   namespace fem
   {
+    auto get_dof(DM const& dm)
+    {
+      DMDALocalInfo info;
+      DMDAGetLocalInfo(dm, &info);
+      return info.dof;
+    }
 
     auto get_DM_bounds_(DM const& dm, std::integral_constant<int, 2>, bool remove_final_points)
     {
@@ -321,8 +327,8 @@ namespace cafes
     PetscErrorCode createMesh(DM& dm, std::array<int, Dimensions> const& npoints, std::array<PetscBool, Dimensions> const& period)
     {
         PetscErrorCode   ierr;
-        auto mpres{npoints};
-        auto mvel{npoints};
+        auto mpres = npoints;
+        auto mvel = npoints;
         std::array<DMBoundaryType, Dimensions> b_type;
         PetscFunctionBeginUser;
 
@@ -348,7 +354,7 @@ namespace cafes
     PetscErrorCode createLaplacianMesh(DM& dm, std::array<int, Dimensions> const& npoints, std::array<PetscBool, Dimensions> const& period)
     {
         PetscErrorCode   ierr;
-        auto mvel{npoints};
+        auto mvel = npoints;
         std::array<DMBoundaryType, Dimensions> b_type;
         PetscFunctionBeginUser;
 

@@ -47,7 +47,7 @@ namespace cafes
       using parent::shape_factors_;
 
       circle(position_type const& c, double const& radius, quaternion q={}):
-             super_ellipsoid<T, 2>(c, {radius, radius}, 2, q)
+             super_ellipsoid<T, 2>(c, {{radius, radius}}, 2, q)
       {
       }
       
