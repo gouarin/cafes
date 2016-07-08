@@ -116,14 +116,14 @@ namespace cafes
         {
           if (box.bottom_left[d] == 0)
           {
-            auto new_box{box};
+            auto new_box = box;
             new_box.upper_right[d] = 1;
             algorithm::iterate(new_box, kernel(x, y, bc.conditions_[2*d], h));
           }
 
           if (box.upper_right[d] == gbounds[d])
           {
-            auto new_box{box};
+            auto new_box = box;
             new_box.bottom_left[d] = gbounds[d]-1;
             algorithm::iterate(new_box, kernel(x, y, bc.conditions_[2*d+1], h));
           }

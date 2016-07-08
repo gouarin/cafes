@@ -165,6 +165,7 @@ namespace cafes
         //     auto c = radius*std::cos(2*i*M_PI/n);
         //     auto s = radius*std::sin(2*i*M_PI/n);
         //     that.push_back({center_[0] + c, center_[1] + s});
+        //     std::cout << that[i] << "\n";
         //   }
         //   return that;
         // }

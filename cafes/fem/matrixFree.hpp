@@ -221,7 +221,7 @@ namespace cafes
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
-      auto hp{h};
+      auto hp = h;
       std::for_each(hp.begin(), hp.end(), [](auto x){x*=2;});
 
       using ctx = problem::context<Dimensions, 2>;
