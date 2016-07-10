@@ -1,5 +1,4 @@
-#include <particle/geometry/box.hpp>
-#include <particle/geometry/super_ellipsoid.hpp>
+#include <cafes.hpp>
 #include <cassert>
 #include <iostream>
 
