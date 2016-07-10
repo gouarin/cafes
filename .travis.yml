@@ -108,7 +108,7 @@ install:
   - cppcheck -I . --enable=performance,portability,information,missingInclude --error-exitcode=2 cafes
   - mkdir build
   - cd build
-  - cmake ..
+  - cmake .. ${CMAKE_EXTRA_ARGS}
   - make -j4
 
 script:
