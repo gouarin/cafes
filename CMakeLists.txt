@@ -22,8 +22,12 @@ include_directories(${PETSC_INCLUDE_CONF} ${PETSC_INCLUDE_DIR} ${MPI_INCLUDE_PAT
 
 # Includes Catch in the project:
 add_subdirectory(${EXT_PROJECTS_DIR}/catch)
+
 include_directories(${CATCH_INCLUDE_DIR} ${COMMON_INCLUDES})
 enable_testing(true)  # Enables unit-testing.
+
+add_library(Catch INTERFACE)
+target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 
 ADD_SUBDIRECTORY(${EXT_PROJECTS_DIR}/qhull)
 ADD_SUBDIRECTORY(tests)

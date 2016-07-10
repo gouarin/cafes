@@ -58,14 +58,3 @@ TARGET_LINK_LIBRARIES(sem ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
 
 #ADD_EXECUTABLE(rvalue_test rvalue_test)
 
-add_library(Catch INTERFACE)
-target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
-
-set(TEST_SOURCES
-  facto.cpp
-  )
-
-add_executable(my_test ${TEST_SOURCES})
-target_link_libraries(my_test Catch)
-
-add_test(NAME MyAwesomeTest COMMAND my_test)
