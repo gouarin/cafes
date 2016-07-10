@@ -18,6 +18,7 @@ addons:
       - cmake-data
       - libvtk5-dev
       - libvtk5.8
+      - cppcheck
 
 cache:
   directories:
@@ -30,7 +31,7 @@ env:
 
 matrix:
   include:
-    - env: GCC_VERSION=5 PETSC_VERSION=3.6.4
+    - env: GCC_VERSION=5 PETSC_VERSION=3.6.4 WITH_COVERAGE=yes
       os: linux
       addons: &gcc5
         apt:
@@ -97,12 +98,22 @@ before_install:
   - export PETSC_DIR="${CACHE_DIRECTORY}/petsc-${PETSC_VERSION}"
   - which $CC
   - which $CXX
+  - |-
+    if [ -n "${WITH_COVERAGE}" ]; then
+        export CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_BUILD_TYPE=Coverage"
+        pip install --user pyyaml cpp-coveralls
+    fi
 
 install:
+  - cppcheck -I . --enable=performance,portability,information,missingInclude --error-exitcode=2 cafes
   - mkdir build
   - cd build
   - cmake ..
   - make -j4
 
 script:
-  - echo "OK"
+  - ctest -V
+
+after_success:
+  - cd ${TRAVIS_BUILD_DIR}
+  - if [ -n "${WITH_COVERAGE}" ]; then coveralls -i cafes; fi
