@@ -38,6 +38,7 @@
 #include <particle/geometry/box.hpp>
 #include <particle/geometry/position.hpp>
 #include <particle/geometry/vector.hpp>
+#include <particle/forces_torques.hpp>
 
 #include <petsc.h>
 #include <iostream>
@@ -233,6 +234,35 @@ namespace cafes
           for(std::size_t d=0; d<Dimensions; ++d)
             parts_[ipart].velocity_[d] = mean[ipart][d];
           
+        PetscFunctionReturn(0);
+      }
+
+      #undef __FUNCT__
+      #define __FUNCT__ "get_new_forces_torques"
+      PetscErrorCode get_new_forces_torques(std::vector<double> forces, std::vector<double> torques)
+      {
+        PetscErrorCode ierr;
+        PetscFunctionBegin;
+        auto box = fem::get_DM_bounds<Dimensions>(ctx->problem.ctx->dm, 0);
+        auto& h = ctx->problem.ctx->h;
+
+        std::size_t torque_size = (Dimensions==2)?1:3;
+        
+        forces.resize(ctx->particles.size()*Dimensions);
+        torques.resize(ctx->particles.size()*torque_size);
+
+        std::fill(forces.begin(), forces.end(), 0.);
+        std::fill(torques.begin(), torques.end(), 0.);
+
+        ierr = forces_torques_with_control(ctx->particles,
+                                           ctx->problem.sol,
+                                           box,
+                                           forces,
+                                           torques,
+                                           ctx->num,
+                                           h,
+                                           false);CHKERRQ(ierr);
+
         PetscFunctionReturn(0);
       }
     };

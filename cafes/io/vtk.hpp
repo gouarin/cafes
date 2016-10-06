@@ -616,9 +616,13 @@ namespace cafes
     #define __FUNCT__ "saveParticles"
     template<typename Shape>
     PetscErrorCode saveParticles(const char* path, const char* filename,
-                                 std::vector<particle<Shape>>const& particles)
+                                 std::vector<particle<Shape>>const& particles,
+                                 std::vector<double> forces,
+                                 std::vector<double> torques)
     {
       PetscErrorCode ierr;
+      using dimension_type         = typename Shape::dimension_type;
+
       int rank;
       ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
 
@@ -626,6 +630,7 @@ namespace cafes
 
         vtkPoints* spheresPoints = vtkPoints::New();
         vtkDoubleArray* shperesRadius = vtkDoubleArray::New();
+        vtkDoubleArray* shperesForces = vtkDoubleArray::New();
         vtkPolyData* data = vtkPolyData::New();
         PetscFunctionBeginUser;
 
@@ -639,14 +644,27 @@ namespace cafes
         shperesRadius->SetNumberOfTuples(particles.size());
         data->GetPointData()->AddArray(shperesRadius);
 
+        shperesForces->SetName("forces");
+        shperesForces->SetNumberOfComponents(dimension_type::value);
+        shperesForces->SetNumberOfTuples(particles.size());
+        data->GetPointData()->AddArray(shperesForces);
 
         std::size_t i = 0;
         for(auto& p: particles){
           // fix this for 2D and 3D problem
           // in 3D
-          //spheresPoints->SetPoint(i, p.center_[0], p.center_[1], p.center_[2]);
+          if (dimension_type::value == 3)
+          {
+            spheresPoints->SetPoint(i, p.center_[0], p.center_[1], p.center_[2]);
+            shperesForces->InsertNextTuple3(forces[i*3], forces[i*3+1], forces[i*3+2]);
+          }
           // in 2D
-          spheresPoints->SetPoint(i, p.center_[0], p.center_[1], 0.);
+          else
+          {
+            spheresPoints->SetPoint(i, p.center_[0], p.center_[1], 0.);
+            shperesForces->InsertNextTuple3(forces[i*2], forces[i*2+1], 0.);
+          }
+
           shperesRadius->SetValue(i, p.shape_factors_[0]);
           i++;
         }
