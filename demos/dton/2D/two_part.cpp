@@ -53,7 +53,7 @@ int main(int argc, char **argv)
     ierr = s.solve();CHKERRQ(ierr);
 
     //ierr = cafes::io::save_VTK("Resultats", "two_part", st.sol, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
-    ierr = cafes::io::saveParticles("Resultats", "two_part", pt);CHKERRQ(ierr);
+    //ierr = cafes::io::saveParticles("Resultats", "two_part", pt);CHKERRQ(ierr);
 
     ierr = PetscFinalize();CHKERRQ(ierr);
 

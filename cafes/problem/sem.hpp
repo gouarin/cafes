@@ -256,7 +256,28 @@ namespace cafes
                                            h,
                                            false);CHKERRQ(ierr);
 
-        std::cout << "forces " << forces[0][0] << " " << forces[0][1] << "\n";
+        PetscFunctionReturn(0);
+      }
+
+      #undef __FUNCT__
+      #define __FUNCT__ "save"
+      PetscErrorCode save(const char* path, const char* filename)
+      {
+        PetscErrorCode ierr;
+        PetscFunctionBegin;
+
+        io::save_VTK(path, filename, problem_.sol, problem_.ctx->dm, problem_.ctx->h);
+    
+        std::vector<geometry::vector<double, Dimensions>> forces(parts_.size());
+        using torques_type  = typename std::conditional<Dimensions==2,
+                                                        double, 
+                                                        geometry::vector<double, 3>>::type;
+        std::vector<torques_type> torques(parts_.size());
+
+        get_new_forces_torques(forces, torques);
+
+        io::saveParticles(path, filename, parts_, forces, torques);
+
         PetscFunctionReturn(0);
       }
     };
