@@ -239,30 +239,24 @@ namespace cafes
 
       #undef __FUNCT__
       #define __FUNCT__ "get_new_forces_torques"
-      PetscErrorCode get_new_forces_torques(std::vector<double> forces, std::vector<double> torques)
+      template<typename forces_type, typename torques_type>
+      PetscErrorCode get_new_forces_torques(forces_type& forces, torques_type& torques)
       {
         PetscErrorCode ierr;
         PetscFunctionBegin;
-        auto box = fem::get_DM_bounds<Dimensions>(ctx->problem.ctx->dm, 0);
-        auto& h = ctx->problem.ctx->h;
-
-        std::size_t torque_size = (Dimensions==2)?1:3;
-        
-        forces.resize(ctx->particles.size()*Dimensions);
-        torques.resize(ctx->particles.size()*torque_size);
-
-        std::fill(forces.begin(), forces.end(), 0.);
-        std::fill(torques.begin(), torques.end(), 0.);
-
-        ierr = forces_torques_with_control(ctx->particles,
-                                           ctx->problem.sol,
+        auto box = fem::get_DM_bounds<Dimensions>(problem_.ctx->dm, 0);
+        auto& h = problem_.ctx->h;
+       
+        ierr = forces_torques_with_control(parts_,
+                                           sol,
                                            box,
                                            forces,
                                            torques,
-                                           ctx->num,
+                                           num_,
                                            h,
                                            false);CHKERRQ(ierr);
 
+        std::cout << "forces " << forces[0][0] << " " << forces[0][1] << "\n";
         PetscFunctionReturn(0);
       }
     };

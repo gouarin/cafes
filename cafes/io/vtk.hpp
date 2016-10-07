@@ -66,6 +66,7 @@
 #include "vtkXMLPolyDataWriter.h"
 #include "vtkXMLPolyDataReader.h"
 #include "vtkPolyData.h"
+#include <vtkSmartPointer.h>
 
 #include <array>
 
@@ -612,59 +613,85 @@ namespace cafes
       PetscFunctionReturn(0);
     }
 
+    // template<typename torque_type, typename vtktorque_type>
+    // void save_torque_impl(torque_type& torque, vtktorque_type& vtktorque, std::integral_constant<std::size_t, 2>)
+    // {
+    //   vtktorque->InsertNextTuple3(0., 0., torque);
+    // }
+
+    // template<typename torque_type, typename vtktorque_type>
+    // void save_torque_impl(torque_type& torque, vtktorque_type& vtktorque, std::integral_constant<std::size_t, 3>)
+    // {
+    //   vtktorque->InsertNextTuple3(torque[0], torque[1], torque[2]);
+    // }
+
+    // template<typename torque_type, typename vtktorque_type>
+    // void save_torque(torque_type& torque, vtktorque_type& vtktorque, std::size_t const dim)
+    // {
+    //   save_torque_impl(torque, vtktorque, std::integral_constant<std::size_t, dim>{});
+    // }
+
     #undef __FUNCT__
     #define __FUNCT__ "saveParticles"
-    template<typename Shape>
+    template<typename Shape, typename forces_type, typename torques_type>
     PetscErrorCode saveParticles(const char* path, const char* filename,
                                  std::vector<particle<Shape>>const& particles,
-                                 std::vector<double> forces,
-                                 std::vector<double> torques)
+                                 forces_type const& forces,
+                                 torques_type const& torques)
     {
       PetscErrorCode ierr;
+      PetscFunctionBeginUser;
+
       using dimension_type         = typename Shape::dimension_type;
+      std::cout << "forces 2 " << forces[0][0] << " " << forces[0][1] << "\n";
 
       int rank;
       ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
 
       if (rank == 0){
 
-        vtkPoints* spheresPoints = vtkPoints::New();
-        vtkDoubleArray* shperesRadius = vtkDoubleArray::New();
-        vtkDoubleArray* shperesForces = vtkDoubleArray::New();
-        vtkPolyData* data = vtkPolyData::New();
-        PetscFunctionBeginUser;
+        vtkSmartPointer<vtkPoints> spheresPoints = vtkSmartPointer<vtkPoints>::New();
+        vtkSmartPointer<vtkDoubleArray> shperesRadius = vtkSmartPointer<vtkDoubleArray>::New();
+        vtkSmartPointer<vtkDoubleArray> shperesForces = vtkSmartPointer<vtkDoubleArray>::New();
+        vtkSmartPointer<vtkDoubleArray> shperesTorques = vtkSmartPointer<vtkDoubleArray>::New();
+        vtkSmartPointer<vtkPolyData> data = vtkSmartPointer<vtkPolyData>::New();
 
         data->Allocate(1, 1);
 
         spheresPoints->SetDataTypeToDouble();
         spheresPoints->SetNumberOfPoints(particles.size());
         data->SetPoints(spheresPoints);
+
         shperesRadius->SetName("radius");
         shperesRadius->SetNumberOfComponents(1);
         shperesRadius->SetNumberOfTuples(particles.size());
         data->GetPointData()->AddArray(shperesRadius);
 
         shperesForces->SetName("forces");
-        shperesForces->SetNumberOfComponents(dimension_type::value);
-        shperesForces->SetNumberOfTuples(particles.size());
+        shperesForces->SetNumberOfComponents(3);
+        //shperesForces->SetNumberOfTuples(particles.size());
         data->GetPointData()->AddArray(shperesForces);
+
+        // shperesTorques->SetName("torques");
+        // shperesTorques->SetNumberOfComponents(3);
+        // shperesTorques->SetNumberOfTuples(particles.size());
+        // data->GetPointData()->AddArray(shperesTorques);
 
         std::size_t i = 0;
         for(auto& p: particles){
-          // fix this for 2D and 3D problem
           // in 3D
           if (dimension_type::value == 3)
           {
             spheresPoints->SetPoint(i, p.center_[0], p.center_[1], p.center_[2]);
-            shperesForces->InsertNextTuple3(forces[i*3], forces[i*3+1], forces[i*3+2]);
+            shperesForces->InsertNextTuple3(forces[i][0], forces[i][1], forces[i][2]);
           }
           // in 2D
           else
           {
             spheresPoints->SetPoint(i, p.center_[0], p.center_[1], 0.);
-            shperesForces->InsertNextTuple3(forces[i*2], forces[i*2+1], 0.);
+            shperesForces->InsertNextTuple3(forces[i][0], forces[i][1], 0.);
           }
-
+          //save_torque(torques[i], shperesTorques, dimension_type::value)
           shperesRadius->SetValue(i, p.shape_factors_[0]);
           i++;
         }
@@ -673,8 +700,9 @@ namespace cafes
 
         std::stringstream output;
         output << path << "/" << filename << "_particles.vtp";
-        vtkXMLPolyDataWriter* writer = vtkXMLPolyDataWriter::New();
+        vtkSmartPointer<vtkXMLPolyDataWriter> writer = vtkSmartPointer<vtkXMLPolyDataWriter>::New();
         writer->SetFileName(output.str().data());
+        //writer->SetDataModeToAscii();
       #if VTK_MAJOR_VERSION <= 5
         writer->SetInput(data);
       #else
