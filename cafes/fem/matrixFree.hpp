@@ -1,8 +1,38 @@
+// Copyright (c) 2016, Loic Gouarin <loic.gouarin@math.u-psud.fr>
+// All rights reserved.
+
+// Redistribution and use in source and binary forms, with or without modification, 
+// are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, 
+//    this list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its contributors
+//    may be used to endorse or promote products derived from this software without
+//    specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+// IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+// NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+// OF SUCH DAMAGE.
+
 #ifndef CAFES_FEM_MATRIXFREE_HPP_INCLUDED
 #define CAFES_FEM_MATRIXFREE_HPP_INCLUDED
 
 #include <fem/operator.hpp>
+#include <petsc/vec.hpp>
 #include <iostream>
+#include <array>
 #include <petsc.h>
 
 namespace cafes
@@ -10,8 +40,8 @@ namespace cafes
   namespace fem
   {
     #undef __FUNCT__
-    #define __FUNCT__ "diag_block_matrix"    
-    template<typename CTX>
+    #define __FUNCT__ "diag_block_matrix"
+    template<typename CTX, typename Dimensions = typename CTX::dimension_type>
     typename std::enable_if<CTX::ndm_type::value==1, PetscErrorCode>::type
     diag_block_matrix(Mat A, Vec x, Vec y)
     {
@@ -20,34 +50,28 @@ namespace cafes
       PetscFunctionBeginUser;
 
       ierr = MatShellGetContext(A, &ctx);CHKERRQ(ierr);
-
-      Vec xlocal, ylocal;
-      ierr = DMGetLocalVector(ctx->dm, &xlocal);CHKERRQ(ierr);
-      ierr = DMGlobalToLocalBegin(ctx->dm, x, INSERT_VALUES, xlocal);CHKERRQ(ierr);
-      ierr = DMGlobalToLocalEnd(ctx->dm, x, INSERT_VALUES, xlocal);CHKERRQ(ierr);
-
       ierr = VecSet(y, 0.);CHKERRQ(ierr);
-      ierr = DMGetLocalVector(ctx->dm, &ylocal);CHKERRQ(ierr);
-      ierr = VecSet(ylocal, 0.);CHKERRQ(ierr);
 
-      ierr = ctx->apply(ctx->dm, xlocal, ylocal, ctx->h);CHKERRQ(ierr);
+      auto xpetsc = petsc::petsc_vec<Dimensions::value>(ctx->dm, x, 0);
+      auto ypetsc = petsc::petsc_vec<Dimensions::value>(ctx->dm, y, 0, false);
 
-      ierr = DMLocalToGlobalBegin(ctx->dm, ylocal, ADD_VALUES, y);CHKERRQ(ierr);
-      ierr = DMLocalToGlobalEnd(ctx->dm, ylocal, ADD_VALUES, y);CHKERRQ(ierr);
+      ierr = xpetsc.global_to_local(INSERT_VALUES);CHKERRQ(ierr);
+      ierr = ypetsc.fill(0.);CHKERRQ(ierr);
 
-      ierr = DMRestoreLocalVector(ctx->dm, &xlocal);CHKERRQ(ierr);
-      ierr = DMRestoreLocalVector(ctx->dm, &ylocal);CHKERRQ(ierr);
+      ierr = ctx->apply(xpetsc, ypetsc, ctx->h);CHKERRQ(ierr);
+
+      ierr = ypetsc.local_to_global(ADD_VALUES);CHKERRQ(ierr);
 
       if(ctx->set_bc_){
-         ierr = SetDirichletOnVec(ctx->dm, ctx->bc_, x, y);CHKERRQ(ierr);
+         ierr = SetDirichletOnVec(xpetsc, ypetsc, ctx->bc_);CHKERRQ(ierr);
       }
 
       PetscFunctionReturn(0);
     }
 
     #undef __FUNCT__
-    #define __FUNCT__ "diag_block_matrix"    
-    template<typename CTX>
+    #define __FUNCT__ "diag_block_matrix"
+    template<typename CTX, typename Dimensions = typename CTX::dimension_type>
     typename std::enable_if<(CTX::ndm_type::value>1), PetscErrorCode>::type
     diag_block_matrix(Mat A, Vec x, Vec y)
     {
@@ -56,49 +80,32 @@ namespace cafes
       PetscFunctionBeginUser;
 
       ierr = MatShellGetContext(A, &ctx);CHKERRQ(ierr);
-
-      int ndm;
-      ierr = DMCompositeGetNumberDM(ctx->dm, &ndm);CHKERRQ(ierr);
-
-      DM dm[ndm];
-      ierr = DMCompositeGetEntriesArray(ctx->dm, dm);CHKERRQ(ierr);
-        
-      Vec xdm[ndm], ydm[ndm];
-      ierr = DMCompositeGetAccessArray(ctx->dm, x, ndm, NULL, xdm);CHKERRQ(ierr);
-      ierr = DMCompositeGetAccessArray(ctx->dm, y, ndm, NULL, ydm);CHKERRQ(ierr);
-
       ierr = VecSet(y, 0.);CHKERRQ(ierr);
 
+      int ndm;
+      ierr = DMCompositeGetNumberDM(ctx->dm, &ndm);CHKERRQ(ierr);
+
       for(std::size_t i=0; i<ndm; ++i){
-        Vec xlocal, ylocal;
-        ierr = DMGetLocalVector(dm[i], &xlocal);CHKERRQ(ierr);
-        ierr = DMGlobalToLocalBegin(dm[i], xdm[i], INSERT_VALUES, xlocal);CHKERRQ(ierr);
-        ierr = DMGlobalToLocalEnd(dm[i], xdm[i], INSERT_VALUES, xlocal);CHKERRQ(ierr);
-   
-        ierr = DMGetLocalVector(dm[i], &ylocal);CHKERRQ(ierr);
-        ierr = VecSet(ylocal, 0.);CHKERRQ(ierr);
+        auto xpetsc = petsc::petsc_vec<Dimensions::value>(ctx->dm, x, i);
+        auto ypetsc = petsc::petsc_vec<Dimensions::value>(ctx->dm, y, i, false);
 
-        ierr = ctx->apply(dm[i], xlocal, ylocal, ctx->h[i]);CHKERRQ(ierr);
+        ierr = xpetsc.global_to_local(INSERT_VALUES);CHKERRQ(ierr);
+        ierr = ypetsc.fill(0.);CHKERRQ(ierr);
 
-        ierr = DMLocalToGlobalBegin(dm[i], ylocal, ADD_VALUES, ydm[i]);CHKERRQ(ierr);
-        ierr = DMLocalToGlobalEnd(dm[i], ylocal, ADD_VALUES, ydm[i]);CHKERRQ(ierr);
+        ierr = ctx->apply(xpetsc, ypetsc, ctx->h[i]);CHKERRQ(ierr);
 
-        ierr = DMRestoreLocalVector(dm[i], &xlocal);CHKERRQ(ierr);
-        ierr = DMRestoreLocalVector(dm[i], &ylocal);CHKERRQ(ierr);
+        ierr = ypetsc.local_to_global(ADD_VALUES);CHKERRQ(ierr);
       }
 
-      ierr = DMCompositeRestoreAccessArray(ctx->dm, x, ndm, NULL, xdm);CHKERRQ(ierr);
-      ierr = DMCompositeRestoreAccessArray(ctx->dm, y, ndm, NULL, ydm);CHKERRQ(ierr);
-
       PetscFunctionReturn(0);
     }
 
 
     #undef __FUNCT__
-    #define __FUNCT__ "diag_block_matrix_diag"
-    template<typename CTX>
+    #define __FUNCT__ "diag_diag_block_matrix"
+    template<typename CTX, typename Dimensions = typename CTX::dimension_type>
     typename std::enable_if<CTX::ndm_type::value==1, PetscErrorCode>::type
-    diag_block_matrix_diag(Mat A, Vec x)
+    diag_diag_block_matrix(Mat A, Vec x)
     {
       CTX *ctx;
       PetscErrorCode ierr;
@@ -106,118 +113,83 @@ namespace cafes
 
       ierr = MatShellGetContext(A, &ctx);CHKERRQ(ierr);
 
-      ierr = VecSet(x, 0.);CHKERRQ(ierr);
+      auto xpetsc = petsc::petsc_vec<Dimensions::value>(ctx->dm, x, 0, false);
+      ierr = xpetsc.fill(0.);CHKERRQ(ierr);
 
-      Vec xlocal;
-      ierr = DMGetLocalVector(ctx->dm, &xlocal);CHKERRQ(ierr);
-      ierr = VecSet(xlocal, 0.);CHKERRQ(ierr);
+      ierr = ctx->apply_diag(xpetsc, ctx->h);CHKERRQ(ierr);
 
-      ierr = ctx->apply_diag(ctx->dm, xlocal, ctx->h);CHKERRQ(ierr);
-
-      ierr = DMLocalToGlobalBegin(ctx->dm, xlocal, ADD_VALUES, x);CHKERRQ(ierr);
-      ierr = DMLocalToGlobalEnd(ctx->dm, xlocal, ADD_VALUES, x);CHKERRQ(ierr);
-
-      ierr = DMRestoreLocalVector(ctx->dm, &xlocal);CHKERRQ(ierr);
+      ierr = xpetsc.fill_global(0.);CHKERRQ(ierr);
+      ierr = xpetsc.local_to_global(ADD_VALUES);CHKERRQ(ierr);
 
       PetscFunctionReturn(0);
     }
 
     #undef __FUNCT__
-    #define __FUNCT__ "diag_block_matrix_diag"
-    template<typename CTX>
+    #define __FUNCT__ "diag_diag_block_matrix"
+    template<typename CTX, typename Dimensions = typename CTX::dimension_type>
     typename std::enable_if<(CTX::ndm_type::value>1), PetscErrorCode>::type
-    diag_block_matrix_diag(Mat A, Vec x)
+    diag_diag_block_matrix(Mat A, Vec x)
     {
       CTX *ctx;
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
       ierr = MatShellGetContext(A, &ctx);CHKERRQ(ierr);
-
-      ierr = VecSet(x, 0.);CHKERRQ(ierr);
 
       int ndm;
       ierr = DMCompositeGetNumberDM(ctx->dm, &ndm);CHKERRQ(ierr);
 
-      DM dm[ndm];
-      ierr = DMCompositeGetEntriesArray(ctx->dm, dm);CHKERRQ(ierr);
-        
-      Vec xdm[ndm];
-      ierr = DMCompositeGetAccessArray(ctx->dm, x, ndm, NULL, xdm);CHKERRQ(ierr);
-
       for(std::size_t i=0; i<ndm; ++i){
-        Vec xlocal;
-        ierr = DMGetLocalVector(dm[i], &xlocal);CHKERRQ(ierr);
-        ierr = VecSet(xlocal, 0.);CHKERRQ(ierr);
-   
-        ierr = ctx->apply_diag(dm[i], xlocal, ctx->h[i]);CHKERRQ(ierr);
+        auto xpetsc = petsc::petsc_vec<Dimensions::value>(ctx->dm, x, i, false);
+        ierr = xpetsc.fill(0.);CHKERRQ(ierr);
 
-        ierr = DMLocalToGlobalBegin(dm[i], xlocal, ADD_VALUES, xdm[i]);CHKERRQ(ierr);
-        ierr = DMLocalToGlobalEnd(dm[i], xlocal, ADD_VALUES, xdm[i]);CHKERRQ(ierr);
+        ierr = ctx->apply_diag(xpetsc, ctx->h[i]);CHKERRQ(ierr);
 
-        ierr = DMRestoreLocalVector(dm[i], &xlocal);CHKERRQ(ierr);
+        ierr = xpetsc.fill_global(0.);CHKERRQ(ierr);
+        ierr = xpetsc.local_to_global(ADD_VALUES);CHKERRQ(ierr);
       }
-
-      ierr = DMCompositeRestoreAccessArray(ctx->dm, x, ndm, NULL, xdm);CHKERRQ(ierr);
 
       PetscFunctionReturn(0);
     }
 
     #undef __FUNCT__
     #define __FUNCT__ "stokes_matrix"
-    template<typename CTX>
+    template<typename CTX, typename Dimensions = typename CTX::dimension_type>
     PetscErrorCode stokes_matrix(Mat A, Vec x, Vec y)
     {
       CTX *ctx;
       PetscErrorCode ierr;
       DM dav, dap;
-      Vec xu, xp, xulocal, xplocal;
-      Vec yu, yp, yulocal, yplocal;
-
       PetscFunctionBeginUser;
 
       ierr = MatShellGetContext(A, (void**) &ctx);CHKERRQ(ierr);
-
-      ierr = DMCompositeGetEntries(ctx->dm, &dav, &dap);CHKERRQ(ierr);
-
-      ierr = DMCompositeGetAccess(ctx->dm, x, &xu, &xp);CHKERRQ(ierr);
-
-      ierr = DMGetLocalVector(dav, &xulocal);CHKERRQ(ierr);
-      ierr = DMGlobalToLocalBegin(dav, xu, INSERT_VALUES, xulocal);CHKERRQ(ierr);
-      ierr = DMGlobalToLocalEnd(dav, xu, INSERT_VALUES, xulocal);CHKERRQ(ierr);
-
-      ierr = DMGetLocalVector(dap, &xplocal);CHKERRQ(ierr);
-      ierr = DMGlobalToLocalBegin(dap, xp, INSERT_VALUES, xplocal);CHKERRQ(ierr);
-      ierr = DMGlobalToLocalEnd(dap, xp, INSERT_VALUES, xplocal);CHKERRQ(ierr);
-
       ierr = VecSet(y, 0.);CHKERRQ(ierr);
-      ierr = DMGetLocalVector(dav, &yulocal);CHKERRQ(ierr);
-      ierr = DMGetLocalVector(dap, &yplocal);CHKERRQ(ierr);
-      ierr = VecSet(yulocal, 0.);CHKERRQ(ierr);
-      ierr = VecSet(yplocal, 0.);CHKERRQ(ierr);
 
-      ierr = ctx->apply(dav, xulocal, yulocal, ctx->h);CHKERRQ(ierr);
-      ierr = B_and_BT_mult(ctx->dm, xulocal, xplocal, yulocal, yplocal, ctx->h);CHKERRQ(ierr);
+      using petsc_type = petsc::petsc_vec<Dimensions::value>;
 
-      ierr = DMCompositeGetAccess(ctx->dm, y, &yu, &yp);CHKERRQ(ierr);
+      std::array<petsc_type, 2> xpetsc{petsc_type(ctx->dm, x, 0),
+                                       petsc_type(ctx->dm, x, 1)};
 
-      ierr = DMLocalToGlobalBegin(dav, yulocal, ADD_VALUES, yu);CHKERRQ(ierr);
-      ierr = DMLocalToGlobalEnd(dav, yulocal, ADD_VALUES, yu);CHKERRQ(ierr);
+      std::array<petsc_type, 2> ypetsc{petsc_type(ctx->dm, y, 0, false),
+                                       petsc_type(ctx->dm, y, 1, false)};
 
-      ierr = DMLocalToGlobalBegin(dap, yplocal, ADD_VALUES, yp);CHKERRQ(ierr);
-      ierr = DMLocalToGlobalEnd(dap, yplocal, ADD_VALUES, yp);CHKERRQ(ierr);
-
-      if (ctx->set_bc_){
-        ierr = SetDirichletOnVec(dav, ctx->bc_, xu, yu);CHKERRQ(ierr);
+      for(std::size_t i=0; i<xpetsc.size(); ++i)
+      {
+        ierr = xpetsc[i].global_to_local(INSERT_VALUES);CHKERRQ(ierr);
+        ierr = ypetsc[i].fill(0.);CHKERRQ(ierr);
       }
 
-      ierr = DMCompositeRestoreAccess(ctx->dm, x, &xu, &xp);CHKERRQ(ierr);
-      ierr = DMCompositeRestoreAccess(ctx->dm, y, &yu, &yp);CHKERRQ(ierr);
+      ierr = ctx->apply(xpetsc[0], ypetsc[0], ctx->h);CHKERRQ(ierr);
+      ierr = B_and_BT_mult(xpetsc[0], xpetsc[1], ypetsc[0], ypetsc[1], ctx->h);CHKERRQ(ierr);
 
-      ierr = DMRestoreLocalVector(dav, &xulocal);CHKERRQ(ierr);
-      ierr = DMRestoreLocalVector(dav, &yulocal);CHKERRQ(ierr);
-      ierr = DMRestoreLocalVector(dap, &xplocal);CHKERRQ(ierr);
-      ierr = DMRestoreLocalVector(dap, &yplocal);CHKERRQ(ierr);
+      for(std::size_t i=0; i<xpetsc.size(); ++i)
+      {
+        ierr = ypetsc[i].local_to_global(ADD_VALUES);CHKERRQ(ierr);
+      }
+
+      if (ctx->set_bc_){
+        ierr = SetDirichletOnVec(xpetsc[0], ypetsc[0], ctx->bc_);CHKERRQ(ierr);
+      }
 
       PetscFunctionReturn(0);
     }
@@ -225,7 +197,7 @@ namespace cafes
     template<typename CTX>
     Mat make_matrix(CTX *ctx, 
                     PetscErrorCode(*method)(Mat, Vec, Vec) = diag_block_matrix<CTX>, 
-                    PetscErrorCode(*method_diag)(Mat, Vec) = diag_block_matrix_diag<CTX>)
+                    PetscErrorCode(*method_diag)(Mat, Vec) = diag_diag_block_matrix<CTX>)
     {
       Mat A;
       int localsize, totalsize;
@@ -249,7 +221,7 @@ namespace cafes
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
-      auto hp{h};
+      auto hp = h;
       std::for_each(hp.begin(), hp.end(), [](auto x){x*=2;});
 
       using ctx = problem::context<Dimensions, 2>;

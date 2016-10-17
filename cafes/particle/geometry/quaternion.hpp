@@ -1,3 +1,31 @@
+// Copyright (c) 2016, Loic Gouarin <loic.gouarin@math.u-psud.fr>
+// All rights reserved.
+
+// Redistribution and use in source and binary forms, with or without modification, 
+// are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, 
+//    this list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its contributors
+//    may be used to endorse or promote products derived from this software without
+//    specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+// IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+// NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+// OF SUCH DAMAGE.
+
 #ifndef PARTICLE_GEOMETRY_QUATERNION_HPP_INCLUDED
 #define PARTICLE_GEOMETRY_QUATERNION_HPP_INCLUDED
 
@@ -25,9 +53,9 @@ namespace cafes
 
     struct quaternion
     {
-            using vector_type   = vector<3, double>;
+      using vector_type   = vector<double, 3>;
 
-      vector<4, double> components_;
+      vector<double, 4> components_;
 
       quaternion() = default;
 
@@ -82,7 +110,7 @@ namespace cafes
       // }
 
       //todo : proper interface for quaternion compositon and application
-      position<2, double> rotate(position<2, double> pos) const
+      position<double, 2> rotate(position<double, 2> pos) const
       {
         auto& x = components_[0];
         auto& y = components_[1];
@@ -93,7 +121,7 @@ namespace cafes
                };
       }
 
-      position<3, double> rotate(position<3, double> pos) const
+      position<double, 3> rotate(position<double, 3> pos) const
       {
         auto& x = components_[0];
         auto& y = components_[1];

@@ -1,3 +1,31 @@
+// Copyright (c) 2016, Loic Gouarin <loic.gouarin@math.u-psud.fr>
+// All rights reserved.
+
+// Redistribution and use in source and binary forms, with or without modification, 
+// are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, 
+//    this list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its contributors
+//    may be used to endorse or promote products derived from this software without
+//    specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+// IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+// NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+// OF SUCH DAMAGE.
+
 #ifndef PARTICLE_GEOMETRY_SUPER_ELLIPSOID_HPP_INCLUDED
 #define PARTICLE_GEOMETRY_SUPER_ELLIPSOID_HPP_INCLUDED
 
@@ -17,13 +45,13 @@ namespace cafes
   namespace geometry
   {
 
-      template<std::size_t Dimensions, typename T=double>
+      template<typename T, std::size_t Dimensions>
       struct super_ellipsoid
       {
-        template<std::size_t N> using int_ = std::integral_constant<std::size_t,N>;
+        template<std::size_t N> using int_ = std::integral_constant<std::size_t, N>;
         using dimension_type = int_<Dimensions>;
 
-        using position_type = position<Dimensions, T>;
+        using position_type = position<T, Dimensions>;
         using shapes_type   = std::array<double, Dimensions>;
 
         position_type  center_;
@@ -55,7 +83,7 @@ namespace cafes
         super_ellipsoid& operator=(super_ellipsoid const&) = default;
         super_ellipsoid& operator=(super_ellipsoid&&)      = default;
 
-        box<Dimensions, double> bounding_box() const
+        box<double, Dimensions> bounding_box() const
         {
           position_type bl{center_}, ur{center_};
 
@@ -65,7 +93,7 @@ namespace cafes
             ur[i] += shape_factors_[i];
           }
 
-          box<Dimensions, double> that{bl, ur};
+          box<double, Dimensions> that{bl, ur};
 
           if (q_.is_rotate())
           {
@@ -92,9 +120,9 @@ namespace cafes
           return that;
         }
 
-        box<Dimensions, int> bounding_box(std::array<double, Dimensions> const& h) const
+        box<int, Dimensions> bounding_box(std::array<double, Dimensions> const& h) const
         {
-            box<Dimensions, double> b = bounding_box();
+            box<double, Dimensions> b = bounding_box();
             return {(b.bottom_left/h - 1.), b.upper_right/h + 1.};
         }
 
@@ -137,6 +165,7 @@ namespace cafes
         //     auto c = radius*std::cos(2*i*M_PI/n);
         //     auto s = radius*std::sin(2*i*M_PI/n);
         //     that.push_back({center_[0] + c, center_[1] + s});
+        //     std::cout << that[i] << "\n";
         //   }
         //   return that;
         // }
@@ -322,13 +351,13 @@ namespace cafes
       };
   }
   template<std::size_t N>
-  geometry::super_ellipsoid<N> make_ellipsoid(geometry::position<N,double> const& a, std::array<double, N> const& b, double d, geometry::quaternion q)
+  geometry::super_ellipsoid<double, N> make_ellipsoid(geometry::position<double, N> const& a, std::array<double, N> const& b, double d, geometry::quaternion q)
   {
     return {a,b,d, q};
   }
 
   template<std::size_t N>
-  geometry::super_ellipsoid<N> make_ellipsoid(geometry::position<N,double> const& a, std::array<double, N> const& b, double d, double e, geometry::quaternion q)
+  geometry::super_ellipsoid<double, N> make_ellipsoid(geometry::position<double, N> const& a, std::array<double, N> const& b, double d, double e, geometry::quaternion q)
   {
     return {a, b, d, e, q};
   }

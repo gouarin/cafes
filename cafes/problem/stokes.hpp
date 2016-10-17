@@ -1,3 +1,31 @@
+// Copyright (c) 2016, Loic Gouarin <loic.gouarin@math.u-psud.fr>
+// All rights reserved.
+
+// Redistribution and use in source and binary forms, with or without modification, 
+// are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, 
+//    this list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its contributors
+//    may be used to endorse or promote products derived from this software without
+//    specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+// IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+// NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+// OF SUCH DAMAGE.
+
 #ifndef PARTICLE_PROBLEM_STOKES_HPP_INCLUDED
 #define PARTICLE_PROBLEM_STOKES_HPP_INCLUDED
 
@@ -48,8 +76,8 @@ namespace cafes
       // ierr = KSPSetDM(sub_ksp[0], dav);CHKERRQ(ierr);
       // ierr = KSPSetDMActive(sub_ksp[0], PETSC_FALSE);CHKERRQ(ierr);
 
-      ierr = KSPSetType(sub_ksp[0], KSPCG);CHKERRQ(ierr);
-      //ierr = KSPSetType(sub_ksp[0], KSPFGMRES);CHKERRQ(ierr);
+      //ierr = KSPSetType(sub_ksp[0], KSPCG);CHKERRQ(ierr);
+      ierr = KSPSetType(sub_ksp[0], KSPFGMRES);CHKERRQ(ierr);
       ierr = KSPSetTolerances(sub_ksp[0], 1e-2, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);CHKERRQ(ierr);
       ierr = PCSetType(pc_i, PCMG);CHKERRQ(ierr);
 
@@ -113,7 +141,7 @@ namespace cafes
       ierr = MatSetType(Alevel, MATSHELL);CHKERRQ(ierr);
       ierr = MatShellSetContext(Alevel, ctx);CHKERRQ(ierr);
       ierr = MatShellSetOperation(Alevel, MATOP_MULT, (void(*)())fem::diag_block_matrix<CTX>);CHKERRQ(ierr);
-      ierr = MatShellSetOperation(Alevel, MATOP_GET_DIAGONAL, (void(*)())fem::diag_block_matrix_diag<CTX>);CHKERRQ(ierr);
+      ierr = MatShellSetOperation(Alevel, MATOP_GET_DIAGONAL, (void(*)())fem::diag_diag_block_matrix<CTX>);CHKERRQ(ierr);
       ierr = MatSetDM(Alevel, dm);CHKERRQ(ierr);
       ierr = MatSetFromOptions(Alevel);CHKERRQ(ierr);
 
@@ -156,10 +184,12 @@ namespace cafes
         }
 
         // set Stokes matrix
-        PetscErrorCode(*method)(DM, Vec, Vec, std::array<double, Dimensions> const&);
-        if (opt.strain_tensor){
+        PetscErrorCode(*method)(petsc::petsc_vec<Dimensions>&,
+                                petsc::petsc_vec<Dimensions>&,
+                                std::array<double, Dimensions> const&);
+
+        if (opt.strain_tensor)
           method = fem::strain_tensor_mult;
-        }
         else
           method = fem::laplacian_mult;
 
@@ -177,11 +207,11 @@ namespace cafes
         DMSetMatType(dav, MATSHELL);
         DMSetMatType(dap, MATSHELL);
 
-        Ctx *slap = new Ctx{dav, hu, method, fem::laplacian_mult_diag};
+        Ctx *slap = new Ctx{dav, hu, method, fem::diag_laplacian_mult};
         slap->set_dirichlet_bc(bc);
         auto A11 = fem::make_matrix<Ctx>(slap);
 
-        Ctx *smass = new Ctx{dap, hp, fem::mass_mult, fem::mass_mult_diag};
+        Ctx *smass = new Ctx{dap, hp, fem::mass_mult, fem::diag_mass_mult};
         auto A22 = fem::make_matrix<Ctx>(smass);
         
         Mat bA[2][2];
@@ -204,13 +234,9 @@ namespace cafes
           ierr = fem::set_rhs<Dimensions, 1>(ctx->dm, rhs, rhsc_, ctx->h);CHKERRQ(ierr);
         }
         
-        DM dav;
-        Vec rhsv;
-        ierr = DMCompositeGetEntries(ctx->dm, &dav, nullptr);CHKERRQ(ierr);
-        ierr = DMCompositeGetAccess(ctx->dm, rhs, &rhsv, nullptr);CHKERRQ(ierr);
-        ierr = SetDirichletOnRHS(dav, ctx->bc_, rhsv, ctx->h);CHKERRQ(ierr);
-        ierr = DMCompositeRestoreAccess(ctx->dm, rhs, &rhsv, nullptr);CHKERRQ(ierr);
-        
+        auto petsc_rhs = petsc::petsc_vec<Dimensions>(ctx->dm, rhs, 0);
+        ierr = SetDirichletOnRHS(petsc_rhs, ctx->bc_, ctx->h);CHKERRQ(ierr);
+
         PetscFunctionReturn(0);
       }
 
@@ -255,10 +281,12 @@ namespace cafes
 
           // if MG is set for fieldsplit_0
           if (same) {
-            PetscErrorCode(*method)(DM, Vec, Vec, std::array<double, Dimensions> const&);
-            if (opt.strain_tensor){
+            PetscErrorCode(*method)(petsc::petsc_vec<Dimensions>&,
+                                    petsc::petsc_vec<Dimensions>&,
+                                    std::array<double, Dimensions> const&);
+            
+            if (opt.strain_tensor)
               method = fem::strain_tensor_mult;
-            }
             else
               method = fem::laplacian_mult;
 
@@ -267,10 +295,10 @@ namespace cafes
             ierr = PCMGGetLevels(pc, &MGlevels);CHKERRQ(ierr);
 
             for(std::size_t i=0; i<MGlevels; ++i){
-              auto mg_h{ctx->h};
+              auto mg_h = ctx->h;
               std::for_each(mg_h.begin(), mg_h.end(), [&](auto& x){x*=(1<<(MGlevels-1-i));});
 
-              auto *mg_ctx = new Ctx{dav, mg_h, method, fem::laplacian_mult_diag};
+              auto *mg_ctx = new Ctx{dav, mg_h, method, fem::diag_laplacian_mult};
               mg_ctx->set_dirichlet_bc(ctx->bc_);
 
               PC pcsmoother;

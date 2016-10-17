@@ -1,3 +1,31 @@
+// Copyright (c) 2016, Loic Gouarin <loic.gouarin@math.u-psud.fr>
+// All rights reserved.
+
+// Redistribution and use in source and binary forms, with or without modification, 
+// are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, 
+//    this list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its contributors
+//    may be used to endorse or promote products derived from this software without
+//    specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+// IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+// NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+// OF SUCH DAMAGE.
+
 #ifndef CAFES_PARTICLE_SINGULARITY_ADD_SINGULARITY_HPP_INCLUDED
 #define CAFES_PARTICLE_SINGULARITY_ADD_SINGULARITY_HPP_INCLUDED
 
@@ -26,18 +54,18 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "computesingularST"
     template<typename Shape>
-    PetscErrorCode computesingularST(singularity<2, Shape> sing, 
+    PetscErrorCode computesingularST(singularity<Shape, 2> sing, 
                                      particle<Shape> const& p1, particle<Shape> const& p2,
                                      petsc::petsc_vec<2>& sol,
-                                     geometry::box<2, int> box,
+                                     geometry::box<int, 2> box,
                                      std::array<double, 2> const& h)
     {
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
       const int Dimensions = 2;
-      using position_type = geometry::position<Dimensions, double>;
-      using position_type_i = geometry::position<Dimensions, int>;
+      using position_type = geometry::position<double, Dimensions>;
+      using position_type_i = geometry::position<int, Dimensions>;
 
       std::array<double, Dimensions> hs = {{h[0]/sing.scale, h[1]/sing.scale}};
       double coef = 1./(sing.scale*sing.scale);
@@ -150,18 +178,18 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "computesingularST"
     template<typename Shape>
-    PetscErrorCode computesingularST(singularity<3, Shape> sing, 
+    PetscErrorCode computesingularST(singularity<Shape, 3> sing, 
                                      particle<Shape> const& p1, particle<Shape> const& p2,
                                      petsc::petsc_vec<3>& sol,
-                                     geometry::box<3, int> box,
+                                     geometry::box<int, 3> box,
                                      std::array<double, 3> const& h)
     {
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
       const int Dimensions = 3;
-      using position_type = geometry::position<Dimensions, double>;
-      using position_type_i = geometry::position<Dimensions, int>;
+      using position_type = geometry::position<double, Dimensions>;
+      using position_type_i = geometry::position<int, Dimensions>;
 
       std::array<double, Dimensions> hs = {{ h[0]/sing.scale, 
                                              h[1]/sing.scale,
@@ -223,16 +251,16 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "computesingularBC"
     template<typename Shape>
-    PetscErrorCode computesingularBC(singularity<2, Shape>& sing, 
+    PetscErrorCode computesingularBC(singularity<Shape, 2>& sing, 
                                      petsc::petsc_vec<2>& sol,
                                      std::array<double, 2> const& h,
-                                     geometry::box<2, int>& box
+                                     geometry::box<int, 2>& box
              )
     {
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
-      using position_type = geometry::position<2, double>;
+      using position_type = geometry::position<double, 2>;
 
       double theta = std::asin(sing.cutoff_dist_*sing.H1_);
       int N = sing.cutoff_dist_/h[0]*sing.scale;
@@ -245,7 +273,7 @@ namespace cafes
 
         position_type pos_ref{(cos_t - 1.)/sing.H1_, sin_t/sing.H1_};
         auto pos = sing.get_pos_from_part_ref(pos_ref);
-        auto pos_i = static_cast<geometry::position<2, int>>(pos/h);
+        auto pos_i = static_cast<geometry::position<int, 2>>(pos/h);
         //std::cout<< "pos_ref"<<pos_ref<<"pos"<<pos<<"\n";
         //std::cout<< "pos_i"<<pos_i<<"\n";
         if (geometry::point_inside(box, pos_i))
@@ -285,7 +313,7 @@ namespace cafes
 
         position_type pos_ref{sing.contact_length_ + (1. - cos_t)/sing.H2_, sin_t/sing.H2_};
         auto pos = sing.get_pos_from_part_ref(pos_ref);
-        auto pos_i = static_cast<geometry::position<2, int>>(pos/h);
+        auto pos_i = static_cast<geometry::position<int, 2>>(pos/h);
 
         if (geometry::point_inside(box, pos_i))
         {
@@ -320,9 +348,9 @@ namespace cafes
     #define __FUNCT__ "computesingularBC"
     template<std::size_t Dimensions, typename Shape, typename Ctx>
     PetscErrorCode computesingularBC(Ctx& ctx,
-                                     singularity<Dimensions, Shape> sing, 
+                                     singularity<Shape, Dimensions> sing, 
                                      std::size_t ipart_1, std::size_t ipart_2,
-                                     geometry::box<Dimensions, double> box,
+                                     geometry::box<double, Dimensions> box,
                                      std::vector<std::vector<std::array<double, Dimensions>>>& g
              )
     {
@@ -367,21 +395,21 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "addsingularity"
     template<typename Shape>
-    PetscErrorCode addsingularity(singularity<2, Shape> sing, 
+    PetscErrorCode addsingularity(singularity<Shape, 2> sing, 
                                   particle<Shape> const& p1, particle<Shape> const& p2,
                                   petsc::petsc_vec<2>& sol,
-                                  geometry::box<2, int> box,
+                                  geometry::box<int, 2> box,
                                   std::array<double, 2> const& h)
     {
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
       const int Dimensions = 2;
-      using position_type = geometry::position<Dimensions, double>;
-      using position_type_i = geometry::position<Dimensions, int>;
+      using position_type = geometry::position<double, Dimensions>;
+      using position_type_i = geometry::position<int, Dimensions>;
 
       std::array<double, Dimensions> hs = {{h[0]/sing.scale, h[1]/sing.scale}};
-      double coef = 3./4/(sing.scale*sing.scale);
+      double coef = 1./(sing.scale*sing.scale);
 
       for(std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j)
       {
@@ -460,7 +488,7 @@ namespace cafes
 
       std::cout<<"add singularity in fluid...\n";
 
-      auto union_box_func = geometry::union_box<Dimensions, int>;
+      auto union_box_func = geometry::union_box<int, Dimensions>;
 
       auto box = fem::get_DM_bounds<Dimensions>(ctx.problem.ctx->dm, 0);
       auto& h = ctx.problem.ctx->h;
@@ -486,7 +514,7 @@ namespace cafes
           auto p2 = ctx.particles[jpart];
 
           using shape_type = typename decltype(p1)::shape_type;
-          auto sing = singularity<Dimensions, shape_type>(p1, p2, h[0]);
+          auto sing = singularity<shape_type, Dimensions>(p1, p2, h[0]);
 
           if (sing.is_singularity_)
           {
@@ -521,7 +549,7 @@ namespace cafes
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
-      auto union_box_func = geometry::union_box<Dimensions, int>;
+      auto union_box_func = geometry::union_box<int, Dimensions>;
 
       auto box = fem::get_DM_bounds<Dimensions>(ctx.problem.ctx->dm, 0);
       auto& h = ctx.problem.ctx->h;
@@ -539,7 +567,7 @@ namespace cafes
           auto p2 = ctx.particles[jpart];
 
           using shape_type = typename decltype(p1)::shape_type;
-          auto sing = singularity<Dimensions, shape_type>(p1, p2, h[0]);
+          auto sing = singularity<shape_type, Dimensions>(p1, p2, h[0]);
 
           if (sing.is_singularity_)
           {
@@ -561,9 +589,9 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "compute_singular_forces"
     template<typename Shape>
-    auto compute_singular_forces(singularity<2, Shape> sing, std::size_t N)
+    auto compute_singular_forces(singularity<Shape, 2> sing, std::size_t N)
     {
-      using position_type = geometry::position<2, double>;
+      using position_type = geometry::position<double, 2>;
 
       double mu = 1.;
       double theta = std::asin(sing.cutoff_dist_*sing.H1_);
@@ -597,9 +625,9 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "compute_singular_forces_on_part1"
     template<typename Shape>
-    auto compute_singular_forces_on_part1(singularity<2, Shape> sing, std::size_t N)
+    auto compute_singular_forces_on_part1(singularity<Shape, 2> sing, std::size_t N)
     {
-      using position_type = geometry::position<2, double>;
+      using position_type = geometry::position<double, 2>;
 
       double mu = 1.;
       double theta = std::asin(sing.cutoff_dist_*sing.H1_);
@@ -633,9 +661,9 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "compute_singular_forces_on_part2"
     template<typename Shape>
-    auto compute_singular_forces_on_part2(singularity<2, Shape> sing, std::size_t N)
+    auto compute_singular_forces_on_part2(singularity<Shape, 2> sing, std::size_t N)
     {
-      using position_type = geometry::position<2, double>;
+      using position_type = geometry::position<double, 2>;
 
       double mu = 1.;
       double theta = std::asin(sing.cutoff_dist_*sing.H1_);
@@ -669,9 +697,9 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "compute_singular_forces_on_part1"
     template<typename Shape>
-    auto compute_singular_forces_on_part1(singularity<3, Shape> sing, std::size_t N)
+    auto compute_singular_forces_on_part1(singularity<Shape, 3> sing, std::size_t N)
     {
-      using position_type = geometry::position<3, double>;
+      using position_type = geometry::position<double, 3>;
 
       double mu = 1.;
       double theta = std::asin(sing.cutoff_dist_*sing.H1_);
@@ -724,9 +752,9 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "compute_singular_forces_on_part2"
     template<typename Shape>
-    auto compute_singular_forces_on_part2(singularity<3, Shape> sing, std::size_t N)
+    auto compute_singular_forces_on_part2(singularity<Shape, 3> sing, std::size_t N)
     {
-      using position_type = geometry::position<3, double>;
+      using position_type = geometry::position<double, 3>;
 
       double mu = 1.;
       double theta = std::asin(sing.cutoff_dist_*sing.H2_);
@@ -798,7 +826,7 @@ namespace cafes
           auto p2 = ctx.particles[jpart];
 
           using shape_type = typename decltype(p1)::shape_type;
-          auto sing = singularity<Dimensions, shape_type>(p1, p2, h[0]);
+          auto sing = singularity<shape_type, Dimensions>(p1, p2, h[0]);
 
           if (sing.is_singularity_)
           {
@@ -833,7 +861,7 @@ namespace cafes
           auto p2 = particles[jpart];
 
           //using shape_type = typename decltype(p1)::shape_type;
-          auto sing = singularity<Dimensions, Shape>(p1, p2, h[0]);
+          auto sing = singularity<Shape, Dimensions>(p1, p2, h[0]);
 
           if (sing.is_singularity_)
           {
@@ -855,7 +883,7 @@ namespace cafes
 
       std::cout<<"add singularity to surf...\n";
       
-      auto union_box_func = geometry::union_box<Dimensions, int>;
+      auto union_box_func = geometry::union_box<int, Dimensions>;
 
       auto box = fem::get_DM_bounds<Dimensions>(ctx.problem.ctx->dm, 0);
       auto& h = ctx.problem.ctx->h;
@@ -869,7 +897,7 @@ namespace cafes
           auto p2 = ctx.particles[jpart];
 
           using shape_type = typename decltype(p1)::shape_type;
-          auto sing = singularity<Dimensions, shape_type>(p1, p2, h[0]);
+          auto sing = singularity<shape_type, Dimensions>(p1, p2, h[0]);
 
           if (sing.is_singularity_)
           {
@@ -877,7 +905,7 @@ namespace cafes
             if (geometry::intersect(box, pbox))
             {
               auto new_box = geometry::box_inside(box, pbox);
-              geometry::box<Dimensions, double> new_box_d{new_box.bottom_left, new_box.upper_right};
+              geometry::box<double, Dimensions> new_box_d{new_box.bottom_left, new_box.upper_right};
               new_box_d.bottom_left *= h;
               new_box_d.upper_right *= h;
               ierr = computesingularBC(ctx, sing, ipart, jpart, new_box_d, g);CHKERRQ(ierr);
@@ -899,7 +927,7 @@ namespace cafes
 
       std::cout<<"add singularity to surf new...\n";
       
-      auto union_box_func = geometry::union_box<Dimensions, int>;
+      auto union_box_func = geometry::union_box<int, Dimensions>;
 
       auto box = fem::get_DM_bounds<Dimensions>(ctx.problem.ctx->dm, 0);
       auto& h = ctx.problem.ctx->h;
@@ -913,12 +941,13 @@ namespace cafes
           auto p2 = ctx.particles[jpart];
 
           using shape_type = typename decltype(p1)::shape_type;
-          auto sing = singularity<Dimensions, shape_type>(p1, p2, h[0]);
+          auto sing = singularity<shape_type, Dimensions>(p1, p2, h[0]);
 
-          if (sing.is_singularity_)
-          {
-            ierr = computesingularBC(sing, sol, h, box);CHKERRQ(ierr);
-          }
+          // uncomment for 2D and implement for 3D
+          // if (sing.is_singularity_)
+          // {
+          //   ierr = computesingularBC(sing, sol, h, box);CHKERRQ(ierr);
+          // }
         }
       }
 
@@ -930,16 +959,16 @@ namespace cafes
     template<std::size_t Dimensions, typename Shape>
     PetscErrorCode save_singularity(const char* path,
                                     const char* filename,
-                                    singularity<Dimensions, Shape> sing, 
+                                    singularity<Shape, Dimensions> sing, 
                                     particle<Shape> const& p1, particle<Shape> const& p2,
-                                    geometry::box<2, int> box,
+                                    geometry::box<int, 2> box,
                                     std::array<double, 2> const& h)
     {
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
-      using position_type = geometry::position<Dimensions, double>;
-      using position_type_i = geometry::position<Dimensions, int>;
+      using position_type = geometry::position<double, Dimensions>;
+      using position_type_i = geometry::position<int, Dimensions>;
 
       vtkStructuredGrid* singDataSet;
 
@@ -1047,19 +1076,19 @@ namespace cafes
 
     #undef __FUNCT__
     #define __FUNCT__ "save_singularity"
-    template<std::size_t Dimensions, typename Shape>
+    template<typename Shape, std::size_t Dimensions>
     PetscErrorCode save_singularity(const char* path,
                                     const char* filename,
-                                    singularity<Dimensions, Shape> sing, 
+                                    singularity<Shape, Dimensions> sing, 
                                     particle<Shape> const& p1, particle<Shape> const& p2,
-                                    geometry::box<3, int> box,
+                                    geometry::box<int, 3> box,
                                     std::array<double, 3> const& h)
     {
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
-      using position_type = geometry::position<Dimensions, double>;
-      using position_type_i = geometry::position<Dimensions, int>;
+      using position_type = geometry::position<double, Dimensions>;
+      using position_type_i = geometry::position<int, Dimensions>;
 
       vtkStructuredGrid* singDataSet;
 
@@ -1178,7 +1207,7 @@ namespace cafes
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
-      auto union_box_func = geometry::union_box<Dimensions, int>;
+      auto union_box_func = geometry::union_box<int, Dimensions>;
 
       auto box = fem::get_DM_bounds<Dimensions>(ctx.problem.ctx->dm, 0);
       auto& h = ctx.problem.ctx->h;
@@ -1192,7 +1221,7 @@ namespace cafes
           auto p2 = ctx.particles[jpart];
 
           using shape_type = typename decltype(p1)::shape_type;
-          auto sing = singularity<Dimensions, shape_type>(p1, p2, h[0]);
+          auto sing = singularity<shape_type, Dimensions>(p1, p2, h[0]);
 
           if (sing.is_singularity_)
           {

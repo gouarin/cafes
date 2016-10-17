@@ -1,3 +1,31 @@
+// Copyright (c) 2016, Loic Gouarin <loic.gouarin@math.u-psud.fr>
+// All rights reserved.
+
+// Redistribution and use in source and binary forms, with or without modification, 
+// are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, 
+//    this list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its contributors
+//    may be used to endorse or promote products derived from this software without
+//    specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+// IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+// NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+// OF SUCH DAMAGE.
+
 #ifndef CAFES_PROBLEM_DTON_HPP_INCLUDED
 #define CAFES_PROBLEM_DTON_HPP_INCLUDED
 
@@ -10,6 +38,7 @@
 #include <particle/singularity/add_singularity.hpp>
 #include <particle/geometry/box.hpp>
 #include <particle/geometry/position.hpp>
+#include <particle/geometry/vector.hpp>
 
 #include <io/vtk.hpp>
 
@@ -35,11 +64,11 @@ namespace cafes
 
       ierr = VecSet(ctx->problem.rhs, 0.);CHKERRQ(ierr);
 
-      ierr = init_problem_1<Dimensions, Ctx>(*ctx, x);CHKERRQ(ierr);
+      ierr = init_problem<Dimensions, Ctx>(*ctx, x);CHKERRQ(ierr);
       ierr = ctx->problem.solve();CHKERRQ(ierr);
       ierr = VecCopy(ctx->problem.sol, ctx->sol_tmp);CHKERRQ(ierr);
 
-      std::vector<std::vector<std::array<double, Dimensions>>> g;
+      std::vector<std::vector<geometry::vector<double, Dimensions>>> g;
       g.resize(ctx->particles.size());
       for(std::size_t ipart=0; ipart<ctx->surf_points.size(); ++ipart)
         g[ipart].resize(ctx->surf_points[ipart].size());
@@ -64,14 +93,14 @@ namespace cafes
       std::vector<particle<Shape>> parts_;
       Problem_type problem_;
 
-      using position_type   = geometry::position<Dimensions, double>;
-      using position_type_i = geometry::position<Dimensions, int>;
+      using position_type   = geometry::position<double, Dimensions>;
+      using position_type_i = geometry::position<int,Dimensions>;
 
       using Ctx = particle_context<Dimensions, Shape, Problem_type>;
       Ctx *ctx;
 
       std::vector<std::vector<std::pair<position_type_i, position_type>>> surf_points_;
-      std::vector<std::vector<position_type>> radial_vec_;
+      std::vector<std::vector<geometry::vector<double, Dimensions>>> radial_vec_;
       std::vector<int> nb_surf_points_;
       std::vector<int> num_;
       Vec sol;
@@ -104,49 +133,12 @@ namespace cafes
         PetscErrorCode ierr;
         PetscFunctionBeginUser;
 
-
-        surf_points_.resize(parts_.size());
-        radial_vec_.resize(parts_.size());
-        nb_surf_points_.resize(parts_.size());
-
-        std::vector<int> nb_surf_points_local;
-        nb_surf_points_local.resize(parts_.size());
-
         auto box = fem::get_DM_bounds<Dimensions>(problem_.ctx->dm, 0);
-        std::size_t size = 0;
-        std::size_t ipart = 0;
-
-        std::vector<int> num_local;
-        num_local.resize(parts_.size());
-        num_.resize(parts_.size());
-
         auto& h = problem_.ctx->h;
-        std::array<double, Dimensions> hs;
-        for(std::size_t d=0; d<Dimensions; ++d)
-          hs[d] = h[d]/scale_;
 
-        for(auto& p: parts_){
-          auto pbox = p.bounding_box(h);
-          if (geometry::intersect(box, pbox)){
-            auto new_box = geometry::box_inside(box, pbox);
-            auto pts = find_fluid_points_insides(p, new_box, h);
-            size += pts.size();
-
-            auto spts = p.surface(dpart_);   
-            auto spts_valid = find_surf_points_insides(spts, new_box, h);
-            surf_points_[ipart].assign(spts_valid.begin(), spts_valid.end());
-            nb_surf_points_local[ipart] = surf_points_[ipart].size();
-            
-            auto radial_valid = find_radial_surf_points_insides(spts, new_box, h, p.center_);
-            radial_vec_[ipart].assign(radial_valid.begin(), radial_valid.end());
-
-            num_local[ipart] = pts.size();
-          }
-          ipart++;
-        }
-
-        MPI_Allreduce(nb_surf_points_local.data(), nb_surf_points_.data(), parts_.size(), MPI_INT, MPI_SUM, PETSC_COMM_WORLD);
-        MPI_Allreduce(num_local.data(), num_.data(), parts_.size(), MPI_INT, MPI_SUM, PETSC_COMM_WORLD);
+        auto size = set_materials(parts_, surf_points_, radial_vec_,
+                                  nb_surf_points_, num_, box,
+                                  h, dpart_, scale_);
 
         ctx = new Ctx{problem_, parts_, surf_points_, radial_vec_, nb_surf_points_, num_, scale_, false, false, false, sol_tmp};
 
@@ -170,6 +162,7 @@ namespace cafes
           ctx->compute_rhs = true;
           ctx->add_rigid_motion = true;
           ctx->compute_singularity = use_sing;
+          //ctx->compute_singularity = false;
         }
 
         ierr = MatMult(A, sol, rhs);CHKERRQ(ierr);
@@ -220,7 +213,7 @@ namespace cafes
           ctx->compute_singularity = false;
         }
 
-        ierr = init_problem_1<Dimensions, Ctx>(*ctx, sol);CHKERRQ(ierr);
+        ierr = init_problem<Dimensions, Ctx>(*ctx, sol);CHKERRQ(ierr);
         //std::cout<<ctx->compute_rhs<<", "<<ctx->add_rigid_motion<<", "<<ctx->compute_singularity<<"\n";
         //ierr = cafes::io::save_VTK("Resultats", "two_part_reg", sol, ctx->problem.ctx->dm, ctx->problem.ctx->h);CHKERRQ(ierr);
 
@@ -239,7 +232,7 @@ namespace cafes
           ctx->compute_singularity = use_sing;
         }
 
-        ierr = init_problem_1<Dimensions, Ctx>(*ctx, sol);CHKERRQ(ierr);
+        ierr = init_problem<Dimensions, Ctx>(*ctx, sol);CHKERRQ(ierr);
         //std::cout<<ctx->compute_rhs<<", "<<ctx->add_rigid_motion<<", "<<ctx->compute_singularity<<"\n";
         //ierr = cafes::io::save_VTK("Resultats", "two_part_reg", sol, ctx->problem.ctx->dm, ctx->problem.ctx->h);CHKERRQ(ierr);
 
@@ -266,7 +259,8 @@ namespace cafes
         {
           ctx->compute_rhs = false;
           ctx->add_rigid_motion = false;
-          ctx->compute_singularity = false;
+          //ctx->compute_singularity = false;
+          ctx->compute_singularity = true;
         }
 
         ierr = KSPSolve(ksp, rhs, sol);CHKERRQ(ierr);

@@ -1,3 +1,31 @@
+// Copyright (c) 2016, Loic Gouarin <loic.gouarin@math.u-psud.fr>
+// All rights reserved.
+
+// Redistribution and use in source and binary forms, with or without modification, 
+// are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, 
+//    this list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its contributors
+//    may be used to endorse or promote products derived from this software without
+//    specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+// IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+// NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+// OF SUCH DAMAGE.
+
 #ifndef CAFES_PARTICLE_SINGULARITY_SINGULARITY_HPP_INCLUDED
 #define CAFES_PARTICLE_SINGULARITY_SINGULARITY_HPP_INCLUDED
 
@@ -21,7 +49,7 @@ namespace cafes
       return (0. <= val) - (val < 0.);
     }
 
-    template<std::size_t Dimensions, typename Shape>
+    template<typename Shape, std::size_t Dimensions>
     struct singularity
     {
       double alpha_;
@@ -36,7 +64,7 @@ namespace cafes
       double UN_, UT_;
       bool is_singularity_;
 
-      using position_type = geometry::position<Dimensions, double>;
+      using position_type = geometry::position<double, Dimensions>;
       std::array<position_type, Dimensions> base_;
       position_type origin_;
       
@@ -83,7 +111,7 @@ namespace cafes
         }
       }
 
-      geometry::box<Dimensions, int> get_box(std::array<double, 2> h)
+      geometry::box<int, Dimensions> get_box(std::array<double, 2> h)
       {
         double theta1 = std::asin(cutoff_dist_*H1_);
         double theta2 = std::asin(cutoff_dist_*H2_);
@@ -111,7 +139,7 @@ namespace cafes
                };
       }
 
-      geometry::box<Dimensions, int> get_box(std::array<double, 3> h)
+      geometry::box<int, Dimensions> get_box(std::array<double, 3> h)
       {
         double theta1 = std::asin(cutoff_dist_*H1_);
         double theta2 = std::asin(cutoff_dist_*H2_);
@@ -274,7 +302,7 @@ namespace cafes
 
       auto get_u_sing_ref(position_type const& pos_ref_part, std::integral_constant<int, 3>)
       {
-        std::array< double, 3 > UsingRefPart{};
+        std::array< double, 3> UsingRefPart{};
 
         UsingRefPart[0] = ux_sing_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
                         //+ ux_sing_tangMvt3D(pos_ref_part, H1_, H2_, contact_length_, UT_, param_, param_, NULL);
@@ -313,8 +341,8 @@ namespace cafes
       auto get_u_sing(position_type const& pos, std::integral_constant<int, 3>)
       {
         auto pos_ref_part = get_pos_in_part_ref(pos);
-        std::array< double, 3 > Using{};
-        std::array< double, 3 > UsingRefPart{};
+        std::array< double, 3> Using{};
+        std::array< double, 3> UsingRefPart{};
 
         UsingRefPart[0] = ux_sing_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
                         //+ ux_sing_tangMvt3D(pos_ref_part, H1_, H2_, contact_length_, UT_, param_, param_, NULL);
@@ -384,7 +412,7 @@ namespace cafes
       /////////////////////////////////////////////////////////////////////////////
       auto get_grad_u_sing_ref(position_type pos, std::integral_constant<int, 2>)
       {
-        std::array< std::array<double, 2>, 2 > gradUsingRefPart{};
+        std::array< std::array<double, 2>, 2> gradUsingRefPart{};
 
         gradUsingRefPart[0][0] = dxux_sing_normalMvt2D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
         gradUsingRefPart[0][1] = dzux_sing_normalMvt2D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
@@ -396,7 +424,7 @@ namespace cafes
 
       auto get_grad_u_sing_ref(position_type& pos, std::integral_constant<int, 3>)
       {
-        std::array< std::array<double, 3>, 3 > gradUsingRefPart{};
+        std::array< std::array<double, 3>, 3> gradUsingRefPart{};
 
         gradUsingRefPart[0][0] = dxux_sing_normalMvt3D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
         gradUsingRefPart[0][1] = dyux_sing_normalMvt3D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);

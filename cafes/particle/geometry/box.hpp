@@ -1,3 +1,31 @@
+// Copyright (c) 2016, Loic Gouarin <loic.gouarin@math.u-psud.fr>
+// All rights reserved.
+
+// Redistribution and use in source and binary forms, with or without modification, 
+// are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, 
+//    this list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its contributors
+//    may be used to endorse or promote products derived from this software without
+//    specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+// IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+// NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+// OF SUCH DAMAGE.
+
 #ifndef PARTICLE_GEOMETRY_BOX_HPP_INCLUDED
 #define PARTICLE_GEOMETRY_BOX_HPP_INCLUDED
 
@@ -16,11 +44,13 @@ namespace cafes
     * - bottom left
     * - upper right
     *
-    * These corners could be of any type T. 
+    * These corners must be position type of any type T.
     */
-    template<std::size_t Dimensions, typename T> struct box
+    template<typename T, std::size_t Dimensions>
+    struct box
     {
-      using position_type = position<Dimensions, T>;
+      using position_type = position<T, Dimensions>;
+      static constexpr std::size_t dimensions = Dimensions;
 
       position_type bottom_left; //!< position of the bottom left corner of the box
       position_type upper_right; //!< position of the upper right corner of the box
@@ -127,10 +157,14 @@ namespace cafes
     };
 
     /**
-    * return the intersection between two boxes
+    * return true if two boxes have a non null intersection, false otherwise.
+    *
+    *   \param b1 : the first box
+    *   \param b2 : the second box
+    *   \return a boolean
     */
-    template<std::size_t Dimensions, typename T>
-    bool intersect(box<Dimensions, T> const& b1, box<Dimensions, T> const& b2)
+    template<typename T, std::size_t Dimensions>
+    bool intersect(box<T, Dimensions> const& b1, box<T, Dimensions> const& b2)
     {
       for(std::size_t i=0; i<Dimensions; ++i){
         if (b1.bottom_left[i] > b2.upper_right[i]) return false;
@@ -139,64 +173,73 @@ namespace cafes
       return true;
     }
 
-    template<std::size_t Dimensions, typename T>
-    box<Dimensions, T> overlap_box(box<Dimensions, T> const& b1, box<Dimensions, T> const& b2)
+    /**
+    * return the overlapping box between two boxes.
+    */
+    template<typename T, std::size_t Dimensions>
+    box<T, Dimensions> overlap_box(box<T, Dimensions> const& b1, box<T, Dimensions> const& b2)
     {
-
-        box<Dimensions, T> bout{};
-        for(std::size_t i=0; i<Dimensions; ++i){
-            bout.bottom_left[i] = std::max( b1.bottom_left[i], b2.bottom_left[i]);
-            bout.upper_right[i] = std::min( b1.upper_right[i], b2.upper_right[i]);
-        }
-        return bout;
+      box<T, Dimensions> bout{};
+      for(std::size_t i=0; i<Dimensions; ++i){
+        bout.bottom_left[i] = std::max( b1.bottom_left[i], b2.bottom_left[i]);
+        bout.upper_right[i] = std::min( b1.upper_right[i], b2.upper_right[i]);
+      }
+      return bout;
     }
 
-    template<std::size_t Dimensions, typename T>
-    box<Dimensions, T> union_box(box<Dimensions, T> const& b1, box<Dimensions, T> const& b2)
+    /**
+    * return the box included the two boxes.
+    */
+    template<typename T, std::size_t Dimensions>
+    box<T, Dimensions> union_box(box<T, Dimensions> const& b1, box<T, Dimensions> const& b2)
     {
-
-        box<Dimensions, T> bout{};
-        for(std::size_t i=0; i<Dimensions; ++i){
-            bout.bottom_left[i] = std::min( b1.bottom_left[i], b2.bottom_left[i]);
-            bout.upper_right[i] = std::max( b1.upper_right[i], b2.upper_right[i]);
-        }
-        return bout;
+      box<T, Dimensions> bout{};
+      for(std::size_t i=0; i<Dimensions; ++i){
+        bout.bottom_left[i] = std::min( b1.bottom_left[i], b2.bottom_left[i]);
+        bout.upper_right[i] = std::max( b1.upper_right[i], b2.upper_right[i]);
+      }
+      return bout;
     }
 
-    template<std::size_t Dimensions, typename T>
-    box<Dimensions, T> box_inside(box<Dimensions, T> const& b1, box<Dimensions, T> const& b2)
+    template<typename T, std::size_t Dimensions>
+    box<T, Dimensions> box_inside(box<T, Dimensions> const& b1, box<T, Dimensions> const& b2)
     {
-
-        box<Dimensions, T> bout{b1};
-        for(std::size_t i=0; i<Dimensions; ++i){
-          if (b2.bottom_left[i] > b1.bottom_left[i])
-            bout.bottom_left[i] = b2.bottom_left[i];
-          if (b2.upper_right[i] < b1.upper_right[i])
-            bout.upper_right[i] = b2.upper_right[i];
-        }
-        return bout;
+      box<T, Dimensions> bout{b1};
+      for(std::size_t i=0; i<Dimensions; ++i){
+        if (b2.bottom_left[i] > b1.bottom_left[i])
+          bout.bottom_left[i] = b2.bottom_left[i];
+        if (b2.upper_right[i] < b1.upper_right[i])
+          bout.upper_right[i] = b2.upper_right[i];
+      }
+      return bout;
     }
 
-    template<std::size_t Dimensions, typename T>
-    bool point_inside(box<Dimensions, T> const& b, position<Dimensions, T> p){
+    /**
+    * Check if a point is in the box.
+    */
+    template<typename T, std::size_t Dimensions>
+    bool point_inside(box<T, Dimensions> const& b, position<T, Dimensions> p){
       for(std::size_t i=0; i<Dimensions; ++i)
         if (p[i] < b.bottom_left[i] || p[i] >= b.upper_right[i]) // don't take the last point (fix for the border domain)
           return false;
       return true;
     }
 
-    template<std::size_t Dimensions, typename T>
-    bool check_box_inside(box<Dimensions, T> const& b1, box<Dimensions, T> const& b2)
+    /**
+    * Check if a part of the box b2 is inside the box b1
+    */
+    template<typename T, std::size_t Dimensions>
+    bool check_box_inside(box<T, Dimensions> const& b1, box<T, Dimensions> const& b2)
     // check if a part of box b2 is inside the box b1
     {
-        int count = 0;
-        for(std::size_t i=0; i<Dimensions; ++i){
-          if (b2.bottom_left[i] >= b1.bottom_left[i] && b2.bottom_left[i] <= b1.upper_right[i])
-            count++;
-          if (b2.upper_right[i] >= b1.bottom_left[i] && b2.upper_right[i] <= b1.upper_right[i])
-            count++;
-        }
-        return (count>0)?true:false;
+      int count = 0;
+      for(std::size_t i=0; i<Dimensions; ++i){
+        if (b2.bottom_left[i] >= b1.bottom_left[i] && b2.bottom_left[i] <= b1.upper_right[i])
+          count++;
+        if (b2.upper_right[i] >= b1.bottom_left[i] && b2.upper_right[i] <= b1.upper_right[i])
+          count++;
+      }
+      return (count>0)?true:false;
     }
 
   }

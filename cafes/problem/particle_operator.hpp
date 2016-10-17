@@ -1,6 +1,35 @@
+// Copyright (c) 2016, Loic Gouarin <loic.gouarin@math.u-psud.fr>
+// All rights reserved.
+
+// Redistribution and use in source and binary forms, with or without modification, 
+// are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, 
+//    this list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its contributors
+//    may be used to endorse or promote products derived from this software without
+//    specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+// IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+// NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+// OF SUCH DAMAGE.
+
 #ifndef PROBLEM_PARTICLE_OPERATOR_HPP_INCLUDED
 #define PROBLEM_PARTICLE_OPERATOR_HPP_INCLUDED
 
+#include <algorithm/iterate.hpp>
 #include <problem/problem.hpp>
 #include <problem/stokes.hpp>
 #include <fem/mesh.hpp>
@@ -10,6 +39,7 @@
 #include <particle/geometry/cross_product.hpp>
 #include <particle/geometry/position.hpp>
 #include <particle/singularity/add_singularity.hpp>
+#include <particle/geometry/vector.hpp>
 #include <petsc/vec.hpp>
 
 #include <io/vtk.hpp>
@@ -38,87 +68,36 @@ namespace cafes
     }
 
     #undef __FUNCT__
-    #define __FUNCT__ "set_rhs_problem_"
+    #define __FUNCT__ "set_rhs_problem_impl"
     template<std::size_t Dimensions, typename Ctx>
-    PetscErrorCode set_rhs_problem_(Ctx& ctx, Vec x, Vec out, bool apply_forces, std::integral_constant<int, 2>)
+    PetscErrorCode set_rhs_problem_impl(Ctx& ctx, Vec x, petsc::petsc_vec<Dimensions>& petsc_u, bool apply_forces)
     {
       PetscErrorCode ierr;
-      PetscFunctionBeginUser;      
-
-      Vec outu;
-      ierr = DMCompositeGetAccess(ctx.problem.ctx->dm, out, &outu, NULL);CHKERRQ(ierr);
+      PetscFunctionBeginUser;
 
       int num = 0;
       PetscScalar const *px;
       ierr = VecGetArrayRead(x, &px);CHKERRQ(ierr);
 
-      DM dau;
-      ierr = DMCompositeGetEntries(ctx.problem.ctx->dm , &dau, PETSC_NULL);CHKERRQ(ierr);
-
-      PetscScalar ***pout;
-      ierr = DMDAVecGetArrayDOF(dau, outu, &pout);CHKERRQ(ierr);
       auto box = fem::get_DM_bounds<Dimensions>(ctx.problem.ctx->dm, 0);
       for(auto& p: ctx.particles){
         auto pbox = p.bounding_box(ctx.problem.ctx->h);
         if (geometry::intersect(box, pbox)){
           auto new_box = geometry::overlap_box(box, pbox);
           auto pts = find_fluid_points_insides(p, new_box, ctx.problem.ctx->h);
-          for(auto& ind: pts){
+          for(auto& ind: pts)
+          {
+            auto u = petsc_u.at_g(ind);
             if (apply_forces)
-              for(std::size_t i=0; i<2; ++i)
-                pout[ind[1]][ind[0]][i] = px[num++] + p.rho_*p.force_[i];
+              for(std::size_t i=0; i<Dimensions; ++i)
+                u[i] = px[num++] + p.rho_*p.force_[i];
             else
-              for(std::size_t i=0; i<2; ++i)
-                pout[ind[1]][ind[0]][i] = px[num++];
+              for(std::size_t i=0; i<Dimensions; ++i)
+                u[i] = px[num++];
           }       
         }
       }
 
-      ierr = DMDAVecRestoreArrayDOF(dau, outu, &pout);CHKERRQ(ierr);
-      ierr = DMCompositeRestoreAccess(ctx.problem.ctx->dm, out, &outu, NULL);CHKERRQ(ierr);
-      ierr = VecRestoreArrayRead(x, &px);CHKERRQ(ierr);
-      PetscFunctionReturn(0);
-    }
-
-    #undef __FUNCT__
-    #define __FUNCT__ "set_rhs_problem_"
-    template<std::size_t Dimensions, typename Ctx>
-    PetscErrorCode set_rhs_problem_(Ctx& ctx, Vec x, Vec out, bool apply_forces, std::integral_constant<int, 3>)
-    {
-      PetscErrorCode ierr;
-      PetscFunctionBeginUser;      
-
-      Vec outu;
-      ierr = DMCompositeGetAccess(ctx.problem.ctx->dm, out, &outu, NULL);CHKERRQ(ierr);
-
-      int num = 0;
-      PetscScalar const *px;
-      ierr = VecGetArrayRead(x, &px);CHKERRQ(ierr);
-
-      DM dau;
-      ierr = DMCompositeGetEntries(ctx.problem.ctx->dm , &dau, PETSC_NULL);CHKERRQ(ierr);
-
-      PetscScalar ****pout;
-      ierr = DMDAVecGetArrayDOF(dau, outu, &pout);CHKERRQ(ierr);
-      auto box = fem::get_DM_bounds<Dimensions>(ctx.problem.ctx->dm, 0);
-      for(auto& p: ctx.particles){
-        auto pbox = p.bounding_box(ctx.problem.ctx->h);
-        if (geometry::intersect(box, pbox)){
-          auto new_box = geometry::overlap_box(box, pbox);
-          auto pts = find_fluid_points_insides(p, new_box, ctx.problem.ctx->h);
-          for(auto& ind: pts){
-            if (apply_forces)
-              for(std::size_t i=0; i<3; ++i)
-                pout[ind[2]][ind[1]][ind[0]][i] = px[num++] + p.rho_*p.force_[i];
-            else
-              for(std::size_t i=0; i<3; ++i)
-                pout[ind[2]][ind[1]][ind[0]][i] = px[num++];
-          }       
-        }
-      }
-
-      ierr = DMDAVecRestoreArrayDOF(dau, outu, &pout);CHKERRQ(ierr);
-      ierr = DMCompositeRestoreAccess(ctx.problem.ctx->dm, out, &outu, NULL);CHKERRQ(ierr);
       ierr = VecRestoreArrayRead(x, &px);CHKERRQ(ierr);
       PetscFunctionReturn(0);
     }
@@ -129,14 +108,17 @@ namespace cafes
     PetscErrorCode set_rhs_problem(Ctx& ctx, Vec x, bool apply_forces=false)
     {
       PetscErrorCode ierr;
-      PetscFunctionBeginUser;      
+      PetscFunctionBeginUser;
 
       Vec forces, mass_mult;
       ierr = DMGetGlobalVector(ctx.problem.ctx->dm, &forces);CHKERRQ(ierr);
       ierr = DMGetGlobalVector(ctx.problem.ctx->dm, &mass_mult);CHKERRQ(ierr);
-
       ierr = VecSet(forces, 0);CHKERRQ(ierr);
-      ierr = set_rhs_problem_<Dimensions, Ctx>(ctx, x, forces, apply_forces, std::integral_constant<int, Dimensions>{});CHKERRQ(ierr);
+
+      auto petsc_forces = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, forces, 0, false);
+      
+      ierr = set_rhs_problem_impl(ctx, x, petsc_forces, apply_forces);CHKERRQ(ierr);
+
       ierr = fem::apply_mass_matrix(ctx.problem.ctx->dm, forces, mass_mult, ctx.problem.ctx->h);CHKERRQ(ierr);
       ierr = VecAXPY(ctx.problem.rhs, 1., mass_mult);CHKERRQ(ierr);
 
@@ -146,56 +128,23 @@ namespace cafes
       PetscFunctionReturn(0);
     }
 
-    using surf_2d = std::vector<std::vector<std::pair<geometry::position<2, int>, geometry::position<2, double>>>>;
-    using surf_3d = std::vector<std::vector<std::pair<geometry::position<3, int>, geometry::position<3, double>>>>;
-    using array_2d_g = std::vector<std::vector<std::array<double, 2>>>;
-    using array_3d_g = std::vector<std::vector<std::array<double, 3>>>;
     #undef __FUNCT__
     #define __FUNCT__ "interp_rigid_motion_"
-    template<typename Shape>
+    template<typename Shape, std::size_t Dimensions>
     PetscErrorCode interp_rigid_motion_(std::vector<particle<Shape>> const& particles,
-                                        std::vector<std::vector<geometry::position<2, double>>> const& r, 
-                                        array_2d_g& g){
+                                        std::vector<std::vector<geometry::vector<double, Dimensions>>> const& r, 
+                                        std::vector<std::vector<geometry::vector<double, Dimensions>>>& g){
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
       
       std::cout<<"add rigid motion to surf...\n";
 
       std::size_t ipart=0;
-      for(auto& rpts: r){       
+      for(auto& rpts: r)
+      {
         for(std::size_t i=0; i<rpts.size(); ++i){
-          //g[ipart][i] -= particles[ipart].velocity_ - geometry::cross_product(particles[ipart].angular_velocity_[2], r[ipart][i]);
-          g[ipart][i][0] -= particles[ipart].velocity_[0] - particles[ipart].angular_velocity_[2]*r[ipart][i][1];
-          g[ipart][i][1] -= particles[ipart].velocity_[1] + particles[ipart].angular_velocity_[2]*r[ipart][i][0];
-        }
-        ipart++;
-      }
-      PetscFunctionReturn(0);
-    }
-
-    #undef __FUNCT__
-    #define __FUNCT__ "interp_rigid_motion_"
-    template<typename Shape>
-    PetscErrorCode interp_rigid_motion_(std::vector<particle<Shape>> const& particles,
-                                        std::vector<std::vector<geometry::position<3, double>>> const& r, 
-                                        array_3d_g& g){
-      PetscErrorCode ierr;
-      PetscFunctionBeginUser;
-      std::cout<<"add rigid motion to surf...\n";
-
-      std::size_t ipart=0;
-      for(auto& rpts: r){       
-        for(std::size_t i=0; i<rpts.size(); ++i){
-          g[ipart][i][0] -= particles[ipart].velocity_[0] 
-                          + particles[ipart].angular_velocity_[1]*r[ipart][i][2]
-                          - particles[ipart].angular_velocity_[2]*r[ipart][i][1];
-          g[ipart][i][1] -= particles[ipart].velocity_[1] 
-                          + particles[ipart].angular_velocity_[2]*r[ipart][i][0]
-                          - particles[ipart].angular_velocity_[0]*r[ipart][i][2];
-          g[ipart][i][2] -= particles[ipart].velocity_[2] 
-                          + particles[ipart].angular_velocity_[0]*r[ipart][i][1]
-                          - particles[ipart].angular_velocity_[1]*r[ipart][i][0];
-          //g[ipart][i] -= particles[ipart].velocity_ + cross_product(r[ipart][i], particles[ipart].angular_velocity_);
+          particles[ipart].velocity_ - geometry::cross_product(particles[ipart].angular_velocity_, r[ipart][i]);
+          g[ipart][i] -= particles[ipart].velocity_ - geometry::cross_product(particles[ipart].angular_velocity_, r[ipart][i]);
         }
         ipart++;
       }
@@ -205,7 +154,7 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "interp_fluid_to_surf"
     template<std::size_t Dimensions, typename Ctx>
-    PetscErrorCode interp_fluid_to_surf(Ctx& ctx, std::vector<std::vector<std::array<double, Dimensions>>>& g,
+    PetscErrorCode interp_fluid_to_surf(Ctx& ctx, std::vector<std::vector<geometry::vector<double, Dimensions>>>& g,
                                         bool rigid_motion = false, bool singularity = false)
     {
       PetscErrorCode ierr;
@@ -227,7 +176,7 @@ namespace cafes
             auto u = sol.at(ielem[j]);
             for (std::size_t d=0; d<Dimensions; ++d)
               g[ipart][i][d] += u[d]*bfunc[j];
-          }          
+          }
         }
         ipart++;
       }
@@ -246,83 +195,45 @@ namespace cafes
 
     #undef __FUNCT__
     #define __FUNCT__ "simple_layer"
-    template<std::size_t Dimensions, typename Ctx>
-    PetscErrorCode simple_layer(Ctx& ctx, std::vector<std::vector<std::array<double, Dimensions>>>& g,
-                                std::vector<double>& mean, std::vector<double>& cross_prod)
+    template<std::size_t Dimensions, typename Ctx, typename cross_type>
+    PetscErrorCode simple_layer(Ctx& ctx, std::vector<std::vector<geometry::vector<double, Dimensions>>>& g,
+                                std::vector<geometry::vector<double, Dimensions>>& mean,
+                                cross_type& cross_prod)
     {
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
-      std::vector<double> mean_local;
-      std::vector<double> cross_prod_local;
-
-      mean_local.resize(mean.size());
-      cross_prod_local.resize(cross_prod.size());
-
-      std::fill(mean_local.begin(), mean_local.end(), 0.);
-      std::fill(cross_prod_local.begin(), cross_prod_local.end(), 0.);
-
       for(std::size_t ipart=0; ipart<g.size(); ++ipart)
-        for(std::size_t isurf=0; isurf<g[ipart].size(); ++isurf){
-          for (std::size_t d=0; d<Dimensions; ++d)
-            mean_local[ipart*Dimensions + d] += g[ipart][isurf][d];
-
-          if (Dimensions == 2)
-            cross_prod_local[ipart] += geometry::cross_product(ctx.radial_vec[ipart][isurf], g[ipart][isurf]);
-
-            //cross_prod_local[ipart] += ctx.radial_vec[ipart][isurf][0]*g[ipart][isurf][1]
-            //                         - ctx.radial_vec[ipart][isurf][1]*g[ipart][isurf][0];
-          else{
-            cross_prod_local[ipart*Dimensions]     += ctx.radial_vec[ipart][isurf][1]*g[ipart][isurf][2]
-                                                    - ctx.radial_vec[ipart][isurf][2]*g[ipart][isurf][1];
-            cross_prod_local[ipart*Dimensions + 1] += ctx.radial_vec[ipart][isurf][1]*g[ipart][isurf][2]
-                                                    - ctx.radial_vec[ipart][isurf][2]*g[ipart][isurf][1];
-            cross_prod_local[ipart*Dimensions + 2] += ctx.radial_vec[ipart][isurf][0]*g[ipart][isurf][1]
-                                                    - ctx.radial_vec[ipart][isurf][1]*g[ipart][isurf][0];
-          }
+        for(std::size_t isurf=0; isurf<g[ipart].size(); ++isurf)
+        {
+          mean[ipart] += g[ipart][isurf];
+          cross_prod[ipart] += geometry::cross_product(ctx.radial_vec[ipart][isurf], g[ipart][isurf]);
         }
 
-      MPI_Allreduce(mean_local.data(), mean.data(), mean.size(), MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
-      MPI_Allreduce(cross_prod_local.data(), cross_prod.data(), cross_prod.size(), MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
-
-      for(std::size_t ipart=0; ipart<g.size(); ++ipart){
-        auto& radius = ctx.particles[ipart].shape_factors_[0];
-        for(std::size_t d=0; d<Dimensions; ++d)
-          mean[ipart*Dimensions + d] /= ctx.nb_surf_points[ipart];
-        // fix for non circle shape
-        if (Dimensions == 2)
-          cross_prod[ipart] /= radius*radius*ctx.nb_surf_points[ipart];
-        else
-          for(std::size_t d=0; d<Dimensions; ++d)
-            cross_prod[ipart*Dimensions + d] *= 2./(5*radius*radius*ctx.nb_surf_points[ipart]);
+      MPI_Allreduce(MPI_IN_PLACE, mean.data(), mean.size()*Dimensions, MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, cross_prod.data(), cross_prod.size()*(Dimensions==2?1:3), MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
+      
+      for(std::size_t ipart=0; ipart<g.size(); ++ipart)
+      {
+        mean[ipart] /= ctx.nb_surf_points[ipart];
+        cross_prod[ipart] *= ctx.particles[ipart].Cd_R()/ctx.nb_surf_points[ipart];
       }
 
-      if (Dimensions == 2)
-        for(std::size_t ipart=0; ipart<g.size(); ++ipart)
-          for(std::size_t isurf=0; isurf<g[ipart].size(); ++isurf){
-              g[ipart][isurf][0] -= mean[ipart*Dimensions] - cross_prod[ipart]*ctx.radial_vec[ipart][isurf][1];
-              g[ipart][isurf][1] -= mean[ipart*Dimensions + 1] + cross_prod[ipart]*ctx.radial_vec[ipart][isurf][0];
-          }
-      else
-        for(std::size_t ipart=0; ipart<g.size(); ++ipart)
-          for(std::size_t isurf=0; isurf<g[ipart].size(); ++isurf){
-              g[ipart][isurf][0] -= mean[ipart*Dimensions] 
-                                  + cross_prod[ipart*Dimensions + 1]*ctx.radial_vec[ipart][isurf][2]
-                                  - cross_prod[ipart*Dimensions + 2]*ctx.radial_vec[ipart][isurf][1];
-              g[ipart][isurf][1] -= mean[ipart*Dimensions + 1]
-                                  + cross_prod[ipart*Dimensions + 2]*ctx.radial_vec[ipart][isurf][0]
-                                  - cross_prod[ipart*Dimensions    ]*ctx.radial_vec[ipart][isurf][2];
-              g[ipart][isurf][2] -= mean[ipart*Dimensions + 2] 
-                                  + cross_prod[ipart*Dimensions    ]*ctx.radial_vec[ipart][isurf][1]
-                                  - cross_prod[ipart*Dimensions + 1]*ctx.radial_vec[ipart][isurf][0];
-          }
+      for(std::size_t ipart=0; ipart<g.size(); ++ipart)
+      {
+        for(std::size_t isurf=0; isurf<g[ipart].size(); ++isurf)
+        {
+          g[ipart][isurf] -= mean[ipart] + geometry::cross_product(cross_prod[ipart], ctx.radial_vec[ipart][isurf]);
+          
+        }
+      }
 
       PetscFunctionReturn(0);
     }
     #undef __FUNCT__
     #define __FUNCT__ "SL_to_Rhs"
     template<std::size_t Dimensions, typename Ctx>
-    PetscErrorCode SL_to_Rhs(Ctx& ctx, std::vector<std::vector<std::array<double, Dimensions>>>const& g){
+    PetscErrorCode SL_to_Rhs(Ctx& ctx, std::vector<std::vector<geometry::vector<double, Dimensions>>>const& g){
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
@@ -335,7 +246,7 @@ namespace cafes
         auto& radius = ctx.particles[ipart].shape_factors_[0];
         //auto gammak = ctx.particles[ipart].perimeter/ctx.nb_surf_points[ipart];  
         // remove this line !!
-        auto gammak = ctx.particles[ipart].surface_area()/ctx.nb_surf_points[ipart];  
+        auto gammak = ctx.particles[ipart].surface_area()/ctx.nb_surf_points[ipart];
         for(std::size_t isurf=0; isurf<ctx.surf_points[ipart].size(); ++isurf){
           auto bfunc = fem::P1_integration(get_position(ctx.surf_points[ipart][isurf]), ctx.problem.ctx->h);
           auto ielem = fem::get_element(get_index(ctx.surf_points[ipart][isurf]));
@@ -347,28 +258,23 @@ namespace cafes
         }
       }
 
-      if (ctx.compute_singularity)
-      { 
-        ierr = singularity::add_singularity_to_surf<Dimensions, Ctx>(ctx, sol);CHKERRQ(ierr);
-      }
+      // if (ctx.compute_singularity)
+      // { 
+      //   ierr = singularity::add_singularity_to_surf<Dimensions, Ctx>(ctx, sol);CHKERRQ(ierr);
+      // }
 
       ierr = sol.local_to_global(ADD_VALUES);CHKERRQ(ierr);
 
-      DM dav;
-      Vec rhs;
-      ierr = DMCompositeGetEntries(ctx.problem.ctx->dm, &dav, nullptr);CHKERRQ(ierr);
-      ierr = DMCompositeGetAccess(ctx.problem.ctx->dm, ctx.problem.rhs, &rhs, nullptr);CHKERRQ(ierr);
-      ierr = SetNullDirichletOnRHS(dav, ctx.problem.ctx->bc_, rhs, ctx.problem.ctx->h);CHKERRQ(ierr);
-      ierr = DMCompositeRestoreAccess(ctx.problem.ctx->dm, ctx.problem.rhs, &rhs, nullptr);CHKERRQ(ierr);
-      PetscFunctionReturn(0);
+      auto petsc_rhs = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, ctx.problem.rhs, 0);
+      ierr = SetNullDirichletOnRHS(petsc_rhs, ctx.problem.ctx->bc_);CHKERRQ(ierr);
 
       PetscFunctionReturn(0);
     }
 
     #undef __FUNCT__
-    #define __FUNCT__ "init_problem_1"
+    #define __FUNCT__ "init_problem"
     template<std::size_t Dimensions, typename Ctx>
-    PetscErrorCode init_problem_1(Ctx& ctx, Vec x, bool apply_forces=false){
+    PetscErrorCode init_problem(Ctx& ctx, Vec x, bool apply_forces=false){
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
@@ -383,398 +289,162 @@ namespace cafes
 
       ierr = set_rhs_problem<Dimensions, Ctx>(ctx, x, apply_forces);CHKERRQ(ierr);
       
-      DM dav;
-      Vec rhs;
-      ierr = DMCompositeGetEntries(ctx.problem.ctx->dm, &dav, nullptr);CHKERRQ(ierr);
-      ierr = DMCompositeGetAccess(ctx.problem.ctx->dm, ctx.problem.rhs, &rhs, nullptr);CHKERRQ(ierr);
+      auto petsc_rhs = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, ctx.problem.rhs, 0);
 
       if (ctx.compute_rhs)
       {
-        ierr = SetDirichletOnRHS(dav, ctx.problem.ctx->bc_, rhs, ctx.problem.ctx->h);CHKERRQ(ierr);
+        ierr = SetDirichletOnRHS(petsc_rhs, ctx.problem.ctx->bc_, ctx.problem.ctx->h);CHKERRQ(ierr);
       }
       else
       {
-        ierr = SetNullDirichletOnRHS(dav, ctx.problem.ctx->bc_, rhs, ctx.problem.ctx->h);CHKERRQ(ierr); 
+        ierr = SetNullDirichletOnRHS(petsc_rhs, ctx.problem.ctx->bc_);CHKERRQ(ierr);
       }
-      ierr = DMCompositeRestoreAccess(ctx.problem.ctx->dm, ctx.problem.rhs, &rhs, nullptr);CHKERRQ(ierr);
 
       PetscFunctionReturn(0);
     }
 
-    #undef __FUNCT__
-    #define __FUNCT__ "projection"
-    template<typename Shape>
-    PetscErrorCode projection(std::vector<particle<Shape>> const& particles,
-                              DM dm, 
-                              Vec sol,
-                              geometry::box<2, int> const& box,
-                              std::vector<double>& mean, 
-                              std::vector<double>& cross_prod,
-                              std::vector<int> const& num,
-                              std::size_t scale,
-                              std::array<double, 2> const& h)
+
+    auto const kernel_projection = [](auto const& p, auto& sol, 
+                            auto const& h, auto const& hs, 
+                            auto& box_scale, auto& mean, auto& cross)
     {
-      PetscErrorCode ierr;
-      PetscFunctionBeginUser;
+      auto const kernel_pos = [&](auto const& pos){
+        auto const kernel = [&](auto const& pos_scale)
+        {
+          using mean_type = typename std::remove_reference<decltype(mean)>::type;
+          auto pts = pos*h + pos_scale*hs;
+          if (p.contains(pts))
+          {
+            auto pts_corner = pos_scale*hs;
+            auto bfunc = fem::P1_integration(pts_corner, h);
+            auto ielem = fem::get_element(pos);
+            mean_type tmp{};
 
-      const int Dimensions = 2;
-      using position_type = geometry::position<Dimensions, double>;
-      using position_type_i = geometry::position<Dimensions, int>;
+            for(std::size_t ib=0; ib<bfunc.size(); ++ib)
+            {
+              auto u = sol.at(ielem[ib]);
+              for (std::size_t d=0; d<pos.dimensions; ++d)
+                tmp[d] += u[d]*bfunc[ib];
+            }
 
-      std::array<double, Dimensions> hs = {{h[0]/scale, h[1]/scale}};
+            mean_type r;
+            for (std::size_t d=0; d<pos.dimensions; ++d)
+              r[d] = pts[d] - p.center_[d];
 
-      PetscScalar ***psol;
-      ierr = DMDAVecGetArrayDOFRead(dm, sol, &psol);CHKERRQ(ierr);
-
-      for(std::size_t ipart=0; ipart<particles.size(); ++ipart){
-        auto& p = particles[ipart];
-        auto pbox = p.bounding_box(h);
-        double meanu=0, meanv=0, cross=0;
-        if (geometry::intersect(box, pbox)){
-          auto new_box = geometry::box_inside(box, pbox);
-          for(std::size_t j=new_box.bottom_left[1]; j<new_box.upper_right[1]; ++j)
-            for(std::size_t i=new_box.bottom_left[0]; i<new_box.upper_right[0]; ++i)
-              for(std::size_t js=0; js<scale; ++js)
-                for(std::size_t is=0; is<scale; ++is){
-                  position_type pts = {i*h[0] + is*hs[0], j*h[1] + js*hs[1]};
-                  position_type_i pts_i = {i, j};
-                  if (p.contains(pts)){
-                    position_type pts_corner = {is*hs[0], js*hs[1]};
-                    auto bfunc = fem::P1_integration(pts_corner, h);
-                    auto ielem = fem::get_element(pts_i);
-                    auto solu = 0.;
-                    auto solv = 0.;
-                    for(std::size_t ib=0; ib<bfunc.size(); ++ib){
-                      solu += psol[ielem[ib][1]][ielem[ib][0]][0]*bfunc[ib];
-                      solv += psol[ielem[ib][1]][ielem[ib][0]][1]*bfunc[ib];
-                    }
-                    meanu += solu;
-                    meanv += solv;
-                    cross += (pts[0] - p.center_[0])*solv - (pts[1] - p.center_[1])*solu;
-                  }
-                }
-          mean[ipart*Dimensions] = meanu/num[ipart];
-          mean[ipart*Dimensions + 1] = meanv/num[ipart];
-          cross_prod[ipart] = cross/num[ipart];
-        }
-      }
-
-      ierr = DMDAVecRestoreArrayDOFRead(dm, sol, &psol);CHKERRQ(ierr);
-      PetscFunctionReturn(0);
-    }
-
-    #undef __FUNCT__
-    #define __FUNCT__ "projection"
-    template<typename Shape>
-    PetscErrorCode projection(std::vector<particle<Shape>> const& particles,
-                              DM dm, 
-                              Vec sol,
-                              geometry::box<3, int> const& box,
-                              std::vector<double>& mean, 
-                              std::vector<double>& cross_prod,
-                              std::vector<int> const& num,
-                              std::size_t scale,
-                              std::array<double, 3> const& h)
-    {
-      PetscErrorCode ierr;
-      PetscFunctionBeginUser;
-
-      const int Dimensions = 3;
-      using position_type = geometry::position<Dimensions, double>;
-      using position_type_i = geometry::position<Dimensions, int>;
-
-      std::array<double, Dimensions> hs = {{h[0]/scale, h[1]/scale, h[2]/scale}};
-
-      PetscScalar ****psol;
-      ierr = DMDAVecGetArrayDOFRead(dm, sol, &psol);CHKERRQ(ierr);
-
-      for(std::size_t ipart=0; ipart<particles.size(); ++ipart){
-        auto& p = particles[ipart];
-        auto pbox = p.bounding_box(h);
-        std::array<double, Dimensions> mean_tmp{};
-        std::array<double, Dimensions> cross_tmp{};
-        if (geometry::intersect(box, pbox)){
-          auto new_box = geometry::box_inside(box, pbox);
-
-          for(std::size_t k=new_box.bottom_left[2]; k<new_box.upper_right[2]; ++k)
-            for(std::size_t j=new_box.bottom_left[1]; j<new_box.upper_right[1]; ++j)
-              for(std::size_t i=new_box.bottom_left[0]; i<new_box.upper_right[0]; ++i)
-                for(std::size_t ks=0; ks<scale; ++ks)
-                  for(std::size_t js=0; js<scale; ++js)
-                    for(std::size_t is=0; is<scale; ++is){
-                      position_type pts = {i*h[0] + is*hs[0], j*h[1] + js*hs[1], k*h[2] + ks*hs[2]};
-                      position_type_i pts_i = {i, j, k};
-                      if (p.contains(pts)){
-                        position_type pts_corner = {is*hs[0], js*hs[1], ks*hs[2]};
-                        auto bfunc = fem::P1_integration(pts_corner, h);
-                        auto ielem = fem::get_element(pts_i);
-                        std::array<double, Dimensions> tmp{};
-                        for(std::size_t ib=0; ib<bfunc.size(); ++ib)
-                          for(std::size_t d=0; d<Dimensions; ++d)
-                            tmp[d] += psol[ielem[ib][2]][ielem[ib][1]][ielem[ib][0]][d]*bfunc[ib];
-                        for(std::size_t d=0; d<Dimensions; ++d)
-                          mean_tmp[d] += tmp[d];
-                        cross_tmp[0] += (pts[1] - p.center_[1])*mean_tmp[2] - (pts[2] - p.center_[2])*mean_tmp[1];
-                        cross_tmp[1] += (pts[2] - p.center_[2])*mean_tmp[0] - (pts[0] - p.center_[0])*mean_tmp[2];
-                        cross_tmp[2] += (pts[0] - p.center_[0])*mean_tmp[1] - (pts[1] - p.center_[1])*mean_tmp[0];
-                      }
-                    }
-          for(std::size_t d=0; d<Dimensions; ++d){
-            mean[ipart*Dimensions + d ] = mean_tmp[d]/num[ipart];
-            cross_prod[ipart*Dimensions + d ] = cross_tmp[d]/num[ipart];
+            mean += tmp;
+            cross += geometry::cross_product(r, tmp);
           }
-        }
-      }
+        };
+        algorithm::iterate(box_scale, kernel);
+      };
+      return kernel_pos;
+    };
 
-      ierr = DMDAVecRestoreArrayDOFRead(dm, sol, &psol);CHKERRQ(ierr);
+    #undef __FUNCT__
+    #define __FUNCT__ "projection_impl"
+    template<typename Shape, typename cross_type, std::size_t Dimensions>
+    PetscErrorCode projection_impl(std::vector<particle<Shape>> const& particles,
+                              petsc::petsc_vec<Dimensions>& sol,
+                              geometry::box<int, Dimensions> const& box,
+                              std::vector<geometry::vector<double, Dimensions>>& mean,
+                              cross_type& cross_prod,
+                              std::vector<int> const& num,
+                              std::size_t scale,
+                              std::array<double, Dimensions> const& h)
+    {
+      PetscErrorCode ierr;
+      PetscFunctionBeginUser;
+
+
+      std::array<double, Dimensions> hs;
+      for (std::size_t d=0; d<Dimensions; ++d)
+        hs[d] = h[d]/scale;
+
+      geometry::position<std::size_t, Dimensions> p1, p2;
+      p1.fill(0);
+      p2.fill(scale);
+      geometry::box<std::size_t, Dimensions> box_scale{ p1, p2};
+
+      for(std::size_t ipart=0; ipart<particles.size(); ++ipart){
+        auto& p = particles[ipart];
+        mean[ipart] = 0;
+        cross_prod[ipart] = 0;
+        auto pbox = p.bounding_box(h);
+        if (geometry::intersect(box, pbox)){
+          auto new_box = geometry::box_inside(box, pbox);
+          algorithm::iterate(new_box, kernel_projection(p, sol, h, hs, box_scale, mean[ipart], cross_prod[ipart]));
+        }
+        mean[ipart] /= num[ipart];
+        cross_prod[ipart] /= num[ipart];
+      }
       PetscFunctionReturn(0);
     }
 
     #undef __FUNCT__
     #define __FUNCT__ "projection"
-    template<std::size_t Dimensions, typename Ctx>
-    PetscErrorCode projection(Ctx& ctx, std::vector<double>& mean, std::vector<double>& cross_prod)
+    template<std::size_t Dimensions, typename Ctx, typename cross_type>
+    PetscErrorCode projection(Ctx& ctx,
+                              std::vector<geometry::vector<double, Dimensions>>& mean,
+                              cross_type& cross_prod)
     {
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
-      using position_type = geometry::position<Dimensions, double>;
-      using position_type_i = geometry::position<Dimensions, int>;
+      using position_type = geometry::position<double, Dimensions>;
+      using position_type_i = geometry::position<int, Dimensions>;
 
       auto box = fem::get_DM_bounds<Dimensions>(ctx.problem.ctx->dm, 0);
       auto& h = ctx.problem.ctx->h;
 
-      std::vector<double> mean_local;
-      std::vector<double> cross_prod_local;
+      auto sol = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, ctx.problem.sol, 0);
+      sol.global_to_local(INSERT_VALUES);
 
-      mean_local.resize(mean.size());
-      cross_prod_local.resize(cross_prod.size());
+      ierr = projection_impl(ctx.particles, sol, box, mean, cross_prod, ctx.num, ctx.scale, h);
 
-      std::fill(mean_local.begin(), mean_local.end(), 0.);
-      std::fill(cross_prod_local.begin(), cross_prod_local.end(), 0.);
-
-      DM dav;
-      Vec sol;
-      ierr = DMCompositeGetEntries(ctx.problem.ctx->dm, &dav, nullptr);CHKERRQ(ierr);
-      ierr = DMCompositeGetAccess(ctx.problem.ctx->dm, ctx.problem.sol, &sol, nullptr);CHKERRQ(ierr);
-      
-      Vec sol_local;
-      ierr = DMGetLocalVector(dav, &sol_local);CHKERRQ(ierr);
-      ierr = DMGlobalToLocalBegin(dav, sol, INSERT_VALUES, sol_local);CHKERRQ(ierr);
-      ierr = DMGlobalToLocalEnd(dav, sol, INSERT_VALUES, sol_local);CHKERRQ(ierr);
-
-      ierr = projection(ctx.particles, dav, sol_local, box, mean_local, cross_prod_local, ctx.num, ctx.scale, h);
-
-      MPI_Allreduce(mean_local.data(), mean.data(), mean.size(), MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
-      MPI_Allreduce(cross_prod_local.data(), cross_prod.data(), cross_prod.size(), MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
-
-      ierr = DMRestoreLocalVector(dav, &sol_local);CHKERRQ(ierr);
-      ierr = DMCompositeRestoreAccess(ctx.problem.ctx->dm, ctx.problem.sol, &sol, nullptr);CHKERRQ(ierr);      
-      PetscFunctionReturn(0);
-    }
-
-    #undef __FUNCT__
-    #define __FUNCT__ "compute_y"
-    template<typename Shape>
-    PetscErrorCode compute_y(std::vector<particle<Shape>> const& particles,
-                             DM dm, 
-                             Vec y, 
-                             Vec sol,
-                             geometry::box<2, int> const& box,
-                             std::vector<double> const& mean, 
-                             std::vector<double> const& cross_prod,
-                             std::array<double, 2> const& h)
-    {
-      PetscErrorCode ierr;
-      PetscFunctionBeginUser;
-
-      const int Dimensions = 2;
-
-      PetscScalar ***psol;
-      ierr = DMDAVecGetArrayDOFRead(dm, sol, &psol);CHKERRQ(ierr);
-
-      int num = 0;
-      PetscScalar *py;
-      ierr = VecGetArray(y, &py);CHKERRQ(ierr);
-
-      for(std::size_t ipart=0; ipart<particles.size(); ++ipart){
-        auto& p = particles[ipart];
-        auto pbox = p.bounding_box(h);
-        auto radius = p.shape_factors_[0];
-        auto Cr = 2./(radius*radius);
-        if (geometry::intersect(box, pbox)){
-          auto new_box = geometry::box_inside(box, pbox);
-          auto pts = find_fluid_points_insides(p, new_box, h);
-          for(auto& ind: pts){
-            py[num++] = psol[ind[1]][ind[0]][0] - mean[ipart*Dimensions  ] + Cr*(ind[1]*h[1] - p.center_[1])*cross_prod[ipart];
-            py[num++] = psol[ind[1]][ind[0]][1] - mean[ipart*Dimensions+1] - Cr*(ind[0]*h[0] - p.center_[0])*cross_prod[ipart];
-          }
-        }
-      }
-
-      ierr = DMDAVecRestoreArrayDOFRead(dm, sol, &psol);CHKERRQ(ierr);
-      ierr = VecRestoreArray(y, &py);CHKERRQ(ierr);
-
-      PetscFunctionReturn(0);
-    }
-    
-    #undef __FUNCT__
-    #define __FUNCT__ "compute_y"
-    template<typename Shape>
-    PetscErrorCode compute_y(std::vector<particle<Shape>> const& particles,
-                             DM dm, 
-                             Vec y, 
-                             Vec sol,
-                             geometry::box<3, int> const& box,
-                             std::vector<double> const& mean, 
-                             std::vector<double> const& cross_prod,
-                             std::array<double, 3> const& h)
-    {
-      PetscErrorCode ierr;
-      PetscFunctionBeginUser;
-
-      const int Dimensions = 3;
-      using position_type = geometry::position<Dimensions, double>;
-
-      PetscScalar ***psol;
-      ierr = DMDAVecGetArrayDOFRead(dm, sol, &psol);CHKERRQ(ierr);
-
-      int num = 0;
-      PetscScalar *py;
-      ierr = VecGetArray(y, &py);CHKERRQ(ierr);
-
-      for(std::size_t ipart=0; ipart<particles.size(); ++ipart){
-        auto& p = particles[ipart];
-        auto pbox = p.bounding_box(h);
-        auto radius = p.shape_factors_[0];
-        auto Cr = 2./(5*radius*radius);
-        if (geometry::intersect(box, pbox)){
-          auto new_box = geometry::box_inside(box, pbox);
-          auto pts = find_fluid_points_insides(p, new_box, h);
-          for(auto& ind: pts){
-            position_type pos { ind[0]*h[0] - p.center_[0], ind[1]*h[1] - p.center_[1], ind[2]*h[2] - p.center_[2] };
-            py[num++] = psol[ind[2]][ind[1]][ind[0]][0] - mean[ipart*Dimensions] 
-                      - Cr*( cross_prod[ipart*Dimensions + 1]*pos[2] 
-                           - cross_prod[ipart*Dimensions + 2]*pos[1]);
-            py[num++] = psol[ind[2]][ind[1]][ind[0]][1] - mean[ipart*Dimensions+1] 
-                      - Cr*( cross_prod[ipart*Dimensions    ]*pos[2] 
-                           - cross_prod[ipart*Dimensions + 2]*pos[0]);
-            py[num++] = psol[ind[2]][ind[1]][ind[0]][2] - mean[ipart*Dimensions+2] 
-                      - Cr*( cross_prod[ipart*Dimensions + 1]*pos[2] 
-                           - cross_prod[ipart*Dimensions + 2]*pos[1]);
-          }
-        }
-      }
-
-      ierr = DMDAVecRestoreArrayDOFRead(dm, sol, &psol);CHKERRQ(ierr);
-      ierr = VecRestoreArray(y, &py);CHKERRQ(ierr);
+      MPI_Allreduce(MPI_IN_PLACE, mean.data(), mean.size()*Dimensions, MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, cross_prod.data(), cross_prod.size()*(Dimensions==2?1:3), MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
 
       PetscFunctionReturn(0);
     }
 
     #undef __FUNCT__
     #define __FUNCT__ "compute_y"
-    template<std::size_t Dimensions, typename Ctx>
-    PetscErrorCode compute_y(Ctx& ctx, Vec y, std::vector<double> const& mean, std::vector<double> const& cross_prod)
+    template<std::size_t Dimensions, typename Ctx, typename cross_type>
+    PetscErrorCode compute_y(Ctx& ctx, Vec y, 
+                             std::vector<geometry::vector<double, Dimensions>> const& mean, 
+                             cross_type const& cross_prod)
     {
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
       auto box = fem::get_DM_bounds<Dimensions>(ctx.problem.ctx->dm, 0);
       auto& h = ctx.problem.ctx->h;
-
-      Vec sol;
-      ierr = DMCompositeGetAccess(ctx.problem.ctx->dm, ctx.problem.sol, &sol, NULL);CHKERRQ(ierr);
-      DM dav;
-      ierr = DMCompositeGetEntries(ctx.problem.ctx->dm , &dav, PETSC_NULL);CHKERRQ(ierr);
-
-      compute_y(ctx.particles, dav, y, sol, box, mean, cross_prod, h);
-
-      ierr = DMCompositeRestoreAccess(ctx.problem.ctx->dm, ctx.problem.sol, &sol, NULL);CHKERRQ(ierr);
-      PetscFunctionReturn(0);
-    }
-
-    #undef __FUNCT__
-    #define __FUNCT__ "compute_y"
-    template<typename Shape>
-    PetscErrorCode compute_y(std::vector<particle<Shape>> const& particles,
-                             DM dm, 
-                             Vec y, 
-                             Vec sol,
-                             geometry::box<2, int> const& box,
-                             std::array<double, 2> const& h)
-    {
-      PetscErrorCode ierr;
-      PetscFunctionBeginUser;
-
-      const int Dimensions = 2;
-
-      PetscScalar ***psol;
-      ierr = DMDAVecGetArrayDOFRead(dm, sol, &psol);CHKERRQ(ierr);
+      auto sol = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, ctx.problem.sol, 0);
 
       int num = 0;
       PetscScalar *py;
       ierr = VecGetArray(y, &py);CHKERRQ(ierr);
 
-      for(std::size_t ipart=0; ipart<particles.size(); ++ipart){
-        auto& p = particles[ipart];
+      for(std::size_t ipart=0; ipart<ctx.particles.size(); ++ipart){
+        auto& p = ctx.particles[ipart];
         auto pbox = p.bounding_box(h);
         if (geometry::intersect(box, pbox)){
           auto new_box = geometry::box_inside(box, pbox);
           auto pts = find_fluid_points_insides(p, new_box, h);
-          for(auto& ind: pts){
-            py[num++] = psol[ind[1]][ind[0]][0];
-            py[num++] = psol[ind[1]][ind[0]][1];
+          for(auto& ind: pts)
+          {
+            geometry::vector<double, Dimensions> r;
+            for (std::size_t d=0; d<Dimensions; ++d)
+              r[d] = ind[d]*h[d] - p.center_[d];
+            auto tmp = mean[ipart] + p.Ci_R()*geometry::cross_product(cross_prod[ipart], r);
+            auto usol = sol.at(ind);
+            for (std::size_t d=0; d<Dimensions; ++d)
+              py[num++] = usol[d] - tmp[d];
           }
         }
       }
 
-      ierr = DMDAVecRestoreArrayDOFRead(dm, sol, &psol);CHKERRQ(ierr);
       ierr = VecRestoreArray(y, &py);CHKERRQ(ierr);
-
-      PetscFunctionReturn(0);
-    }
-    
-    #undef __FUNCT__
-    #define __FUNCT__ "compute_y"
-    template<typename Shape>
-    PetscErrorCode compute_y(std::vector<particle<Shape>> const& particles,
-                             DM dm, 
-                             Vec y, 
-                             Vec sol,
-                             geometry::box<3, int> const& box,
-                             std::array<double, 3> const& h)
-    {
-      PetscErrorCode ierr;
-      PetscFunctionBeginUser;
-
-      const int Dimensions = 3;
-      using position_type = geometry::position<Dimensions, double>;
-
-      PetscScalar ****psol;
-      ierr = DMDAVecGetArrayDOFRead(dm, sol, &psol);CHKERRQ(ierr);
-
-      int num = 0;
-      PetscScalar *py;
-      ierr = VecGetArray(y, &py);CHKERRQ(ierr);
-
-      for(std::size_t ipart=0; ipart<particles.size(); ++ipart){
-        auto& p = particles[ipart];
-        auto pbox = p.bounding_box(h);
-        if (geometry::intersect(box, pbox)){
-          auto new_box = geometry::box_inside(box, pbox);
-          auto pts = find_fluid_points_insides(p, new_box, h);
-          for(auto& ind: pts){
-            py[num++] = psol[ind[2]][ind[1]][ind[0]][0];
-            py[num++] = psol[ind[2]][ind[1]][ind[0]][1];
-            py[num++] = psol[ind[2]][ind[1]][ind[0]][2];
-          }
-        }
-      }
-
-      ierr = DMDAVecRestoreArrayDOFRead(dm, sol, &psol);CHKERRQ(ierr);
-      ierr = VecRestoreArray(y, &py);CHKERRQ(ierr);
-
       PetscFunctionReturn(0);
     }
 
@@ -786,17 +456,32 @@ namespace cafes
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
+
       auto box = fem::get_DM_bounds<Dimensions>(ctx.problem.ctx->dm, 0);
       auto& h = ctx.problem.ctx->h;
 
-      Vec sol;
-      ierr = DMCompositeGetAccess(ctx.problem.ctx->dm, ctx.problem.sol, &sol, NULL);CHKERRQ(ierr);
-      DM dav;
-      ierr = DMCompositeGetEntries(ctx.problem.ctx->dm , &dav, PETSC_NULL);CHKERRQ(ierr);
+      auto sol = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, ctx.problem.sol, 0);
 
-      compute_y(ctx.particles, dav, y, sol, box, h);
+      int num = 0;
+      PetscScalar *py;
+      ierr = VecGetArray(y, &py);CHKERRQ(ierr);
 
-      ierr = DMCompositeRestoreAccess(ctx.problem.ctx->dm, ctx.problem.sol, &sol, NULL);CHKERRQ(ierr);
+      for(std::size_t ipart=0; ipart<ctx.particles.size(); ++ipart){
+        auto& p = ctx.particles[ipart];
+        auto pbox = p.bounding_box(h);
+        if (geometry::intersect(box, pbox)){
+          auto new_box = geometry::box_inside(box, pbox);
+          auto pts = find_fluid_points_insides(p, new_box, h);
+          for(auto& ind: pts)
+          {
+            auto usol = sol.at(ind);
+            for (std::size_t d=0; d<Dimensions; ++d)
+              py[num++] = usol[d];
+          }
+        }
+      }
+
+      ierr = VecRestoreArray(y, &py);CHKERRQ(ierr);
       PetscFunctionReturn(0);
     }
   }
