@@ -13,6 +13,14 @@ void three(const PetscReal x[], PetscScalar *u){
   *u = 3.;
 }
 
+void ones(const PetscReal x[], PetscScalar *u){
+  *u = 1.;
+}
+
+void zeros(const PetscReal x[], PetscScalar *u){
+  *u = 0.;
+}
+
 int main(int argc, char **argv)
 {
   PetscErrorCode ierr;
@@ -20,13 +28,21 @@ int main(int argc, char **argv)
 
   ierr = PetscInitialize(&argc, &argv,  (char *)0, (char *)0);CHKERRQ(ierr);
 
-  auto bc = cafes::make_bc<dim>({ {{quadratic_u_2d}} // left
-                                , {{quadratic_u_2d}} // right
-                                , {{quadratic_u_2d}} // bottom
-                                , {{quadratic_u_2d}} // top
+  // auto bc = cafes::make_bc<dim>({ {{quadratic_u_2d, quadratic_v_2d}} // left
+  //                               , {{quadratic_u_2d, quadratic_v_2d}} // right
+  //                               , {{quadratic_u_2d, quadratic_v_2d}} // bottom
+  //                               , {{quadratic_u_2d, quadratic_v_2d}} // top
+  //                               });
+
+  // auto rhs = cafes::make_rhs<dim>({{three}});
+
+  auto bc = cafes::make_bc<dim>({ {{ones, zeros}} // left
+                                , {{zeros, zeros}} // right
+                                , {{zeros, zeros}} // bottom
+                                , {{zeros, zeros}} // top
                                 });
 
-  auto rhs = cafes::make_rhs<dim>({{ three}});
+  auto rhs = cafes::make_rhs<dim>({{zeros}});
   
   auto lap = cafes::make_laplacian<dim>(bc, rhs);
 
@@ -34,7 +50,7 @@ int main(int argc, char **argv)
   lap.setup_KSP();
   lap.solve();
 
-  ierr = cafes::io::save_VTK("Resultats", "test", lap.sol, lap.ctx->dm, lap.ctx->h);CHKERRQ(ierr);
+  ierr = cafes::io::save_VTK_laplacian("Resultats", "test", lap.sol, lap.ctx->dm, lap.ctx->h);CHKERRQ(ierr);
   ierr = PetscFinalize();CHKERRQ(ierr);
 
   return 0;

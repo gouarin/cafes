@@ -88,10 +88,58 @@ namespace cafes
       return box;
     }
 
+    auto get_DM_overlap_bounds_(DM const& dm, std::integral_constant<int, 2>, bool remove_final_points)
+    {
+      DMDALocalInfo info;
+      DMDAGetLocalInfo(dm, &info);
+      
+      geometry::box<int, 2> box{ { info.gxs          , info.gys           },
+                                 { info.gxs + info.gxm, info.gys + info.gym }
+                                };
+
+      // For the not periodic boundary condition.
+      if (remove_final_points)
+      {
+        if(box.upper_right[1] == info.my && info.by != DM_BOUNDARY_PERIODIC)
+          --box.upper_right[1];
+        if(box.upper_right[0] == info.mx && info.bx != DM_BOUNDARY_PERIODIC)
+          --box.upper_right[0];
+      }
+      return box;
+    }
+
+    auto get_DM_overlap_bounds_(DM const& dm, std::integral_constant<int, 3>, bool remove_final_points)
+    {
+      DMDALocalInfo info;
+      DMDAGetLocalInfo(dm, &info);
+
+      geometry::box<int, 3> box{ { info.gxs          , info.gys          , info.gzs           },
+                                 { info.gxs + info.gxm, info.gys + info.gym, info.gzs + info.gzm }
+                                };
+      
+      // For the not periodic boundary condition.
+      if (remove_final_points)
+      {
+        if(box.upper_right[2] == info.mz && info.bz != DM_BOUNDARY_PERIODIC)
+          --box.upper_right[2];
+        if(box.upper_right[1] == info.my && info.by != DM_BOUNDARY_PERIODIC)
+          --box.upper_right[1];
+        if(box.upper_right[0] == info.mx && info.bx != DM_BOUNDARY_PERIODIC)
+          --box.upper_right[0];
+      }
+      return box;
+    }
+
     template<int Dimensions>
     auto get_DM_bounds(DM const& dm, bool remove_final_points=true)
     {
       return get_DM_bounds_(dm, std::integral_constant<int, Dimensions>{}, remove_final_points);
+    }
+
+    template<int Dimensions>
+    auto get_DM_overlap_bounds(DM const& dm, bool remove_final_points=true)
+    {
+      return get_DM_overlap_bounds_(dm, std::integral_constant<int, Dimensions>{}, remove_final_points);
     }
 
     template<int Dimensions>
@@ -102,6 +150,16 @@ namespace cafes
       DM dmc[ndm];
       DMCompositeGetEntriesArray(dm, dmc);
       return get_DM_bounds_(dmc[i], std::integral_constant<int, Dimensions>{}, remove_final_points);
+    }
+
+    template<int Dimensions>
+    auto get_DM_overlap_bounds(DM const& dm, int i, bool remove_final_points=true)
+    {
+      int ndm;
+      DMCompositeGetNumberDM(dm, &ndm);
+      DM dmc[ndm];
+      DMCompositeGetEntriesArray(dm, dmc);
+      return get_DM_overlap_bounds_(dmc[i], std::integral_constant<int, Dimensions>{}, remove_final_points);
     }
 
     std::array<int, 2> get_global_bounds_(DM const& dm, std::integral_constant<int, 2>)

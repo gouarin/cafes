@@ -29,6 +29,9 @@
 #ifndef IO_VTK_HPP_INCLUDED
 #define IO_VTK_HPP_INCLUDED
 
+#include <fem/mesh.hpp>
+#include <particle/geometry/position.hpp>
+
 #include <iostream>
 #include <sstream>
 
@@ -260,6 +263,101 @@ namespace cafes
       ierr = DMRestoreLocalVector(dau, &locsolu);CHKERRQ(ierr);
       ierr = DMRestoreLocalVector(dap, &locsolp);CHKERRQ(ierr);
       ierr = DMCompositeRestoreAccess(dm,sol,&solu,&solp);CHKERRQ(ierr);
+      PetscFunctionReturn(0);
+    }
+
+    PetscErrorCode save_VTK_laplacian(const char* path, const char* filename, Vec sol, DM dm, std::array<double, 2> h)
+    {
+      PetscErrorCode ierr;
+
+      auto petsc_sol = petsc::petsc_vec<2>(dm, sol, 0);
+      ierr = petsc_sol.global_to_local(INSERT_VALUES);CHKERRQ(ierr);
+      auto box = fem::get_DM_overlap_bounds<2>(dm);
+
+      vtkStructuredGrid* DataSet = vtkStructuredGrid::New();
+      DataSet->SetExtent(box.bottom_left[0], box.upper_right[0], box.bottom_left[1], box.upper_right[1], 0, 0);
+    
+      vtkPoints* Points = vtkPoints::New();
+      
+      vtkDoubleArray* velocity = vtkDoubleArray::New();
+      velocity->SetNumberOfComponents(3);
+      velocity->SetName("velocity");
+           
+      for (int j=box.bottom_left[1]; j<box.upper_right[1]+1; j++)
+        for (int i=box.bottom_left[0]; i<box.upper_right[0]+1; i++)
+          {
+            geometry::position<int, 2> pos{i, j};
+            auto u = petsc_sol.at(pos);
+            Points->InsertNextPoint(i*h[0], j*h[1], 0.);
+            velocity->InsertNextTuple3(u[0], u[1], 0.);
+          }
+
+      int rank;
+      MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
+      DataSet->SetPoints(Points);
+      DataSet->GetPointData()->SetScalars(velocity);
+      
+      vtkXMLStructuredGridWriter* velocityDataWriter = vtkXMLStructuredGridWriter::New();
+      std::stringstream ov;
+      int size;//, rank;
+      MPI_Comm_size(PETSC_COMM_WORLD, &size);
+      MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
+      int x[size], y[size], z[size];
+      int sx[size], sy[size], sz[size];
+
+      MPI_Gather(&box.bottom_left[0], 1, MPI_INT, x, 1, MPI_INT, 0, PETSC_COMM_WORLD);
+      auto tmp = box.upper_right[0] - box.bottom_left[0] + 1;
+      MPI_Gather(&tmp, 1, MPI_INT, sx, 1, MPI_INT, 0, PETSC_COMM_WORLD);
+
+      MPI_Gather(&box.bottom_left[1], 1, MPI_INT, y, 1, MPI_INT, 0, PETSC_COMM_WORLD);
+      tmp = box.upper_right[1] - box.bottom_left[1] + 1;
+      MPI_Gather(&tmp, 1, MPI_INT, sy, 1, MPI_INT, 0, PETSC_COMM_WORLD);
+
+      ov << path << "/" << filename << "_velocity_" << rank << ".vts";
+      velocityDataWriter->SetFileName(ov.str().data());
+      //dataWriter->SetDataModeToAscii();
+    #if VTK_MAJOR_VERSION <= 5
+      velocityDataWriter->SetInput(DataSet);
+    #else
+      velocityDataWriter->SetInputData(DataSet);
+    #endif
+      velocityDataWriter->Write();
+
+      if (rank == 0){
+        auto bounds = fem::get_global_bounds<2>(dm);
+
+        std::stringstream oall;
+        oall << path << "/" << filename << "_velocity.pvts";
+        ofstream pvts;
+        pvts.open(oall.str().data(), ios::out | ios::trunc);
+        pvts << "<?xml version=\"1.0\"?>" << endl;
+        pvts << "<VTKFile type=\"PStructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\" compressor=\"vtkZLibDataCompressor\">" << endl;
+        pvts << "<PStructuredGrid WholeExtent=\"0 " << bounds[0]-1 << " 0 " << bounds[1]-1 << " 0 0\" GhostLevel=\"0\">";
+        pvts << "<PPoints>" << endl;
+        pvts << "<PDataArray type=\"Float32\" Name=\"Points\" NumberOfComponents=\"3\"/>" << endl;
+        pvts << "</PPoints>" << endl;
+        pvts << "<PPointData Vectors=\"velocity\">" << endl;
+        pvts << "<PDataArray type=\"Float64\" Name=\"velocity\" NumberOfComponents=\"3\"/>" << endl;
+        pvts << "</PPointData>" << endl;
+        pvts << "<PCells>" << endl;
+        pvts << "</PCells>" << endl;
+        // Attention!! ajout d'un point apres source pour aller dans le repertoire ..
+        // changer les arguments d'entree en dir et filename
+        for(int i=0; i<size; i++){
+          pvts << "<Piece Extent=\"" << x[i] << " " << x[i]+sx[i]-1;
+          pvts << " " << y[i] << " " << y[i]+sy[i]-1 << " ";
+          pvts << " 0 0\" Source=\"./" << filename << "_velocity_" << i << ".vts\"/>" << endl;
+        }
+        pvts << "</PStructuredGrid>" << endl;
+        pvts << "</VTKFile>" << endl;
+        pvts.close();
+      }
+
+      Points->Delete();
+      velocity->Delete();
+      DataSet->Delete();
+      velocityDataWriter->Delete();
+
       PetscFunctionReturn(0);
     }
 

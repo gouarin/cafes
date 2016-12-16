@@ -30,7 +30,7 @@
 #define CAFES_HPP_INCLUDED
 
 #include<problem/stokes.hpp>
-//#include<problem/laplacian.hpp>
+#include<problem/laplacian.hpp>
 #include<problem/sem.hpp>
 #include<problem/dton.hpp>
 #include<problem/ntod.hpp>
