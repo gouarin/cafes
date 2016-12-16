@@ -280,7 +280,6 @@ namespace cafes
       vtkPoints* Points = vtkPoints::New();
       
       vtkDoubleArray* velocity = vtkDoubleArray::New();
-      velocity->SetNumberOfComponents(3);
       velocity->SetName("velocity");
            
       for (int j=box.bottom_left[1]; j<box.upper_right[1]+1; j++)
@@ -289,7 +288,7 @@ namespace cafes
             geometry::position<int, 2> pos{i, j};
             auto u = petsc_sol.at(pos);
             Points->InsertNextPoint(i*h[0], j*h[1], 0.);
-            velocity->InsertNextTuple3(u[0], u[1], 0.);
+            velocity->InsertNextValue(*u);
           }
 
       int rank;
@@ -337,7 +336,7 @@ namespace cafes
         pvts << "<PDataArray type=\"Float32\" Name=\"Points\" NumberOfComponents=\"3\"/>" << endl;
         pvts << "</PPoints>" << endl;
         pvts << "<PPointData Vectors=\"velocity\">" << endl;
-        pvts << "<PDataArray type=\"Float64\" Name=\"velocity\" NumberOfComponents=\"3\"/>" << endl;
+        pvts << "<PDataArray type=\"Float64\" Name=\"velocity\"/>" << endl;
         pvts << "</PPointData>" << endl;
         pvts << "<PCells>" << endl;
         pvts << "</PCells>" << endl;
