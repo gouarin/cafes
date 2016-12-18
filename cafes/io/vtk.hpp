@@ -272,27 +272,28 @@ namespace cafes
 
       auto petsc_sol = petsc::petsc_vec<2>(dm, sol, 0);
       ierr = petsc_sol.global_to_local(INSERT_VALUES);CHKERRQ(ierr);
-      auto box = fem::get_DM_overlap_bounds<2>(dm);
+      auto box = fem::get_DM_overlap_bounds<2>(dm, false);
 
       vtkStructuredGrid* DataSet = vtkStructuredGrid::New();
-      DataSet->SetExtent(box.bottom_left[0], box.upper_right[0], box.bottom_left[1], box.upper_right[1], 0, 0);
+      DataSet->SetExtent(box.bottom_left[0], box.upper_right[0]-1, box.bottom_left[1], box.upper_right[1]-1, 0, 0);
     
       vtkPoints* Points = vtkPoints::New();
       
       vtkDoubleArray* velocity = vtkDoubleArray::New();
       velocity->SetName("velocity");
            
-      for (int j=box.bottom_left[1]; j<box.upper_right[1]+1; j++)
-        for (int i=box.bottom_left[0]; i<box.upper_right[0]+1; i++)
+      int rank;
+      MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
+
+      for (int j=box.bottom_left[1]; j<box.upper_right[1]; j++)
+        for (int i=box.bottom_left[0]; i<box.upper_right[0]; i++)
           {
             geometry::position<int, 2> pos{i, j};
             auto u = petsc_sol.at(pos);
             Points->InsertNextPoint(i*h[0], j*h[1], 0.);
-            velocity->InsertNextValue(*u);
+            velocity->InsertNextValue(u[0]);
           }
 
-      int rank;
-      MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
       DataSet->SetPoints(Points);
       DataSet->GetPointData()->SetScalars(velocity);
       
@@ -335,7 +336,7 @@ namespace cafes
         pvts << "<PPoints>" << endl;
         pvts << "<PDataArray type=\"Float32\" Name=\"Points\" NumberOfComponents=\"3\"/>" << endl;
         pvts << "</PPoints>" << endl;
-        pvts << "<PPointData Vectors=\"velocity\">" << endl;
+        pvts << "<PPointData Scalars=\"velocity\">" << endl;
         pvts << "<PDataArray type=\"Float64\" Name=\"velocity\"/>" << endl;
         pvts << "</PPointData>" << endl;
         pvts << "<PCells>" << endl;

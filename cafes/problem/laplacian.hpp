@@ -33,6 +33,8 @@
 #include <problem/context.hpp>
 #include <problem/options.hpp>
 #include <fem/matrixFree.hpp>
+#include <problem/stokes.hpp>
+
 #include <fem/rhs.hpp>
 #include <fem/mesh.hpp>
 #include <petsc.h>
@@ -43,6 +45,37 @@ namespace cafes
 {
   namespace problem
   {
+
+    #undef __FUNCT__
+    #define __FUNCT__ "setMGSolver"
+    PetscErrorCode setMGSolver(KSP ksp, DM dm){
+      PetscErrorCode ierr;
+      PetscFunctionBeginUser;
+      PC pc;
+      PetscInt MGlevels;
+      DMDALocalInfo  info;
+
+      PetscFunctionBeginUser;
+
+      ierr = DMDAGetLocalInfo(dm, &info);CHKERRQ(ierr);
+
+      /* Set MG solver on velocity field*/
+      ierr = KSPGetPC(ksp, &pc);CHKERRQ(ierr);
+      ierr = PCSetType(pc, PCMG);CHKERRQ(ierr);
+      
+      auto i = (info.mx<info.my)? info.mx: info.my;
+      i = (info.mz == 1 || i<info.mz)? i: info.mz;
+
+      MGlevels = 1;
+      while(i > 8){
+        i >>= 1;
+        MGlevels++;
+      }
+
+      ierr = PCMGSetLevels(pc, MGlevels, PETSC_NULL);CHKERRQ(ierr);
+
+      PetscFunctionReturn(0);
+    }
 
     //!
     //! Laplacian class 
@@ -123,12 +156,56 @@ namespace cafes
 
         ierr = KSPCreate(PETSC_COMM_WORLD, &ksp);CHKERRQ(ierr);
         ierr = KSPSetDM(ksp, ctx->dm);CHKERRQ(ierr);
+        //ierr = KSPSetType(ksp, KSPCG);CHKERRQ(ierr);
         ierr = KSPSetDMActive(ksp, PETSC_FALSE);CHKERRQ(ierr);
         ierr = KSPSetOptionsPrefix(ksp, "laplacian_");CHKERRQ(ierr);
 
         ierr = KSPSetOperators(ksp, A, A);CHKERRQ(ierr);
 
+        ierr = setMGSolver(ksp, ctx->dm);CHKERRQ(ierr);
+
         ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
+        ierr = KSPGetPC(ksp, &pc);CHKERRQ(ierr);
+
+        PetscBool same;
+        ierr = PetscObjectTypeCompare((PetscObject)pc, PCMG, &same);CHKERRQ(ierr);
+
+        // if MG is set
+        if (same) {
+          std::cout << "set MG !!!!!\n";
+
+          PetscErrorCode(*method)(petsc::petsc_vec<Dimensions>&,
+                                  petsc::petsc_vec<Dimensions>&,
+                                  std::array<double, Dimensions> const&);
+          
+          if (opt.strain_tensor)
+            method = fem::strain_tensor_mult;
+          else
+            method = fem::laplacian_mult;
+
+          PetscInt MGlevels;
+          KSP smoother;
+          ierr = PCMGGetLevels(pc, &MGlevels);CHKERRQ(ierr);
+
+          for(std::size_t i=0; i<MGlevels; ++i){
+            auto mg_h = ctx->h;
+            std::for_each(mg_h.begin(), mg_h.end(), [&](auto& x){x*=(1<<(MGlevels-1-i));});
+
+            auto *mg_ctx = new Ctx{ctx->dm, mg_h, method, fem::diag_laplacian_mult};
+            mg_ctx->set_dirichlet_bc(ctx->bc_);
+
+            PC pcsmoother;
+            ierr = PCMGGetSmoother(pc, i, &smoother);CHKERRQ(ierr);
+
+            ierr = KSPSetComputeOperators(smoother, createLevelMatrices<Ctx>, (void *) mg_ctx);CHKERRQ(ierr);
+            //ierr = KSPSetType(smoother, KSPCG);CHKERRQ(ierr);
+            ierr = KSPSetType(smoother, KSPCG);CHKERRQ(ierr);
+            ierr = KSPGetPC(smoother, &pcsmoother);CHKERRQ(ierr);
+            ierr = PCSetType(pcsmoother, PCJACOBI);CHKERRQ(ierr);
+          }
+
+          ierr = PCSetUp(pc);CHKERRQ(ierr);
+        }
         ierr = KSPSetUp(ksp);CHKERRQ(ierr);
 
         PetscFunctionReturn(0);
@@ -152,6 +229,12 @@ namespace cafes
   problem::laplacian<Dimensions> make_laplacian(fem::dirichlet_conditions<Dimensions> const& dc, fem::rhs_conditions<Ndof> const& rhs)
   {
     return {dc, rhs}; 
+  }
+
+  template<std::size_t Dimensions>
+  problem::laplacian<Dimensions> make_laplacian(fem::dirichlet_conditions<Dimensions> const& dc)
+  {
+    return {dc}; 
   }
 
 }

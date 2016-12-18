@@ -51,7 +51,6 @@ int main(int argc, char **argv)
   lap.setup_KSP();
   lap.solve();
 
-  ierr = cafes::io::save_VTK_laplacian("Resultats", "rhs", lap.rhs, lap.ctx->dm, lap.ctx->h);CHKERRQ(ierr);
   ierr = cafes::io::save_VTK_laplacian("Resultats", "test", lap.sol, lap.ctx->dm, lap.ctx->h);CHKERRQ(ierr);
   ierr = PetscFinalize();CHKERRQ(ierr);
 
