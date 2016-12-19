@@ -61,6 +61,8 @@ namespace cafes
 
       /* Set MG solver on velocity field*/
       ierr = KSPGetPC(ksp, &pc);CHKERRQ(ierr);
+
+      ierr = KSPSetType(ksp, KSPFGMRES);CHKERRQ(ierr);      
       ierr = PCSetType(pc, PCMG);CHKERRQ(ierr);
       
       auto i = (info.mx<info.my)? info.mx: info.my;
@@ -113,11 +115,7 @@ namespace cafes
         PetscErrorCode(*method)(petsc::petsc_vec<Dimensions>&,
                                 petsc::petsc_vec<Dimensions>&,
                                 std::array<double, Dimensions> const&);
-        if (opt.strain_tensor){
-          method = fem::strain_tensor_mult;
-        }
-        else
-          method = fem::laplacian_mult;
+        method = fem::laplacian_mult;
 
         // fix this to avoid raw pointer !!
         rhsc_ = rhsc;
@@ -156,7 +154,7 @@ namespace cafes
 
         ierr = KSPCreate(PETSC_COMM_WORLD, &ksp);CHKERRQ(ierr);
         ierr = KSPSetDM(ksp, ctx->dm);CHKERRQ(ierr);
-        //ierr = KSPSetType(ksp, KSPCG);CHKERRQ(ierr);
+        //ierr = KSPSetType(ksp, KSPGCR);CHKERRQ(ierr);
         ierr = KSPSetDMActive(ksp, PETSC_FALSE);CHKERRQ(ierr);
         ierr = KSPSetOptionsPrefix(ksp, "laplacian_");CHKERRQ(ierr);
 
@@ -178,10 +176,7 @@ namespace cafes
                                   petsc::petsc_vec<Dimensions>&,
                                   std::array<double, Dimensions> const&);
           
-          if (opt.strain_tensor)
-            method = fem::strain_tensor_mult;
-          else
-            method = fem::laplacian_mult;
+          method = fem::laplacian_mult;
 
           PetscInt MGlevels;
           KSP smoother;
@@ -198,7 +193,6 @@ namespace cafes
             ierr = PCMGGetSmoother(pc, i, &smoother);CHKERRQ(ierr);
 
             ierr = KSPSetComputeOperators(smoother, createLevelMatrices<Ctx>, (void *) mg_ctx);CHKERRQ(ierr);
-            //ierr = KSPSetType(smoother, KSPCG);CHKERRQ(ierr);
             ierr = KSPSetType(smoother, KSPCG);CHKERRQ(ierr);
             ierr = KSPGetPC(smoother, &pcsmoother);CHKERRQ(ierr);
             ierr = PCSetType(pcsmoother, PCJACOBI);CHKERRQ(ierr);

@@ -24,7 +24,6 @@ void zeros(const PetscReal x[], PetscScalar *u){
 int main(int argc, char **argv)
 {
   PetscErrorCode ierr;
-  std::size_t const dim = 2;
 
   ierr = PetscInitialize(&argc, &argv,  (char *)0, (char *)0);CHKERRQ(ierr);
 
@@ -36,11 +35,20 @@ int main(int argc, char **argv)
 
   // auto rhs = cafes::make_rhs<dim>({{three}});
 
+  std::size_t const dim = 2;
   auto bc = cafes::make_bc<dim>({ {{ones}} // left
                                 , {{zeros}} // right
                                 , {{zeros}} // bottom
                                 , {{zeros}} // top
                                 });
+  // std::size_t const dim = 3;
+  // auto bc = cafes::make_bc<dim>({ {{ones}} // left
+  //                               , {{zeros}} // right
+  //                               , {{zeros}} // bottom
+  //                               , {{zeros}} // top
+  //                               , {{zeros}} // front
+  //                               , {{zeros}} // back
+  //                               });
 
   auto rhs = cafes::make_rhs<dim>({{zeros}});
   //auto rhs = cafes::make_rhs<dim>({{nullptr}}); // doesn't work but it should !!!
@@ -51,6 +59,7 @@ int main(int argc, char **argv)
   lap.setup_KSP();
   lap.solve();
 
+  ierr = cafes::io::save_VTK_laplacian("Resultats", "rhs", lap.rhs, lap.ctx->dm, lap.ctx->h);CHKERRQ(ierr);
   ierr = cafes::io::save_VTK_laplacian("Resultats", "test", lap.sol, lap.ctx->dm, lap.ctx->h);CHKERRQ(ierr);
   ierr = PetscFinalize();CHKERRQ(ierr);
 
