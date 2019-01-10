@@ -209,6 +209,7 @@ namespace cafes
         ierr = DMDACreate2d(PETSC_COMM_WORLD, b_type[0], b_type[1], DMDA_STENCIL_BOX,
                             mpres[0], mpres[1], PETSC_DECIDE, PETSC_DECIDE,
                             1, 1, 0, 0, &DAPressure);CHKERRQ(ierr);
+        ierr = DMSetUp(DAPressure);CHKERRQ(ierr);
         ierr = DMDASetFieldName(DAPressure, 0, "p");CHKERRQ(ierr);
 
         ierr = DMDAGetInfo(DAPressure, NULL, NULL, NULL, NULL, &npx, &npy, NULL, NULL, NULL, NULL, NULL, NULL, NULL);CHKERRQ(ierr);
@@ -223,6 +224,7 @@ namespace cafes
         ierr = DMDACreate2d(PETSC_COMM_WORLD, b_type[0], b_type[1], DMDA_STENCIL_BOX,
                             mvel[0], mvel[1], npx, npy,
                             2, 1, lxu, lyu, &DAVelocity);CHKERRQ(ierr);
+        ierr = DMSetUp(DAVelocity);CHKERRQ(ierr);
         ierr = DMDASetFieldName(DAVelocity, 0, "u");CHKERRQ(ierr);
         ierr = DMDASetFieldName(DAVelocity, 1, "v");CHKERRQ(ierr);
         

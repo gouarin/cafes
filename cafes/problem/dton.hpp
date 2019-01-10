@@ -110,7 +110,7 @@ namespace cafes
       KSP ksp;
       std::size_t scale_=4;
       bool default_flags_ = true;
-      bool use_sing = true;
+      bool use_sing = false;
 
       using dpart_type = typename std::conditional<Dimensions == 2, 
                                   double, 
@@ -259,8 +259,8 @@ namespace cafes
         {
           ctx->compute_rhs = false;
           ctx->add_rigid_motion = false;
-          //ctx->compute_singularity = false;
-          ctx->compute_singularity = true;
+          // ctx->compute_singularity = false;
+          ctx->compute_singularity = use_sing;
         }
 
         ierr = KSPSolve(ksp, rhs, sol);CHKERRQ(ierr);
