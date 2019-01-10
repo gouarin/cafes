@@ -73,11 +73,11 @@ namespace cafes
 
       /* Set MG solver on velocity field*/
       ierr = KSPGetPC(sub_ksp[0], &pc_i);CHKERRQ(ierr);
-      // ierr = KSPSetDM(sub_ksp[0], dav);CHKERRQ(ierr);
-      // ierr = KSPSetDMActive(sub_ksp[0], PETSC_FALSE);CHKERRQ(ierr);
+      ierr = KSPSetDM(sub_ksp[0], dav);CHKERRQ(ierr);
+      ierr = KSPSetDMActive(sub_ksp[0], PETSC_FALSE);CHKERRQ(ierr);
 
-      //ierr = KSPSetType(sub_ksp[0], KSPCG);CHKERRQ(ierr);
-      ierr = KSPSetType(sub_ksp[0], KSPFGMRES);CHKERRQ(ierr);
+      // ierr = KSPSetType(sub_ksp[0], KSPCG);CHKERRQ(ierr);
+      ierr = KSPSetType(sub_ksp[0], KSPGCR);CHKERRQ(ierr);
       ierr = KSPSetTolerances(sub_ksp[0], 1e-4, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);CHKERRQ(ierr);
       ierr = PCSetType(pc_i, PCMG);CHKERRQ(ierr);
 
@@ -274,7 +274,7 @@ namespace cafes
           ierr = DMCompositeGetEntries(ctx->dm, &dav, &dap);CHKERRQ(ierr);
 
           ierr = KSPGetPC(subksp[0], &pc);CHKERRQ(ierr);
-          ierr = KSPSetType(subksp[0], KSPCG);CHKERRQ(ierr);
+          ierr = KSPSetType(subksp[0], KSPGCR);CHKERRQ(ierr);
           ierr = KSPSetDM(subksp[0], dav);CHKERRQ(ierr);
           ierr = KSPSetDMActive(subksp[0], PETSC_FALSE);CHKERRQ(ierr);
           ierr = PetscObjectTypeCompare((PetscObject)pc, PCMG, &same);CHKERRQ(ierr);
