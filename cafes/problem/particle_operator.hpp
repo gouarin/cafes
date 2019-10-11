@@ -143,7 +143,6 @@ namespace cafes
       for(auto& rpts: r)
       {
         for(std::size_t i=0; i<rpts.size(); ++i){
-          particles[ipart].velocity_ - geometry::cross_product(particles[ipart].angular_velocity_, r[ipart][i]);
           g[ipart][i] -= particles[ipart].velocity_ - geometry::cross_product(particles[ipart].angular_velocity_, r[ipart][i]);
         }
         ipart++;
