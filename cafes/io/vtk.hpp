@@ -699,6 +699,58 @@ namespace cafes
 
     #undef __FUNCT__
     #define __FUNCT__ "saveParticles"
+    template<typename Shape>
+    PetscErrorCode saveParticles(const char* path, const char* filename,
+                                 std::vector<particle<Shape>>const& particles)
+    {
+      PetscErrorCode ierr;
+      PetscFunctionBeginUser;
+
+      int rank;
+      ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
+
+      if (rank == 0){
+
+        vtkSmartPointer<vtkPoints> spheresPoints = vtkSmartPointer<vtkPoints>::New();
+        vtkSmartPointer<vtkDoubleArray> shperesRadius = vtkSmartPointer<vtkDoubleArray>::New();
+        vtkSmartPointer<vtkPolyData> data = vtkSmartPointer<vtkPolyData>::New();
+
+        data->Allocate(1, 1);
+
+        spheresPoints->SetDataTypeToDouble();
+        spheresPoints->SetNumberOfPoints(particles.size());
+        data->SetPoints(spheresPoints);
+
+        shperesRadius->SetName("radius");
+        shperesRadius->SetNumberOfComponents(1);
+        shperesRadius->SetNumberOfTuples(particles.size());
+        data->GetPointData()->AddArray(shperesRadius);
+
+        std::size_t i = 0;
+        for(auto& p: particles){
+          spheresPoints->SetPoint(i, p.center_[0], p.center_[1], 0.);
+          shperesRadius->SetValue(i, p.shape_factors_[0]);
+          i++;
+        }
+
+        std::stringstream output;
+        output << path << "/" << filename << "_particles.vtp";
+        vtkSmartPointer<vtkXMLPolyDataWriter> writer = vtkSmartPointer<vtkXMLPolyDataWriter>::New();
+        writer->SetFileName(output.str().data());
+        //writer->SetDataModeToAscii();
+      #if VTK_MAJOR_VERSION <= 5
+        writer->SetInput(data);
+      #else
+        writer->SetInputData(data);
+      #endif
+
+        writer->Write();
+      }
+      PetscFunctionReturn(0);
+    }
+
+    #undef __FUNCT__
+    #define __FUNCT__ "saveParticles"
     template<typename Shape, typename torques_type>
     PetscErrorCode saveParticles(const char* path, const char* filename,
                                  std::vector<particle<Shape>>const& particles,
