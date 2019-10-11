@@ -169,9 +169,9 @@ namespace cafes
         ierr = VecScale(rhs, -1.);CHKERRQ(ierr);
 
         ierr = VecCopy(sol_tmp, sol_rhs);CHKERRQ(ierr);
-        ierr = cafes::io::save_VTK("Resultats", "two_part_u0", sol_tmp, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
-        ierr = cafes::io::save_VTK("Resultats", "two_part_w0", problem_.sol, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
-        ierr = cafes::io::save_VTK("Resultats", "two_part_w0_rhs", problem_.rhs, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
+        // ierr = cafes::io::save_VTK("Resultats", "two_part_u0", sol_tmp, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
+        // ierr = cafes::io::save_VTK("Resultats", "two_part_w0", problem_.sol, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
+        // ierr = cafes::io::save_VTK("Resultats", "two_part_w0_rhs", problem_.rhs, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
 
         PetscFunctionReturn(0);
       }
@@ -185,7 +185,7 @@ namespace cafes
         PetscFunctionBegin;
 
         ierr = KSPCreate(PETSC_COMM_WORLD, &ksp);CHKERRQ(ierr);
-        ierr = KSPSetOptionsPrefix(ksp, "DtoN_");CHKERRQ(ierr);
+        ierr = KSPSetOptionsPrefix(ksp, "dton_");CHKERRQ(ierr);
 
         ierr = KSPSetOperators(ksp, A, A);CHKERRQ(ierr);
         ierr = KSPGetPC(ksp, &pc);CHKERRQ(ierr);
@@ -218,10 +218,10 @@ namespace cafes
         //ierr = cafes::io::save_VTK("Resultats", "two_part_reg", sol, ctx->problem.ctx->dm, ctx->problem.ctx->h);CHKERRQ(ierr);
 
         ierr = ctx->problem.solve();CHKERRQ(ierr);
-        ierr = cafes::io::save_VTK("Resultats", "two_part_tilde_ug", problem_.sol, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
+        // ierr = cafes::io::save_VTK("Resultats", "two_part_tilde_ug", problem_.sol, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
 
         VecAXPY(problem_.sol, 1, sol_rhs);
-        ierr = cafes::io::save_VTK("Resultats", "two_part_new_u", problem_.sol, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
+        // ierr = cafes::io::save_VTK("Resultats", "two_part_new_u", problem_.sol, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
 
         ierr = VecSet(ctx->problem.rhs, 0.);CHKERRQ(ierr);
 
@@ -237,13 +237,13 @@ namespace cafes
         //ierr = cafes::io::save_VTK("Resultats", "two_part_reg", sol, ctx->problem.ctx->dm, ctx->problem.ctx->h);CHKERRQ(ierr);
 
         ierr = ctx->problem.solve();CHKERRQ(ierr);
-        ierr = cafes::io::save_VTK("Resultats", "two_part_ureg", problem_.sol, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
+        // ierr = cafes::io::save_VTK("Resultats", "two_part_ureg", problem_.sol, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
 
         if (use_sing)
         {
           ierr = singularity::add_singularity_to_last_sol<Dimensions, Ctx>(*ctx, problem_.sol);CHKERRQ(ierr);
         }
-        ierr = cafes::io::save_VTK("Resultats", "two_part_u", problem_.sol, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
+        // ierr = cafes::io::save_VTK("Resultats", "two_part_u", problem_.sol, problem_.ctx->dm, problem_.ctx->h);CHKERRQ(ierr);
 
         PetscFunctionReturn(0);
       }
