@@ -209,6 +209,17 @@ auto getMatElemLaplacian(std::array<double, 2> const& h){
   return MatElem;
 }
 
+auto getMatElemLaplacianA(std::array<double, 2> const& h){
+  std::array<double, 16> MatElem;
+  double hxy = h[0]/h[1], hyx = h[1]/h[0];
+
+  for(std::size_t i=0; i<4; ++i)
+    for(std::size_t j=0; j<4; ++j)
+      MatElem[i + j*4] = hyx*matElem2d_dxudxu[i][j] + hxy*matElem2d_dyudyu[i][j];
+  
+  return MatElem;
+}
+
 auto getMatElemStrainTensor(std::array<double, 2> const& h){
   std::array<std::array<std::array<std::array<double, 2> , 2>, 4>, 4> MatElem;
   double hxy = h[0]/h[1], hyx = h[1]/h[0];
@@ -238,6 +249,38 @@ auto getMatElemPressure(std::array<double, 2> const& h){
     {
       MatElem[i][j][0] = -h[1]*matElem2d_pdxu[i][j];
       MatElem[i][j][1] = -h[0]*matElem2d_pdyu[i][j];
+    }
+  }
+
+  return MatElem;
+}
+
+auto getMatElemPressureA(std::array<double, 2> const& h){
+  // return the integral of p div u
+  std::array<double, 72> MatElem;
+
+  for(std::size_t i=0; i<4; ++i)
+  {
+    for(std::size_t j=0; j<9; ++j)
+    {
+      MatElem[18*i + j] = -h[1]*matElem2d_pdxu[i][j];
+      MatElem[18*i + j + 9] = -h[0]*matElem2d_pdyu[i][j];
+    }
+  }
+
+  return MatElem;
+}
+
+auto getMatElemPressureAT(std::array<double, 2> const& h){
+  // return the integral of p div u
+  std::array<double, 72> MatElem;
+
+  for(std::size_t i=0; i<4; ++i)
+  {
+    for(std::size_t j=0; j<9; ++j)
+    {
+      MatElem[i + 4*j] = -h[1]*matElem2d_pdxu[i][j];
+      MatElem[i + 4*( j + 9)] = -h[0]*matElem2d_pdyu[i][j];
     }
   }
 

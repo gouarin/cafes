@@ -47,6 +47,7 @@ namespace cafes
 
     template<std::size_t Dimensions, std::size_t Ndm=1>
     struct context{
+      static constexpr std::size_t dim = Dimensions;
       template<std::size_t N> using int_ = std::integral_constant<std::size_t, N>;
       using ndm_type = int_<Ndm>;
       using dimension_type = int_<Dimensions>;

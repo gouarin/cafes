@@ -8,8 +8,11 @@
 #ADD_EXECUTABLE(superellipsoid superellipsoid_uniform.cpp)
 #TARGET_LINK_LIBRARIES(superellipsoid libqhullcpp libqhullr ${HDF5_hdf5_LIBRARY_RELEASE})
 
-ADD_EXECUTABLE(sem sem.cpp)
-TARGET_LINK_LIBRARIES(sem ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
+# ADD_EXECUTABLE(sem sem.cpp)
+# TARGET_LINK_LIBRARIES(sem ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
+
+ADD_EXECUTABLE(preallocate preallocate.cpp)
+TARGET_LINK_LIBRARIES(preallocate ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
 
 #ADD_EXECUTABLE(particle_operator particle_operator.cpp)
 #TARGET_LINK_LIBRARIES(particle_operator ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})

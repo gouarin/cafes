@@ -176,7 +176,133 @@ namespace cafes
 
       PetscFunctionReturn(0);
     }
+
+    #undef __FUNCT__
+    #define __FUNCT__ "set_dirichlet_on_mat_impl"
+    PetscErrorCode set_dirichlet_on_mat_impl(Mat& A,
+                                     dirichlet_conditions<2> bc)
+    {
+      PetscErrorCode ierr;
+      PetscFunctionBeginUser;
+
+      PetscInt       i, j, d, ind, nx, ny, size;
+      PetscInt       local_id, nbcs;
+      PetscInt       *bc_id1, *bc_id2;
+      DMDALocalInfo  info;
+      IS is;
+
+      // warning: we assume that both u and v on a border have a Dirichlet condition
+      DM dm, dmcomposite;
+      ierr = MatGetDM(A, &dmcomposite);CHKERRQ(ierr);
+      ierr = DMCompositeGetEntries(dmcomposite, &dm, PETSC_NULL);CHKERRQ(ierr);
+
+      auto bd_type = get_boundary_type<2>(dm);
+
+      ierr = DMDAGetLocalInfo(dm, &info);CHKERRQ(ierr);
+
+      ierr = PetscMalloc(sizeof(PetscInt)*2*info.gym, &bc_id1);CHKERRQ(ierr);
+      ierr = PetscMalloc(sizeof(PetscInt)*2*info.gxm, &bc_id2);CHKERRQ(ierr);
+
+      MPI_Comm_size(PETSC_COMM_WORLD, &size);
+      nx = (size == 1)? info.mx: info.gxm;
+      ny = (size == 1)? info.my: info.gym;
+
+      //left border
+      nbcs = 0;
+      i = 0;
+      ind = 0;
+      for(j=0; j<ny; j++){
+        local_id = info.dof*(i + j*nx);
+        bc_id1[ind] = local_id;
+        bc_id1[ind + 1] = local_id + 1;
+        ind += 2;
+      }
+
+      if (bd_type[0] != DM_BOUNDARY_PERIODIC)
+        if(info.xs == 0 && info.bx != DM_BOUNDARY_PERIODIC){
+          nbcs = 2*ny;
+        }
+
+      ierr = MatZeroRowsLocal(A, nbcs, bc_id1, 1.0, NULL, NULL);CHKERRQ(ierr);
+
+      // right border
+      nbcs = 0;
+      i = (size == 1) ? info.mx-1: info.gxm-1;
+      ind = 0;
+      for(j=0; j<ny; j++){
+        local_id = info.dof*(i + j*nx);
+        bc_id1[ind] = local_id;
+        bc_id1[ind+1] = local_id + 1;
+        ind += 2;
+      }
+
+      if (bd_type[0] != DM_BOUNDARY_PERIODIC)
+        if(info.xs + info.xm == info.mx && info.bx != DM_BOUNDARY_PERIODIC){
+          nbcs = 2*ny;
+        }
+
+      ierr = MatZeroRowsLocal(A, nbcs, bc_id1, 1.0, NULL, NULL);CHKERRQ(ierr);
+
+      nx = (size == 1) ? info.mx: info.gxm;
+
+      // bottom border
+      nbcs = 0;
+      j = 0;
+      ind = 0;
+      for(i=0; i<nx; i++){
+        local_id = info.dof*(i + j*nx);
+        bc_id2[ind] = local_id;
+        bc_id2[ind+1] = local_id + 1;
+        ind += 2;
+      }
+
+      if (bd_type[1] != DM_BOUNDARY_PERIODIC)
+        if(info.ys == 0 && info.by != DM_BOUNDARY_PERIODIC){
+          nbcs =  2*nx;
+        }
+
+      ierr = MatZeroRowsLocal(A, nbcs, bc_id2, 1.0, NULL, NULL);CHKERRQ(ierr);
+
+      // top border
+      nbcs = 0;
+      j = (size == 1) ? info.my-1:  info.gym-1;
+      ind = 0;
+      for(i=0; i<nx; i++){
+        local_id = info.dof*(i + j*nx);
+        bc_id2[ind] = local_id;
+        bc_id2[ind+1] = local_id + 1;
+        ind += 2;
+      }
+
+      if (bd_type[1] != DM_BOUNDARY_PERIODIC)
+        if(info.ys + info.ym == info.my && info.by != DM_BOUNDARY_PERIODIC){
+          nbcs = 2*nx;
+        }
+
+      ierr = MatZeroRowsLocal(A, nbcs, bc_id2, 1.0, NULL, NULL);CHKERRQ(ierr);
+
+      ierr = PetscFree(bc_id1);CHKERRQ(ierr);
+      ierr = PetscFree(bc_id2);CHKERRQ(ierr);
+
+      PetscFunctionReturn(0);
+    }
+
+    #undef __FUNCT__
+    #define __FUNCT__ "SetDirichletOnMat"
+    template<std::size_t Dimensions>
+    PetscErrorCode SetDirichletOnMat(Mat& A,
+                                     dirichlet_conditions<Dimensions> bc)
+    {
+      PetscErrorCode ierr;
+      PetscFunctionBeginUser;
+
+      set_dirichlet_on_mat_impl(A, bc);
+
+      PetscFunctionReturn(0);
+    }
+
   }
+
   template<std::size_t Dimensions>
   fem::dirichlet_conditions<Dimensions> make_bc(std::initializer_list<std::array<condition_fn, Dimensions>> il){
     return {il};

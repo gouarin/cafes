@@ -98,6 +98,21 @@ namespace cafes
             return that;
         }
 
+        inline PetscInt DMDALocalIndex2D(DMDALocalInfo& info, int i, int j)
+        {
+            return info.dof*((j - info.gys)*info.gxm + i - info.gxs);
+        }
+
+        auto get_indices(DMDALocalInfo& info, geometry::position<int, 2> const& ix, int dof){
+            std::array<int, 4> that;
+
+            that[0] = dof + DMDALocalIndex2D(info, ix[0], ix[1]);
+            that[1] = dof + DMDALocalIndex2D(info, ix[0]+1, ix[1]);
+            that[2] = dof + DMDALocalIndex2D(info, ix[0], ix[1]+1);
+            that[3] = dof + DMDALocalIndex2D(info, ix[0]+1, ix[1]+1);
+            return that;
+        }
+
         auto get_element(geometry::position<int, 3> const& ix){
             std::array<std::array<int, 3>, 8> that;
 
@@ -124,6 +139,24 @@ namespace cafes
             that[6] = {2*ix[0]  , 2*ix[1]+2};
             that[7] = {2*ix[0]+1, 2*ix[1]+2};
             that[8] = {2*ix[0]+2, 2*ix[1]+2};
+            return that;
+        }
+
+        auto get_indices_4Q1(DMDALocalInfo& info, geometry::position<int, 2> const& ix){
+            std::array<int, 18> that;
+
+            for(std::size_t d=0; d<2; ++d)
+            {
+                that[0 + d*9] = d + DMDALocalIndex2D(info, 2*ix[0]  , 2*ix[1]  );
+                that[1 + d*9] = d + DMDALocalIndex2D(info, 2*ix[0]+1, 2*ix[1]  );
+                that[2 + d*9] = d + DMDALocalIndex2D(info, 2*ix[0]+2, 2*ix[1]  );
+                that[3 + d*9] = d + DMDALocalIndex2D(info, 2*ix[0]  , 2*ix[1]+1);
+                that[4 + d*9] = d + DMDALocalIndex2D(info, 2*ix[0]+1, 2*ix[1]+1);
+                that[5 + d*9] = d + DMDALocalIndex2D(info, 2*ix[0]+2, 2*ix[1]+1);
+                that[6 + d*9] = d + DMDALocalIndex2D(info, 2*ix[0]  , 2*ix[1]+2);
+                that[7 + d*9] = d + DMDALocalIndex2D(info, 2*ix[0]+1, 2*ix[1]+2);
+                that[8 + d*9] = d + DMDALocalIndex2D(info, 2*ix[0]+2, 2*ix[1]+2);
+            }
             return that;
         }
 
