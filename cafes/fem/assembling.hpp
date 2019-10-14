@@ -322,12 +322,13 @@ PetscErrorCode PreallocateMat(Context *user, Options opt, const MatType mtype, M
 
 namespace cafes
 {
-  auto const kernel_diag_block_A = [](Mat& A, auto& info, auto const& matelem){
+  auto const kernel_diag_block_A = [](Mat& A, auto& info, auto const& matelem, int const& dec = 0)
+  {
     auto const kernel_pos = [&](auto const& pos)
     {
       for(std::size_t d=0; d<info.dof; ++d)
       {
-        auto ielem = fem::get_indices(info, pos, d);
+        auto ielem = fem::get_indices(info, pos, d+dec);
         MatSetValuesLocal(A, ielem.size(), ielem.data(), ielem.size(), ielem.data(), matelem.data(), ADD_VALUES);
       }
     };
@@ -347,18 +348,41 @@ namespace cafes
     algorithm::iterate(box, kernel_diag_block_A(A, info, matelem));
   }
 
-    auto const kernel_off_diag_block_A = [](auto& A, auto& dec, auto& infov, auto& infop, const auto& matelemB, const auto& matelemBT)
-    {
-      auto const kernel_pos = [&](auto const& pos)
-      {
-        auto ielem_p = fem::get_indices(infop, pos, dec);
-        auto ielem_v = fem::get_indices_4Q1(infov, pos);
+  template<std::size_t Dimensions>
+  PetscErrorCode  mass_assembling(DM& dm, Mat& A, const std::array<double, Dimensions>& h)
+  {
+    PetscErrorCode ierr;
+    DMDALocalInfo infov, infop;
+    DM dav, dap;
 
-        MatSetValuesLocal(A, ielem_p.size(), ielem_p.data(), ielem_v.size(), ielem_v.data(), matelemB.data(), ADD_VALUES);
-        MatSetValuesLocal(A, ielem_v.size(), ielem_v.data(), ielem_p.size(), ielem_p.data(), matelemBT.data(), ADD_VALUES);
-      };
-      return kernel_pos;
+    ierr = DMCompositeGetEntries(dm, &dav, &dap);CHKERRQ(ierr);
+
+    DMDAGetLocalInfo(dav, &infov);
+    DMDAGetLocalInfo(dap, &infop);
+
+    auto box = fem::get_DM_bounds<Dimensions>(dap);
+
+    auto matelem = getMatElemMassA(h);
+
+    int dec = infov.dof*infov.gxm*infov.gym*infov.gzm;
+
+    algorithm::iterate(box, kernel_diag_block_A(A, infop, matelem, dec));
+
+    return ierr;
+  }
+
+  auto const kernel_off_diag_block_A = [](auto& A, auto& dec, auto& infov, auto& infop, const auto& matelemB, const auto& matelemBT)
+  {
+    auto const kernel_pos = [&](auto const& pos)
+    {
+      auto ielem_p = fem::get_indices(infop, pos, dec);
+      auto ielem_v = fem::get_indices_4Q1(infov, pos);
+
+      MatSetValuesLocal(A, ielem_p.size(), ielem_p.data(), ielem_v.size(), ielem_v.data(), matelemB.data(), ADD_VALUES);
+      MatSetValuesLocal(A, ielem_v.size(), ielem_v.data(), ielem_p.size(), ielem_p.data(), matelemBT.data(), ADD_VALUES);
     };
+    return kernel_pos;
+  };
 
 
   template<std::size_t Dimensions>

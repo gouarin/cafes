@@ -1,3 +1,5 @@
+// ./preallocate -nx 10 -ny 10 -stokes_ksp_type gmres -stokes_pc_type none -stokes_ksp_monitor
+
 #include <cafes.hpp>
 #include <fem/assembling.hpp>
 #include <petsc.h>
@@ -46,22 +48,33 @@ int main(int argc, char **argv)
   
   auto st = cafes::make_stokes<dim>(bc, rhs);
 
-  Mat A;
+  Mat A, P;
   PreallocateMat(st.ctx, st.opt, MATAIJ, &A, false);
+  PreallocateMat(st.ctx, st.opt, MATAIJ, &P, true);
 
   DM dav, dap;
   ierr = DMCompositeGetEntries(st.ctx->dm, &dav, &dap);CHKERRQ(ierr);
 
   MatSetDM(A, st.ctx->dm);
+  MatSetDM(P, st.ctx->dm);
   MatSetFromOptions(A);
+  MatSetFromOptions(P);
 
   cafes::laplacian_assembling(dav, A, st.ctx->h);
   cafes::B_BT_assembling(st.ctx->dm, A, st.ctx->h);
+  cafes::laplacian_assembling(dav, P, st.ctx->h);
+  std::array<double, 2> hp; hp[0] = 2*st.ctx->h[0]; hp[1] = 2*st.ctx->h[1];
+  cafes::mass_assembling(st.ctx->dm, P, hp);
 
   MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
   MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
+  MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY);
+
+  //ierr = MatView(P, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
   cafes::fem::SetDirichletOnMat(A, bc);
+  cafes::fem::SetDirichletOnMat(P, bc);
 
   st.setup_RHS();
 
@@ -70,7 +83,7 @@ int main(int argc, char **argv)
   KSPSetDM(ksp, st.ctx->dm);CHKERRQ(ierr);
   KSPSetDMActive(ksp, PETSC_FALSE);CHKERRQ(ierr);
   KSPSetOptionsPrefix(ksp, "stokes_");CHKERRQ(ierr);
-  KSPSetOperators(ksp, A, A);CHKERRQ(ierr);
+  KSPSetOperators(ksp, A, P);CHKERRQ(ierr);
   KSPSetFromOptions(ksp);
   
   KSPSolve(ksp, st.rhs, st.sol);

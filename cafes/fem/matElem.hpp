@@ -297,6 +297,16 @@ auto getMatElemMass(std::array<double, 2> const& h){
   return MatElem;  
 }
 
+auto getMatElemMassA(std::array<double, 2> const& h){
+  std::array<double, 16> MatElem;
+
+  for(std::size_t i=0; i<4; ++i)
+    for(std::size_t j=0; j<4; ++j)
+      MatElem[i+4*j] = h[0]*h[1]*matElemMass2d[i][j];
+
+  return MatElem;  
+}
+
 auto getMatElemLaplacian(std::array<double, 3> const& h){
   array_3d MatElem;
   double hxy = h[0]*h[1], hxz = h[0]*h[2], hyz = h[1]*h[2];
