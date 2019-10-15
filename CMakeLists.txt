@@ -20,4 +20,4 @@ link_directories(${PETSC_LIBRARY_DIRS})
 
 ADD_SUBDIRECTORY(external_packages/qhull)
 ADD_SUBDIRECTORY(tests)
-# ADD_SUBDIRECTORY(demos)
+ADD_SUBDIRECTORY(demos)
