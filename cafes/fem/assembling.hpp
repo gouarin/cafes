@@ -242,7 +242,7 @@ PetscErrorCode PreallocateMat(Context *user, Options opt, const MatType mtype,
     ierr = PetscMalloc2(colp, &rowsp, colp, &colsp);
     CHKERRQ(ierr);
 
-    if (precond)
+    // if (precond)
     {
         // preallocation of the pressure -> block (2, 2)
         indxEnd = infop.xs + infop.xm;
@@ -290,7 +290,8 @@ PetscErrorCode PreallocateMat(Context *user, Options opt, const MatType mtype,
             }
         }
     }
-    else
+    // else
+    if (!precond)
     {
         // preallocation of the pressure-velocity interaction -> block (2, 1)
         PetscInt pst, lst, rst, icnt, ii, kk, jj, rank;
@@ -536,6 +537,27 @@ namespace cafes
         auto matelem = getMatElemStrainTensorA(h);
 
         algorithm::iterate(box, kernel_tensor_block_A(A, info, matelem));
+    }
+
+    template<std::size_t Dimensions>
+    void diagonal_assembling(DM &dm, Mat &A, double value)
+    {
+        DMDALocalInfo infov, infop;
+        DM dav, dap;
+
+        DMCompositeGetEntries(dm, &dav, &dap);
+
+        DMDAGetLocalInfo(dav, &infov);
+        DMDAGetLocalInfo(dap, &infop);
+
+        auto box = fem::get_DM_bounds<Dimensions>(dap);
+
+        std::array<double, 16> matelem;
+        matelem.fill(0);
+
+        int dec = infov.dof * infov.gxm * infov.gym * infov.gzm;
+
+        algorithm::iterate(box, kernel_diag_block_A(A, infop, matelem, dec));
     }
 
     auto const kernel_off_diag_block_A = [](auto &A, auto &dec, auto &infov,
