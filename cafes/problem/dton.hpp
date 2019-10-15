@@ -194,19 +194,19 @@ namespace cafes
                 ierr = VecScale(rhs, -1.);
                 CHKERRQ(ierr);
 
-                ierr = VecCopy(sol_tmp, sol_rhs);
-                CHKERRQ(ierr);
-                ierr = cafes::io::save_VTK("Resultats", "two_part_u0", sol_tmp,
-                                           problem_.ctx->dm, problem_.ctx->h);
-                CHKERRQ(ierr);
-                ierr = cafes::io::save_VTK("Resultats", "two_part_w0",
-                                           problem_.sol, problem_.ctx->dm,
-                                           problem_.ctx->h);
-                CHKERRQ(ierr);
-                ierr = cafes::io::save_VTK("Resultats", "two_part_w0_rhs",
-                                           problem_.rhs, problem_.ctx->dm,
-                                           problem_.ctx->h);
-                CHKERRQ(ierr);
+                // ierr = VecCopy(sol_tmp, sol_rhs);
+                // CHKERRQ(ierr);
+                // ierr = cafes::io::save_VTK("Resultats", "two_part_u0", sol_tmp,
+                //                            problem_.ctx->dm, problem_.ctx->h);
+                // CHKERRQ(ierr);
+                // ierr = cafes::io::save_VTK("Resultats", "two_part_w0",
+                //                            problem_.sol, problem_.ctx->dm,
+                //                            problem_.ctx->h);
+                // CHKERRQ(ierr);
+                // ierr = cafes::io::save_VTK("Resultats", "two_part_w0_rhs",
+                //                            problem_.rhs, problem_.ctx->dm,
+                //                            problem_.ctx->h);
+                // CHKERRQ(ierr);
 
                 PetscFunctionReturn(0);
             }

@@ -473,9 +473,11 @@ namespace cafes
           auto pts = find_fluid_points_insides(p, new_box, h);
           for(auto& ind: pts)
           {
-            auto usol = sol.at(ind);
+            auto usol = sol.at_g(ind);
             for (std::size_t d=0; d<Dimensions; ++d)
-              py[num++] = usol[d];
+              {
+                py[num++] = usol[d];
+              }
           }
         }
       }

@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 
     double R1 = .05;
     double R2 = .05;
-    double dist = .05;
+    double dist = .05/5;
 
     auto se1 = cafes::make_circle({.5 - R1 - dist / 2, .5}, R1, 0);
     auto se2 = cafes::make_circle({.5 + R2 + dist / 2, .5}, R2, 0);
