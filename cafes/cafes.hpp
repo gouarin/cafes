@@ -42,4 +42,5 @@
 #include<particle/geometry/circle.hpp>
 #include<particle/geometry/quaternion.hpp>
 #include<io/vtk.hpp>
+#include<posttraitement/interpolation.hpp>
 #endif

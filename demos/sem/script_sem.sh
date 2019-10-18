@@ -1,7 +1,7 @@
 #!/bin/bash
 
 exec=../../build/demos/sem2d
-nproc=1
+nproc=2
 
 # mpirun -np $nproc $exec \
 #     -pmm \
