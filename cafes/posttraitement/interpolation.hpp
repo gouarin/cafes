@@ -57,6 +57,16 @@ namespace cafes
   {
   	#undef __FUNCT__
     #define __FUNCT__ "linear_interpolation"
+    // --------------------------------------------------------------------------
+    // Linear interpolation of the solution of a Stokes problem on a rafined mesh                                                
+    // --------------------------------------------------------------------------
+    //
+    //                                    DM dm :   mesh of the solution
+    //                                  Vec sol :   solution of the Stokes problem
+    //                             DM dm_refine :   refined mesh on wich sol will be interpolated (construct within the function)
+    //                           Vec sol_refine :   refined solution (construct within the function)
+    // const std::array<int, Dimensions> refine :   refinement factor of the mesh in each direction
+    //  const std::array<double, Dimensions>& h :   size of the mesh dm
     template<std::size_t Dimensions>
     PetscErrorCode linear_interpolation(DM& dm, Vec& sol, DM& dm_refine, Vec& sol_refine, const std::array<int, Dimensions>& refine, const std::array<double, Dimensions>& h)
     {
@@ -98,13 +108,7 @@ namespace cafes
             for(std::size_t i =0; i<refine[1]+1; i++)
             {
               auto refcoord = pos*h + geometry::position<double, Dimensions>{i*h[0]/refine[0], j*h[1]/refine[1]};
-              std::array<double, 4> bfunc;
-              double c = 1. / (h[0] * h[1]);
-              bfunc[0] = c * (refcoord[0] - h[0]*pos[0] - h[0]) * (refcoord[1] - h[1]*pos[1] - h[1]);
-              bfunc[1] = c * (refcoord[0] - h[0]*pos[0]) * (h[1] + h[1]*pos[1] - refcoord[1]);
-              bfunc[2] = c * (h[0] + h[0]*pos[0] - refcoord[0]) * (refcoord[1] - h[1]*pos[1]);
-              bfunc[3] = c * (refcoord[0] - h[0]*pos[0]) * (refcoord[1] - h[1]*pos[1]);
-              //auto bfunc = fem::P1_integration(refcoord, std::array<double,Dimensions>{h[0] + h[0]*pos[0], h[1] + h[1]*pos[1]});
+              auto bfunc = fem::P1_integration(geometry::position<double,Dimensions>{refcoord[0] - h[0]*pos[0], refcoord[1] - h[1]*pos[1]}, h);
               auto refpos = geometry::position<int, Dimensions>{i+pos[0]*refine[0],j+pos[1]*refine[1]};
               auto uref = solv_ref.at(refpos);
               for (std::size_t d=0; d<Dimensions; d++)
