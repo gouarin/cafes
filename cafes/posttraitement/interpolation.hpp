@@ -58,7 +58,7 @@ namespace cafes
   	#undef __FUNCT__
     #define __FUNCT__ "linear_interpolation"
     // --------------------------------------------------------------------------
-    // Linear interpolation of the solution of a Stokes problem on a rafined mesh                                                
+    // Linear interpolation of the solution of a Stokes problem on a refined mesh                                                
     // --------------------------------------------------------------------------
     //
     //                                    DM dm :   mesh of the solution
