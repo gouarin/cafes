@@ -1,7 +1,7 @@
 #!/bin/bash
 
-exec=../../build/demos/sem2d
-nproc=2
+exec=../build/tests/test_interp
+nproc=1
 
 # mpirun -np $nproc $exec \
 #     -pmm \
@@ -16,7 +16,7 @@ nproc=2
 #     -mx 129 \
 #     -my 129
 
-mpirun -np $nproc $exec \
+$exec \
     -strain_tensor \
     -stokes_ksp_type preonly \
     -stokes_pc_type lu \

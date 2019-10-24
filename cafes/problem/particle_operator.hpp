@@ -436,7 +436,7 @@ namespace cafes
             for (std::size_t d=0; d<Dimensions; ++d)
               r[d] = ind[d]*h[d] - p.center_[d];
             auto tmp = mean[ipart] + p.Ci_R()*geometry::cross_product(cross_prod[ipart], r);
-            auto usol = sol.at(ind);
+            auto usol = sol.at_g(ind);
             for (std::size_t d=0; d<Dimensions; ++d)
               py[num++] = usol[d] - tmp[d];
           }
@@ -473,9 +473,11 @@ namespace cafes
           auto pts = find_fluid_points_insides(p, new_box, h);
           for(auto& ind: pts)
           {
-            auto usol = sol.at(ind);
+            auto usol = sol.at_g(ind);
             for (std::size_t d=0; d<Dimensions; ++d)
-              py[num++] = usol[d];
+              {
+                py[num++] = usol[d];
+              }
           }
         }
       }

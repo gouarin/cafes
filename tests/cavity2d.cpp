@@ -1,19 +1,14 @@
 #include <cafes.hpp>
 #include <petsc.h>
 
-void quadratic_u_2d(const PetscReal x[], PetscScalar *u)
+void zeros(const PetscReal x[], PetscScalar *u)
 {
-    *u = x[0] * x[0] + x[1] * x[1];
+    *u = 0.;
 }
 
-void quadratic_v_2d(const PetscReal x[], PetscScalar *u)
+void ones(const PetscReal x[], PetscScalar *u)
 {
-    *u = 2 * x[0] * x[0] - 2 * x[0] * x[1];
-}
-
-void three(const PetscReal x[], PetscScalar *u)
-{
-    *u = 3.;
+    *u = 1.;
 }
 
 int main(int argc, char **argv)
@@ -25,16 +20,16 @@ int main(int argc, char **argv)
     CHKERRQ(ierr);
 
     auto bc = cafes::make_bc<dim>({
-        {{quadratic_u_2d, quadratic_v_2d}} // left
+        {{zeros, zeros}} // left
         ,
-        {{quadratic_u_2d, quadratic_v_2d}} // right
+        {{zeros, zeros}} // right
         ,
-        {{quadratic_u_2d, quadratic_v_2d}} // bottom
+        {{zeros, zeros}} // bottom
         ,
-        {{quadratic_u_2d, quadratic_v_2d}} // top
+        {{ones, zeros}} // top
     });
 
-    auto rhs = cafes::make_rhs<dim>({{three, three}});
+    auto rhs = cafes::make_rhs<dim>({{zeros, zeros}});
 
     auto st = cafes::make_stokes<dim>(bc, rhs);
 
