@@ -54,7 +54,10 @@ namespace cafes
     {
       double alpha_;
       double threshold_;
+      double x1_, y1_, x2_, y2_;
+      double r1_, r2_;
       double H1_, H2_;
+      double UN1_, UN2_;
       double K_;
       double scale = 10;
 
@@ -76,10 +79,18 @@ namespace cafes
         double dist = distance<Shape, Dimensions>(p1, p2);
 
         // Fix this if the particles are not a circle or a sphere
+        x1_ = p1.center_[0];
+        y1_ = p1.center_[1];
+        x2_ = p2.center_[0];
+        y2_ = p2.center_[1];
         double r1 = p1.shape_factors_[0];
         double r2 = p2.shape_factors_[0];
+        r1_ = r1;
+        r2_ = r2;
         H1_ = 1./r1;
         H2_ = 1./r2;
+        UN1_ = p1.velocity_[0];
+        UN2_ = p2.velocity_[0];
         contact_length_ = dist - r1 - r2;
         K_ = .5*(1./r1 + 1./r2);
 
@@ -292,7 +303,8 @@ namespace cafes
       {
         std::array< double, 2 > UsingRefPart{};
 
-        UsingRefPart[0] = ux_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+        UsingRefPart[0] = ur_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+                        //ux_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
                         //+ ux_sing_tangMvt2D(pos_ref_part, H1_, H2_, contact_length_, UT_, param_, param_, NULL);
         UsingRefPart[1] = uz_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
                         //+ uz_sing_tangMvt2D(pos_ref_part, H1_, H2_, contact_length_, UT_, param_, param_, NULL);
@@ -321,20 +333,30 @@ namespace cafes
 
       auto get_u_sing(position_type const& pos, std::integral_constant<int, 2>)
       {
-        auto pos_ref_part = get_pos_in_part_ref(pos);
+        // auto pos_ref_part = get_pos_in_part_ref(pos);
+        // std::array< double, 2 > Using{};
+        // std::array< double, 2 > UsingRefPart{};
+
+        // UsingRefPart[0] = ur_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+        //                 //ux_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+        //                 //+ ux_sing_tangMvt2D(pos_ref_part, H1_, H2_, contact_length_, UT_, param_, param_, NULL);
+        // UsingRefPart[1] = uz_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+        //                 //+ uz_sing_tangMvt2D(pos_ref_part, H1_, H2_, contact_length_, UT_, param_, param_, NULL);
+
+        // for(std::size_t k=0; k<2; ++k){
+        //   Using[0] += base_[k][0]*UsingRefPart[k];
+        //   Using[1] += base_[k][1]*UsingRefPart[k];
+        // }
+
+        // return Using;
+
         std::array< double, 2 > Using{};
-        std::array< double, 2 > UsingRefPart{};
-
-        UsingRefPart[0] = ux_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
-                        //+ ux_sing_tangMvt2D(pos_ref_part, H1_, H2_, contact_length_, UT_, param_, param_, NULL);
-        UsingRefPart[1] = uz_sing_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
-                        //+ uz_sing_tangMvt2D(pos_ref_part, H1_, H2_, contact_length_, UT_, param_, param_, NULL);
-
-        for(std::size_t k=0; k<2; ++k){
-          Using[0] += base_[k][0]*UsingRefPart[k];
-          Using[1] += base_[k][1]*UsingRefPart[k];
-        }
-
+        position_type pos1 = geometry::position<double, 2>{- pos[0] + x1_ + r1_ + contact_length_, pos[1] - y1_};
+        position_type pos2 = geometry::position<double, 2>{pos[0] - x1_ - r1_, pos[1] - y1_};
+        Using[0] = uz_sing_normalMvt2D(pos2, H1_, H2_, contact_length_, UN2_, param_, param_, NULL)
+                 - uz_sing_normalMvt2D(pos1, H2_, H1_, contact_length_, -UN1_, param_, param_, NULL);
+        Using[1] = ur_sing_normalMvt2D(pos2, H1_, H2_, contact_length_, UN2_, param_, param_, NULL)
+                 + ur_sing_normalMvt2D(pos1, H2_, H1_, contact_length_, -UN1_, param_, param_, NULL);
         return Using;
       }
 
@@ -414,9 +436,9 @@ namespace cafes
       {
         std::array< std::array<double, 2>, 2> gradUsingRefPart{};
 
-        gradUsingRefPart[0][0] = dxux_sing_normalMvt2D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
-        gradUsingRefPart[0][1] = dzux_sing_normalMvt2D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
-        gradUsingRefPart[1][0] = dxuz_sing_normalMvt2D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+        gradUsingRefPart[0][0] = drur_sing_normalMvt2D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+        gradUsingRefPart[0][1] = dzur_sing_normalMvt2D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+        gradUsingRefPart[1][0] = druz_sing_normalMvt2D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
         gradUsingRefPart[1][1] = dzuz_sing_normalMvt2D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
 
         return gradUsingRefPart;
@@ -443,17 +465,31 @@ namespace cafes
 
       auto get_grad_u_sing(position_type pos)
       {
-        auto pos_ref_part = get_pos_in_part_ref(pos);
+        // auto pos_ref_part = get_pos_in_part_ref(pos);
+        // std::array< std::array<double, Dimensions>, Dimensions > gradUsing{};
+
+        // auto gradUsingRefPart = get_grad_u_sing_ref(pos_ref_part, std::integral_constant<int, Dimensions>{});
+
+        // for(std::size_t k=0; k<Dimensions; ++k)
+        //   for(std::size_t l=0; l<Dimensions; ++l)
+        //     for(std::size_t m=0; m<Dimensions; ++m)
+        //       for(std::size_t n=0; n<Dimensions; ++n)
+        //         gradUsing[k][l] += base_[m][k]*base_[n][l]*gradUsingRefPart[m][n];
+
+        // return gradUsing;
+
         std::array< std::array<double, Dimensions>, Dimensions > gradUsing{};
+        position_type pos1 = geometry::position<double, 2>{- pos[0] + x1_ + r1_ + contact_length_, pos[1] - y1_};
+        position_type pos2 = geometry::position<double, 2>{pos[0] - x1_ - r1_, pos[1] - y1_};
 
-        auto gradUsingRefPart = get_grad_u_sing_ref(pos_ref_part, std::integral_constant<int, Dimensions>{});
-
-        for(std::size_t k=0; k<Dimensions; ++k)
-          for(std::size_t l=0; l<Dimensions; ++l)
-            for(std::size_t m=0; m<Dimensions; ++m)
-              for(std::size_t n=0; n<Dimensions; ++n)
-                gradUsing[k][l] += base_[m][k]*base_[n][l]*gradUsingRefPart[m][n];
-
+        gradUsing[0][0] = dzuz_sing_normalMvt2D(pos2, H1_, H2_, contact_length_, UN2_, param_, param_, NULL)
+                        + dzuz_sing_normalMvt2D(pos1, H2_, H1_, contact_length_, -UN1_, param_, param_, NULL);
+        gradUsing[0][1] = druz_sing_normalMvt2D(pos2, H1_, H2_, contact_length_, UN2_, param_, param_, NULL)
+                        - druz_sing_normalMvt2D(pos1, H2_, H1_, contact_length_, -UN1_, param_, param_, NULL);
+        gradUsing[1][0] = dzur_sing_normalMvt2D(pos2, H1_, H2_, contact_length_, UN2_, param_, param_, NULL)
+                        - dzur_sing_normalMvt2D(pos1, H2_, H1_, contact_length_, -UN1_, param_, param_, NULL);
+        gradUsing[1][1] = drur_sing_normalMvt2D(pos2, H1_, H2_, contact_length_, UN2_, param_, param_, NULL)
+                        + drur_sing_normalMvt2D(pos1, H2_, H1_, contact_length_, -UN1_, param_, param_, NULL);
         return gradUsing;
       }
 
@@ -484,9 +520,13 @@ namespace cafes
 
       auto get_p_sing(position_type& pos, std::integral_constant<int, 2>)
       {
-        auto pos_ref_part = get_pos_in_part_ref(pos);
+        // auto pos_ref_part = get_pos_in_part_ref(pos);
+        // return p_sing_withT_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+        position_type pos1 = geometry::position<double, 2>{- pos[0] + x1_ + r1_ + contact_length_, pos[1] - y1_};
+        position_type pos2 = geometry::position<double, 2>{pos[0] - x1_ - r1_, pos[1] - y1_};
+        return p_sing_withT_normalMvt2D(pos1, H2_, H1_, contact_length_, -UN1_, param_, param_, NULL)
+             + p_sing_withT_normalMvt2D(pos2, H1_, H2_, contact_length_, UN2_, param_, param_, NULL);
 
-        return p_sing_withT_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
       }
 
       auto get_p_sing(position_type& pos, std::integral_constant<int, 3>)
