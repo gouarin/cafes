@@ -49,34 +49,284 @@ namespace cafes
     using position2d = geometry::position<double, 2>;
     using position3d = geometry::position<double, 3>;
 
+    ///////////////////
+    // PRESSURE
+    ///////////////////
+
     PetscScalar p_sing_withT_normalMvt2D(position2d X, PetscReal H, PetscReal M, PetscReal a, double U, PetscReal l, PetscReal eps, PetscReal* param  )
     {
+      double r = X[1];
+      double z = X[0];
       double mu = 1;
-      double t4 = X[1]*X[1];
+      double t4 = r*r;
       double t8 = pow(2 * a + M * t4 + H * t4, 2);
-      double t12 = chiTrunc(X[1], l, eps);
-      return -24 / (H + M) / t8 * U * mu * t12;
-
+      double t12 = chiTrunc(r, l, eps);
+      return (-24 / (H + M) / t8 * U * mu * t12) * (z > -1./H) * (z< a + 1./M);
     }
 
+    ///////////////////
+    // Ur
+    ///////////////////
 
-    PetscScalar uz_sing_normalMvt2D(position2d X, PetscReal H, PetscReal M, PetscReal a, double U, PetscReal l, PetscReal eps, PetscReal* param  )
+    PetscScalar ur_sing_normalMvt2D(position2d X, PetscReal H, PetscReal M, PetscReal a, double U, PetscReal l, PetscReal eps, PetscReal* param  )
     {
       double mu = 1;
       double r  = X[1];
       double z  = X[0];
 
-      double t1 = r * r;
-      double t2 = H * t1;
-      double t3 = 2 * z;
-      double t5 = M * t1;
-      double t6 = 2 * a;
-      double t10 = t6 + t5 + t2;
-      double t11 = t10 * t10;
-      double t15 = chiTrunc(r, l, eps);
-      return -12 * (t2 + t3) * (-t3 + t5 + t6) * U * r / t11 / t10 * t15;
-
+      double t6 = 2 * z;
+      double t7 = r * r;
+      double t8 = M * t7;
+      double t9 = 2 * a;
+      double t10 = -t6 + t8 + t9;
+      double t12 = H * t7;
+      double t16 = (t12 + t6) / (H + M);
+      double t17 = t9 + t8 + t12;
+      double t18 = t17 * t17;
+      double t20 = 1 / t18 / t17;
+      double t21 = chiTrunc(r,l, eps);
+      double t25 = dchiTrunc(r, l, eps);
+      return  (-3 * U * (4 * H * r + 4 * M * r) * t10 * t16 * t20 * t21 - 3 * U * (-2 * t25 * a - t25 * M * t7 - t25 * H * t7) * t10 * t16 * t20 ) * (z > -1./H) * (z < a + 1./M);
     }
+
+    PetscScalar drur_sing_normalMvt2D(position2d X, PetscReal H, PetscReal M, PetscReal a, double U, PetscReal l, PetscReal eps, PetscReal* param  )
+    {
+      double mu = 1;
+      double rr  = X[1];
+      double zz  = X[0];
+      double r1b = 1./H;
+      double r2b = 1./M;
+      double t1 = rr * rr;
+      double t2 = H * t1;
+      double t3 = zz * zz;
+      double t7 = H * H;
+      double t8 = H * t7;
+      double t9 = t1 * t1;
+      double t10 = t8 * t9;
+      double t14 = t9 * t1;
+      double t17 = M * M;
+      double t21 = t17 * M;
+      double t28 = t7 * t1;
+      double t29 = a * a;
+      double t38 = zz * a;
+      double t42 = t9 * M;
+      double t45 = -160 * t2 * t3 * M + 24 * t10 * a + 4 * t8 * M * t14 + 8 * t7 * t17 * t14 + 4 * H * t21 * t14 + 24 * t21 * zz * t9 - 48 * t28 * t29 - 32 * H * t29 * zz - 32 * t29 * M * zz + 128 * t28 * t38 - 24 * t7 * zz * t42;
+      double t46 = H * t9;
+      double t50 = H * a;
+      double t51 = t17 * t9;
+      double t54 = t1 * t17;
+      double t60 = H * M;
+      double t72 = a * M;
+      double t75 = t72 * zz;
+      double t78 = 24 * t46 * t17 * zz - 16 * t50 * t51 + 32 * t54 * t38 + 8 * t7 * a * t42 - 48 * t60 * t1 * t29 - 24 * t10 * zz + 32 * t50 * t3 - 80 * t54 * t3 - 80 * t28 * t3 + 32 * t72 * t3 + 160 * t2 * t75;
+      double t84 = M * t1;
+      double t86 = pow((2 * a + t84 + t2),2);
+      double t87 = t86 * t86;
+      double t89 = 1 / (H + M) / t87;
+      double t90 = chiTrunc(rr, l, eps);
+      double t93 = d2chiTrunc(rr, l, eps);
+      double t94 = t29 * a;
+      double t95 = t93 * t94;
+      double t98 = t93 * t29;
+      double t101 = t1 * rr;
+      double t102 = t7 * t101;
+      double t103 = dchiTrunc(rr, l, eps);
+      double t104 = t103 * a;
+      double t105 = t104 * zz;
+      double t108 = t9 * rr;
+      double t110 = t103 * t17;
+      double t114 = t7 * t108;
+      double t115 = t103 * M;
+      double t120 = t103 * t29;
+      double t121 = t120 * zz;
+      double t136 = t93 * a;
+      double t141 = 16 * t95 * zz - 16 * t98 * t3 - 16 * t105 * t102 - 12 * H * t108 * t110 * zz + 12 * t114 * t115 * zz - 48 * M * rr * t121 - 48 * t17 * t101 * t105 + 8 * t98 * t2 * zz + 12 * t98 * t42 * H + 24 * t98 * t84 * zz + 6 * t136 * t17 * t14 * H;
+      double t145 = t93 * t7;
+      double t150 = t93 * t17;
+      double t155 = t14 * M;
+      double t170 = a * rr * t3;
+      double t173 = H * t103;
+      double t181 = t9 * t101;
+      double t185 = 12 * t136 * t51 * zz - 4 * t145 * t9 * a * zz + 2 * t150 * t14 * H * zz - 2 * t145 * t155 * zz - 24 * t114 * t104 * M + 8 * t136 * t155 * t7 - 12 * t17 * t108 * t104 * H + 64 * t115 * t170 + 64 * t173 * t170 - 16 * t102 * t120 - 12 * t8 * t108 * t104 - 8 * t7 * t181 * t110;
+      double t193 = t93 * t8;
+      double t197 = t9 * t9;
+      double t212 = t93 * t21;
+      double t215 = t14 * zz;
+      double t218 = t9 * t3;
+      double t221 = t101 * t3;
+      double t224 = -4 * t8 * t181 * t115 + 8 * t98 * t7 * t9 + 2 * t193 * t14 * a + 2 * t150 * t197 * t7 + t193 * t197 * M + 8 * t95 * t2 - 4 * t21 * t181 * t173 - 12 * t21 * t108 * t103 * zz + t212 * t197 * H + 2 * t212 * t215 - 4 * t145 * t218 + 32 * t110 * t221;
+      double t252 = a * t1 * t3;
+      double t266 = 32 * t7 * t103 * t221 - 4 * t150 * t218 + 16 * t173 * t94 * rr + 12 * t8 * t103 * t108 * zz - 2 * t193 * t215 - 8 * t60 * t93 * t9 * t3 - 80 * H * rr * t121 + 64 * t60 * t103 * t101 * t3 - 16 * H * t93 * t252 - 16 * M * t93 * t252 - 64 * H * t101 * t103 * t75 + 8 * t136 * M * t46 * zz;
+      return (3 * U * (t45 + t78) * t89 * t90 + 3 * U * (t141 + t185 + t224 + t266) * t89)  * (zz > -r1b) * (zz < a + r2b);
+    }
+
+    PetscScalar dzur_sing_normalMvt2D(position2d X, PetscReal H, PetscReal M, PetscReal a, double U, PetscReal l, PetscReal eps, PetscReal* param  )
+    {
+      double mu = 1;
+      double rr  = X[1];
+      double zz  = X[0];
+
+      double r1b = 1./H;
+      double r2b = 1./M;
+      double t6 = rr * rr;
+      double t7 = H * t6;
+      double t9 = M * t6;
+      double t10 = 2 * a;
+      double t11 = t7 + 4 * zz - t9 - t10;
+      double t14 = 1 / (H + M);
+      double t15 = t10 + t9 + t7;
+      double t16 = t15 * t15;
+      double t18 = 1 / t16 / t15;
+      double t20 = chiTrunc(rr, l, eps);
+      double t23 = dchiTrunc(rr, l, eps);
+      return  (6 * U * (4 * H * rr + 4 * M * rr) * t11 * t14 * t18 * t20 + 6 * U * (-2 * t23 * a - t23 * M * t6 - t23 * H * t6) * t11 * t14 * t18 ) * (zz > -r1b) * (zz < a + r2b);
+    }
+
+    ///////////////////
+    // Uz
+    ///////////////////
+
+    PetscScalar uz_sing_normalMvt2D(position2d X, PetscReal H, PetscReal M, PetscReal a, double U, PetscReal l, PetscReal eps, PetscReal* param  )
+    {
+      double mu = 1;
+      double rr  = X[1];
+      double zz  = X[0];
+
+      double r1b = 1./H;
+      double r2b = 1./M;
+      double t1 = rr * rr;
+      double t2 = H * t1;
+      double t6 = H * H;
+      double t8 = t1 * t1;
+      double t9 = t8 * t1;
+      double t21 = M * M;
+      double t24 = H * t8;
+      double t28 = a * M;
+      double t31 = a * a;
+      double t37 = zz * zz;
+      double t53 = t6 * H * t9 + 4 * M * t9 * t6 + 8 * a * t6 * t8 - 2 * t6 * t8 * zz + 3 * H * t9 * t21 - 20 * t24 * M * zz + 36 * t24 * t28 + 60 * t2 * t31 - 88 * t2 * a * zz + 40 * t2 * t37 - 18 * t21 * t8 * zz - 24 * t28 * t1 * zz + 40 * t1 * t37 * M - 16 * a * t37 + 24 * t31 * zz;
+      double t54 = chiTrunc(rr, l, eps);
+      double t59 = pow((2 * a + M * t1 + t2), 2);
+      double t60 = t59 * t59;
+      return (U * (t2 + 2 * zz) * t53 * t54 / t60)  * (zz > -r1b) * (zz < a + r2b);
+    }
+
+    PetscScalar druz_sing_normalMvt2D(position2d X, PetscReal H, PetscReal M, PetscReal a, double U, PetscReal l, PetscReal eps, PetscReal* param  )
+    {
+      double mu = 1;
+      double rr  = X[1];
+      double zz  = X[0];
+      double r1b = 1./H;
+      double r2b = 1./M;
+      double t1 = rr * rr;
+      double t2 = t1 * rr;
+      double t3 = zz * zz;
+      double t4 = t3 * zz;
+      double t5 = t2 * t4;
+      double t6 = H * H;
+      double t9 = M * M;
+      double t12 = t1 * t1;
+      double t13 = t12 * rr;
+      double t14 = t13 * t3;
+      double t15 = t6 * H;
+      double t18 = t9 * M;
+      double t21 = t13 * t15;
+      double t22 = a * a;
+      double t25 = t2 * t6;
+      double t26 = t22 * a;
+      double t29 = rr * t4;
+      double t30 = H * a;
+      double t33 = rr * t3;
+      double t34 = M * t22;
+      double t37 = a * M;
+      double t44 = zz * t26;
+      double t50 = t2 * t3;
+      double t54 = -480 * t5 * t6 - 480 * t5 * t9 - 144 * t14 * t15 + 144 * t14 * t18 - 144 * t21 * t22 + 480 * t25 * t26 + 576 * t29 * t30 - 576 * t33 * t34 + 576 * t29 * t37 - 1152 * t33 * H * t22 + 576 * rr * H * t44 - 960 * t5 * H * M + 1440 * t50 * t6 * a;
+      double t61 = zz * t22;
+      double t64 = zz * a;
+      double t67 = t12 * t2;
+      double t68 = t67 * t6;
+      double t69 = zz * t9;
+      double t72 = t67 * t15;
+      double t73 = M * zz;
+      double t77 = zz * t18;
+      double t82 = t13 * t6;
+      double t85 = a * t9;
+      double t92 = t61 * M;
+      double t96 = t64 * t9;
+      double t99 = t64 * M;
+      double t102 = -144 * t14 * t6 * M + 144 * t14 * H * t9 - 1440 * t25 * t61 + 288 * t21 * t64 + 48 * t68 * t69 + 24 * t72 * t73 + 24 * t67 * H * t77 - 24 * t72 * t37 + 192 * t82 * t34 - 24 * t68 * t85 + 1440 * t50 * t30 * M - 480 * t2 * H * t92 - 336 * t13 * H * t96 - 48 * t82 * t99;
+      double t106 = M * t1;
+      double t107 = H * t1;
+      double t108 = 2 * a + t106 + t107;
+      double t109 = t108 * t108;
+      double t110 = t109 * t109;
+      double t112 = 1 / t110 / t108;
+      double t113 = chiTrunc(rr, l, eps);
+      double t116 = t6 * t6;
+      double t118 = t12 * t12;
+      double t119 = t118 * t1;
+      double t131 = t6 * t12;
+      double t141 = t12 * t1;
+      double t144 = t15 * t141;
+      double t156 = a * t4;
+      double t161 = t22 * t3;
+      double t166 = t116 * H * t119 - 64 * t22 * t4 + 96 * t26 * t3 + 10 * t116 * t118 * a + 5 * t116 * t119 * M + 80 * t131 * t4 + 80 * t9 * t12 * t4 + 7 * t9 * t119 * t15 + 76 * t22 * t15 * t141 + 36 * t144 * t3 - 36 * t18 * t141 * t3 + 3 * t18 * t119 * t6 + 120 * t26 * t6 * t12 + 128 * t156 * t106 + 128 * t156 * t107 - 48 * t161 * t106 - 336 * t161 * t107;
+      double t167 = a * t3;
+      double t173 = t141 * t6;
+      double t176 = t118 * t6;
+      double t179 = t118 * t15;
+      double t193 = H * t12;
+      double t214 = -120 * t131 * t167 - 120 * t85 * t12 * t3 + 132 * t34 * t173 + 42 * t85 * t176 + 52 * t37 * t179 - 72 * t144 * t64 - 24 * t176 * t69 - 12 * t179 * t73 - 12 * H * t118 * t77 + 288 * t107 * t44 + 160 * t193 * t4 * M + 36 * t173 * t3 * M - 36 * t9 * t141 * t3 * H + 240 * t193 * t92 + 24 * H * t141 * t96 - 48 * t173 * t99 - 240 * t193 * t167 * M;
+      double t217 = dchiTrunc(rr, l, eps);
+      return (U * (t54 + t102) * t112 * t113 + U * (t166 + t214) * t112 * t217 ) * (zz > -r1b) * (zz < a + r2b);
+    }
+
+    PetscScalar dzuz_sing_normalMvt2D(position2d X, PetscReal H, PetscReal M, PetscReal a, double U, PetscReal l, PetscReal eps, PetscReal* param  )
+    {
+      double mu = 1;
+      double rr  = X[1];
+      double zz  = X[0];
+      double r1b = 1./H;
+      double r2b = 1./M;
+
+      double t1 = rr * rr;
+      double t2 = H * t1;
+      double t6 = t1 * t1;
+      double t8 = a * M;
+      double t14 = H * H;
+      double t18 = t6 * t1;
+      double t20 = M * M;
+      double t24 = a * a;
+      double t33 = zz * zz;
+      double t43 = 32 * t2 * a * zz - 4 * H * t6 * t8 + 8 * t8 * t1 * zz - 6 * t14 * t6 * zz + H * t18 * t20 + M * t18 * t14 - 12 * t2 * t24 + 6 * a * t14 * t6 + 6 * t20 * t6 * zz - 20 * t1 * t33 * M - 20 * t2 * t33 - 8 * t24 * zz + 8 * a * t33;
+      double t48 = pow((2 * a + M * t1 + t2), 2);
+      double t49 = t48 * t48;
+      double t51 = chiTrunc(rr, l, eps);
+      return (-12 * U * t43 / t49 * t51)  * (zz > -r1b) * (zz < a + r2b);
+    }
+
+
+
+    // !!!!!!!!!!   OLD FUNCTIONS   !!!!!!!!!!
+
+    // PetscScalar uz_sing_normalMvt2D(position2d X, PetscReal H, PetscReal M, PetscReal a, double U, PetscReal l, PetscReal eps, PetscReal* param  )
+    // {
+    //   double mu = 1;
+    //   double r  = X[1];
+    //   double z  = X[0];
+
+    //   double t1 = r * r;
+    //   double t2 = H * t1;
+    //   double t3 = 2 * z;
+    //   double t5 = M * t1;
+    //   double t6 = 2 * a;
+    //   double t10 = t6 + t5 + t2;
+    //   double t11 = t10 * t10;
+    //   double t15 = chiTrunc(r, l, eps);
+    //   return -12 * (t2 + t3) * (-t3 + t5 + t6) * U * r / t11 / t10 * t15;
+
+    // }
 
 
     //Attention : r cordonnee radial, donc z en 2D et donc z = x .....
@@ -178,35 +428,35 @@ namespace cafes
       return U * (-480 * t2 * t5 + 288 * t2 * t10 + 96 * t14 * t17 - 48 * t21 * t22 + 72 * t21 * M * t4 - 72 * t14 * t15 * t4 - 96 * t31 * t32 - 24 * t36 * t37 * z + 288 * t41 * t8 * z - 144 * t46 * a * z + t89 - 8 * a * t59 * t35 + 160 * t41 * t94 + 160 * t31 * t94 - 64 * t100 - 64 * t102 + 72 * t46 * t4 - 72 * t37 * t13 * t4 + 96 * t110 + 96 * t112 - 16 * H * t114 + t147) * t158 * t159 / 2 + U * (t226 + t283 + t330 + t389) * t158 / 2;
     }
 
-    PetscScalar dzuz_sing_normalMvt2D(position2d X, PetscReal H, PetscReal M, PetscReal a, double U, PetscReal l, PetscReal eps, PetscReal* param  )
-    {
-      double mu  = 1;
-      double z   = X[0];
-      double r   = X[1];
+    // PetscScalar dzuz_sing_normalMvt2D(position2d X, PetscReal H, PetscReal M, PetscReal a, double U, PetscReal l, PetscReal eps, PetscReal* param  )
+    // {
+    //   double mu  = 1;
+    //   double z   = X[0];
+    //   double r   = X[1];
 
-      double t1 = r * r;
-      double t2 = t1 * t1;
-      double t3 = z * z;
-      double t4 = t2 * t3;
-      double t14 = t2 * t1;
-      double t15 = t14 * H;
-      double t16 = a * M;
-      double t22 = H * H;
-      double t25 = M * M;
-      double t29 = a * a;
-      double t33 = H * t2;
-      double t39 = t2 * t2;
-      double t46 = 8 * M * t4 + 16 * t1 * a * t3 - 16 * t2 * a * M * z - 8 * t15 * t16 + 8 * H * t4 + 4 * t14 * z * t22 - 4 * t14 * t25 * z - 16 * t1 * t29 * z - 8 * t33 * t29 - 4 * t14 * a * t22 - 2 * t39 * H * t25 - 2 * t39 * M * t22;
-      double t50 = H * t1;
-      double t52 = pow(2 * a + M * t1 + t50, 2);
-      double t53 = t52 * t52;
-      double t54 = 0.1e1 / t53;
-      double t55 = dchiTrunc(r, l, eps);
-      double t90 = -20 * t1 * t3 * M + 8 * t16 * t1 * z + 8 * a * t3 - 8 * t29 * z + 32 * t50 * a * z - 4 * t33 * t16 - 6 * z * t22 * t2 + t15 * t25 + M * t14 * t22 - 12 * t50 * t29 + 6 * a * t22 * t2 + 6 * t25 * t2 * z - 20 * t3 * H * t1;
-      double t92 = chiTrunc(r, l, eps);
-      return 12 * U * t46 * t54 * t55 + 12 * U * t90 * t54 * t92;
+    //   double t1 = r * r;
+    //   double t2 = t1 * t1;
+    //   double t3 = z * z;
+    //   double t4 = t2 * t3;
+    //   double t14 = t2 * t1;
+    //   double t15 = t14 * H;
+    //   double t16 = a * M;
+    //   double t22 = H * H;
+    //   double t25 = M * M;
+    //   double t29 = a * a;
+    //   double t33 = H * t2;
+    //   double t39 = t2 * t2;
+    //   double t46 = 8 * M * t4 + 16 * t1 * a * t3 - 16 * t2 * a * M * z - 8 * t15 * t16 + 8 * H * t4 + 4 * t14 * z * t22 - 4 * t14 * t25 * z - 16 * t1 * t29 * z - 8 * t33 * t29 - 4 * t14 * a * t22 - 2 * t39 * H * t25 - 2 * t39 * M * t22;
+    //   double t50 = H * t1;
+    //   double t52 = pow(2 * a + M * t1 + t50, 2);
+    //   double t53 = t52 * t52;
+    //   double t54 = 0.1e1 / t53;
+    //   double t55 = dchiTrunc(r, l, eps);
+    //   double t90 = -20 * t1 * t3 * M + 8 * t16 * t1 * z + 8 * a * t3 - 8 * t29 * z + 32 * t50 * a * z - 4 * t33 * t16 - 6 * z * t22 * t2 + t15 * t25 + M * t14 * t22 - 12 * t50 * t29 + 6 * a * t22 * t2 + 6 * t25 * t2 * z - 20 * t3 * H * t1;
+    //   double t92 = chiTrunc(r, l, eps);
+    //   return 12 * U * t46 * t54 * t55 + 12 * U * t90 * t54 * t92;
 
-    }
+    // }
 
 
     PetscScalar dxux_sing_normalMvt2D(position2d X, PetscReal H, PetscReal M, PetscReal a, double U, PetscReal l, PetscReal eps, PetscReal* param  )

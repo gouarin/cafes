@@ -185,7 +185,7 @@ namespace cafes
                 {
                     ctx->compute_rhs = true;
                     ctx->add_rigid_motion = true;
-                    ctx->compute_singularity = use_sing;
+                    ctx->compute_singularity = true;
                     // ctx->compute_singularity = false;
                 }
 
@@ -323,7 +323,7 @@ namespace cafes
                     ctx->compute_rhs = false;
                     ctx->add_rigid_motion = false;
                     // ctx->compute_singularity = false;
-                    ctx->compute_singularity = use_sing;
+                    ctx->compute_singularity = false;
                 }
 
                 ierr = KSPSolve(ksp, rhs, sol);

@@ -69,13 +69,16 @@ namespace cafes
 
     PetscScalar d2alphaTrunc(PetscReal X){
 
-      PetscReal X2Mun  = 0;
-      PetscReal X2Mun3 = 0;
+      PetscReal t1 = 0;
+      PetscReal t2 = 0;
+      PetscReal t5 = 0;
+      PetscReal t6 = 0;
 
-      X2Mun  = X*X-1;
-      X2Mun3 = X2Mun*X2Mun*X2Mun;
-
-      return 2520/128.0*X2Mun3*X;
+      t1 = X - 1;
+      t2 = t1 * t1;
+      t5 = X + 1;
+      t6 = t5 * t5;
+      return 315 / 16.0 * X * t2 * t1 * t6 * t5;
     }
     PetscScalar d3alphaTrunc(PetscReal X){
 
@@ -122,13 +125,13 @@ namespace cafes
      assert(l>=eps);
       
      double X2 = X*X;
-     X = sqrt(X2); //on veut la norme
+     //X = sqrt(X2); //on veut la norme
 
      if(0<=X2<l-eps)
-       return 1;
+       return 0;
      else if(l-eps<=X2 && X2<l+eps)
-       //return -X/eps*dalphaTrunc((X2-l)/eps) ;
-       return - dalphaTrunc((X2-l)/eps)/eps/2.;
+       return -X/eps*dalphaTrunc((X2-l)/eps) ;
+       //return - dalphaTrunc((X2-l)/eps)/eps/2.;
      else
        return 0;
    }
@@ -141,10 +144,10 @@ namespace cafes
      //X = sqrt(X2); //on veut la norme
 
      if(0<=X<l-eps)
-       return 1;
+       return 0;
      else if(l-eps<=X2 && X2<l+eps)
-       //return -2*X2/eps/eps*d2alphaTrunc((X2-l)/eps) - dalphaTrunc((X2-l)/eps)/eps;
-       return - d2alphaTrunc((X2-l)/eps)/eps/eps/2.;
+       return -2*X2/eps/eps*d2alphaTrunc((X2-l)/eps) - dalphaTrunc((X2-l)/eps)/eps;
+       //return - d2alphaTrunc((X2-l)/eps)/eps/eps/2.;
      else
        return 0;
    }
