@@ -64,6 +64,6 @@
 
 #ADD_EXECUTABLE(rvalue_test rvalue_test)
 
-ADD_EXECUTABLE(test_interp test_interp.cpp)
-TARGET_LINK_LIBRARIES(test_interp ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
+#ADD_EXECUTABLE(test_interp test_interp.cpp)
+#TARGET_LINK_LIBRARIES(test_interp ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
 

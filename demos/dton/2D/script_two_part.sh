@@ -1,7 +1,7 @@
 #!/bin/bash
 
 exec=../../../build/demos/two_part
-nproc=4
+nproc=1
 
 mpirun -np $nproc $exec \
     -strain_tensor \

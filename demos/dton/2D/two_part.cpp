@@ -51,15 +51,15 @@ int main(int argc, char **argv)
     //                                           cafes::make_particle(se2, {-1.,
     //                                           0.}, {0.,0.,0.})};
     std::vector<cafes::particle<decltype(se1)>> pt{
-        cafes::make_particle_with_velocity(se2, {1., 0.}, 0.),
+        cafes::make_particle_with_velocity(se2, {-1., 0.}, 0.),
         cafes::make_particle_with_velocity(se1, {1., 0.}, 0.)};
 
     auto s = cafes::make_DtoN(pt, st, .1);
 
     ierr = s.create_Mat_and_Vec();
     CHKERRQ(ierr);
-    // ierr = cafes::singularity::save_singularity<dim,
-    // decltype(*(s.ctx))>("Resultats", "two_part", *(s.ctx));CHKERRQ(ierr);
+    ierr = cafes::singularity::save_singularity<dim,
+    decltype(*(s.ctx))>("Resultats", "two_part", *(s.ctx));CHKERRQ(ierr);
 
     ierr = s.setup_RHS();
     CHKERRQ(ierr);
