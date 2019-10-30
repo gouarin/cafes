@@ -553,7 +553,7 @@ namespace cafes
         auto box = fem::get_DM_bounds<Dimensions>(dap);
 
         std::array<double, 16> matelem;
-        matelem.fill(0);
+        matelem.fill(value);
 
         int dec = infov.dof * infov.gxm * infov.gym * infov.gzm;
 

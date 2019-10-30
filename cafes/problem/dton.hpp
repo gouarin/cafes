@@ -70,8 +70,21 @@ namespace cafes
 
             ierr = init_problem<Dimensions, Ctx>(*ctx, x);
             CHKERRQ(ierr);
+        
             ierr = ctx->problem.solve();
-            CHKERRQ(ierr);
+            // if (!ctx->compute_rhs)
+            // {
+            //     ierr = cafes::io::save_VTK("Resultats", "two_part_ug_rhs",
+            //                                 ctx->problem.rhs, ctx->problem.ctx->dm,
+            //                                 ctx->problem.ctx->h);
+            //     CHKERRQ(ierr);
+            //     ierr = cafes::io::save_VTK("Resultats", "two_part_ug_sol",
+            //                                 ctx->problem.sol, ctx->problem.ctx->dm,
+            //                                 ctx->problem.ctx->h);
+            //     CHKERRQ(ierr);
+            //     std::exit(0);
+            // }
+
             ierr = VecCopy(ctx->problem.sol, ctx->sol_tmp);
             CHKERRQ(ierr);
 
@@ -185,7 +198,7 @@ namespace cafes
                 {
                     ctx->compute_rhs = true;
                     ctx->add_rigid_motion = true;
-                    ctx->compute_singularity = true;
+                    ctx->compute_singularity = false;
                     // ctx->compute_singularity = false;
                 }
 
@@ -281,7 +294,7 @@ namespace cafes
                 {
                     ctx->compute_rhs = true;
                     ctx->add_rigid_motion = true;
-                    ctx->compute_singularity = use_sing;
+                    ctx->compute_singularity = true;
                 }
 
                 ierr = init_problem<Dimensions, Ctx>(*ctx, sol);
@@ -323,18 +336,18 @@ namespace cafes
                     ctx->compute_rhs = false;
                     ctx->add_rigid_motion = false;
                     // ctx->compute_singularity = false;
-                    ctx->compute_singularity = false;
+                    ctx->compute_singularity = true;
                 }
 
                 ierr = KSPSolve(ksp, rhs, sol);
                 CHKERRQ(ierr);
 
-                if (default_flags_)
-                {
-                    std::cout << "Last Problem...\n";
-                    ierr = solve_last_problem();
-                    CHKERRQ(ierr);
-                }
+                // if (default_flags_)
+                // {
+                //     std::cout << "Last Problem...\n";
+                //     ierr = solve_last_problem();
+                //     CHKERRQ(ierr);
+                // }
 
                 PetscFunctionReturn(0);
             }
