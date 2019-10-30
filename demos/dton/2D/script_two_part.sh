@@ -7,13 +7,13 @@ mpirun -np $nproc $exec \
     -strain_tensor \
     -stokes_ksp_type preonly \
     -stokes_pc_type lu \
-    -dton_ksp_type gmres \
+    -dton_ksp_type minres \
     -dton_ksp_monitor_true_residual \
     -dton_ksp_max_it 100 \
     -assembling \
-    -dton_ksp_norm_type UNPRECONDITIONED \
-    -mx 65 \
-    -my 65
+    -mx 128 \
+    -my 128
+    #-dton_ksp_norm_type UNPRECONDITIONED \
 
 
 # mpirun -np $nproc $exec \

@@ -143,7 +143,9 @@ namespace cafes
       for(auto& rpts: r)
       {
         for(std::size_t i=0; i<rpts.size(); ++i){
-          g[ipart][i] -= particles[ipart].velocity_ - geometry::cross_product(particles[ipart].angular_velocity_, r[ipart][i]);
+          g[ipart][i] -= particles[ipart].velocity_; 
+          // TODO
+          //g[ipart][i] -= geometry::cross_product(particles[ipart].angular_velocity_, r[ipart][i]);
         }
         ipart++;
       }
@@ -257,7 +259,8 @@ namespace cafes
         }
       }
 
-      // if (ctx.compute_singularity)
+      //if (ctx.compute_singularity and ctx.compute_rhs)
+      // if (ctx.compute_rhs)
       // { 
       //   ierr = singularity::add_singularity_to_surf<Dimensions, Ctx>(ctx, sol);CHKERRQ(ierr);
       // }

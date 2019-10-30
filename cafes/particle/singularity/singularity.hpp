@@ -95,12 +95,13 @@ namespace cafes
         K_ = .5*(1./r1 + 1./r2);
 
         std::cout << "K = " << K_ << ", H = " << H1_ << ", M = " << H2_ << "\n"; 
+        std::cout << "UN1 = " << UN1_ << ", UN2 = " << UN2_ << "\n";
         auto minr = (r1 < r2)? r1: r2;
 
-        auto tmp = alpha*std::sqrt(contact_length_/K_);
-        cutoff_dist_ = (tmp < minr)? tmp : minr;
-
-        cutoff_dist_ = (cutoff_dist_ <= std::sqrt(2)*h)? std::sqrt(2)*h : cutoff_dist_; 
+        //auto tmp = alpha*std::sqrt(contact_length_/K_);
+        //cutoff_dist_ = (tmp < minr)? tmp : minr;
+        //cutoff_dist_ = (cutoff_dist_ <= std::sqrt(2)*h)? std::sqrt(2)*h : cutoff_dist_; 
+        cutoff_dist_ = minr; 
         std::cout << "cutoff_dist " << cutoff_dist_ << "\n";
         param_ = .5*cutoff_dist_*cutoff_dist_;
         //is_singularity_ = contact_length_<threshold_*cutoff_dist_;
@@ -387,44 +388,46 @@ namespace cafes
         return get_u_sing(pos, std::integral_constant<int, Dimensions>{});
       }
 
-      // /////////////////////////////////////////////////////////////////////////////
-      // //
-      // // DIVU_SING
-      // //
-      // /////////////////////////////////////////////////////////////////////////////
-      // auto get_divu_sing_ref(position_type& pos, std::integral_constant<int, 2>)
+      /////////////////////////////////////////////////////////////////////////////
+      //
+      // DIVU_SING
+      //
+      /////////////////////////////////////////////////////////////////////////////
+      auto get_divu_sing_ref(position_type& pos, std::integral_constant<int, 2>)
+      {
+        return DIVCART_normalMvt2D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+      }
+
+      // auto get_divu_sing_ref(position_type& pos, std::integral_constant<int, 3>)
       // {
-      //   return DIVCART_normalMvt2D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+      //   return p_sing_withT_normalMvt3D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
       // }
 
-      // // auto get_divu_sing_ref(position_type& pos, std::integral_constant<int, 3>)
-      // // {
-      // //   return p_sing_withT_normalMvt3D(pos, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
-      // // }
+      auto get_divu_sing_ref(position_type& pos)
+      {
+        return get_divu_sing_ref(pos, std::integral_constant<int, Dimensions>{});
+      }
 
-      // auto get_divu_sing_ref(position_type& pos)
-      // {
-      //   return get_divu_sing_ref(pos, std::integral_constant<int, Dimensions>{});
-      // }
+      auto get_divu_sing(position_type& pos, std::integral_constant<int, 2>)
+      {
+        //auto pos_ref_part = get_pos_in_part_ref(pos);
+        //return DIVCART_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
 
-      // auto get_divu_sing(position_type& pos, std::integral_constant<int, 2>)
+        auto gradUSing = get_grad_u_sing(pos);
+        return gradUSing[0][0] + gradUSing[1][1];
+      }
+
+      // auto get_divu_sing(position_type& pos, std::integral_constant<int, 3>)
       // {
       //   auto pos_ref_part = get_pos_in_part_ref(pos);
 
-      //   return DIVCART_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+      //   return p_sing_withT_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
       // }
 
-      // // auto get_divu_sing(position_type& pos, std::integral_constant<int, 3>)
-      // // {
-      // //   auto pos_ref_part = get_pos_in_part_ref(pos);
-
-      // //   return p_sing_withT_normalMvt3D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
-      // // }
-
-      // auto get_divu_sing(position_type& pos)
-      // {
-      //   return get_divu_sing(pos, std::integral_constant<int, Dimensions>{});
-      // }
+      auto get_divu_sing(position_type& pos)
+      {
+        return get_divu_sing(pos, std::integral_constant<int, Dimensions>{});
+      }
 
 
       /////////////////////////////////////////////////////////////////////////////
@@ -520,13 +523,13 @@ namespace cafes
 
       auto get_p_sing(position_type& pos, std::integral_constant<int, 2>)
       {
-        // auto pos_ref_part = get_pos_in_part_ref(pos);
-        // return p_sing_withT_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
+         //auto pos_ref_part = get_pos_in_part_ref(pos);
+         //return p_sing_withT_normalMvt2D(pos_ref_part, H1_, H2_, contact_length_, UN_, param_, param_, NULL);
         position_type pos1 = geometry::position<double, 2>{- pos[0] + x1_ + r1_ + contact_length_, pos[1] - y1_};
         position_type pos2 = geometry::position<double, 2>{pos[0] - x1_ - r1_, pos[1] - y1_};
-        return p_sing_withT_normalMvt2D(pos1, H2_, H1_, contact_length_, -UN1_, param_, param_, NULL)
-             + p_sing_withT_normalMvt2D(pos2, H1_, H2_, contact_length_, UN2_, param_, param_, NULL);
-
+        return (p_sing_withT_normalMvt2D(pos1, H2_, H1_, contact_length_, -UN1_, param_, param_, NULL)
+             + p_sing_withT_normalMvt2D(pos2, H1_, H2_, contact_length_, UN2_, param_, param_, NULL));
+             //* chiTrunc(pos[1] - y1_ - r1_ - contact_length_/2., contact_length_*contact_length_, contact_length_*contact_length_);
       }
 
       auto get_p_sing(position_type& pos, std::integral_constant<int, 3>)

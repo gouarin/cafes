@@ -60,7 +60,7 @@ namespace cafes
       double mu = 1;
       double t4 = r*r;
       double t8 = pow(2 * a + M * t4 + H * t4, 2);
-      double t12 = chiTrunc(r, l, eps);
+      double t12 = chiTrunc(r, l, eps); // * chiTrunc(z,l,eps);
       return (-24 / (H + M) / t8 * U * mu * t12) * (z > -1./H) * (z< a + 1./M);
     }
 
