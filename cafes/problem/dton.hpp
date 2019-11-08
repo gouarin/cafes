@@ -134,6 +134,7 @@ namespace cafes
             Vec sol_rhs, sol_g, sol_tmp;
             Mat A;
             KSP ksp;
+            PetscInt kspiter;
             std::size_t scale_ = 4;
             bool default_flags_ = true;
             bool use_sing = false;
@@ -336,11 +337,12 @@ namespace cafes
                     ctx->compute_rhs = false;
                     ctx->add_rigid_motion = false;
                     // ctx->compute_singularity = false;
-                    ctx->compute_singularity = true;
+                    ctx->compute_singularity = false;
                 }
 
                 ierr = KSPSolve(ksp, rhs, sol);
                 CHKERRQ(ierr);
+                ierr = KSPGetIterationNumber(ksp, &kspiter);CHKERRQ(ierr);
 
                 // if (default_flags_)
                 // {
