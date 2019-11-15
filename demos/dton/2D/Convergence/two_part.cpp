@@ -129,7 +129,7 @@ int main(int argc, char **argv)
     ierr = solrefp.global_to_local(INSERT_VALUES);CHKERRQ(ierr);
 
     // Fill pressure
-    op << "Reference/Rsur5_nref60" << "/" <<  "pressure.txt";
+    op << "Reference/Rsur5_nref120_sameVelocity" << "/" <<  "pressure.txt";
     file.open(op.str());
     file >> tmp; file >> tmp; file >> tmp;
     for (std::size_t j =0; j<infop.my; j++ )
@@ -145,7 +145,7 @@ int main(int argc, char **argv)
     file.close();
 
     // Fill velocity
-    ov << "Reference/Rsur5_nref60" << "/" <<  "velocity.txt";
+    ov << "Reference/Rsur5_nref120_sameVelocity" << "/" <<  "velocity.txt";
     file.open(ov.str());
     file >> tmp; file >> tmp; file >> tmp;
     for (std::size_t j =0; j<infov.my; j++ )
