@@ -67,3 +67,6 @@
 #ADD_EXECUTABLE(test_interp test_interp.cpp)
 #TARGET_LINK_LIBRARIES(test_interp ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
 
+#ADD_EXECUTABLE(test_read_solution test_read_solution.cpp)
+#TARGET_LINK_LIBRARIES(test_read_solution ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
+

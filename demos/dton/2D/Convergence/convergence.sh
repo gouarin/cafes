@@ -11,7 +11,7 @@ mpirun -np $nproc $exec \
     -stokes_pc_type lu \
     -dton_ksp_type minres \
     -dton_ksp_monitor_true_residual \
-    -dton_ksp_max_it 1000 \
+    -dton_ksp_max_it 100 \
     -assembling \
     -mx $i \
     -my $i

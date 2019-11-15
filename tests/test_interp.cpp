@@ -51,10 +51,10 @@ int main(int argc, char **argv)
     ierr = cafes::io::save_VTK("Resultats", "test", st.sol, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
 
     // Refinement and interpolation test
-    std::array<int, 2> refine = {2,2};
+    std::array<int, dim> refine = {2,2};
     Vec sol_refine;
     DM dm_refine;
-    std::array<double, 2> h_refine;
+    std::array<double, dim> h_refine;
     h_refine[0] = st.ctx->h[0]/refine[0];
     h_refine[1] = st.ctx->h[1]/refine[1];
     std::cout << h_refine[0] << " " << h_refine[1] << std::endl;
