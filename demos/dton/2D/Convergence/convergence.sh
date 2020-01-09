@@ -3,19 +3,26 @@
 exec=../../../../build/demos/convergence
 nproc=1
 
-for i in '16' '21' '26' '31' '51' '61' '76' '101' '151'
+for i in  '11' '21' '26' '51' '101' '126' '201' '251' #'101' '126' '201' '251'
 do
 mpirun -np $nproc $exec \
-    -strain_tensor \
     -stokes_ksp_type preonly \
     -stokes_pc_type lu \
-    -dton_ksp_type minres \
+    -dton_ksp_type lgmres \
+    -dton_ksp_max_it 500 \
+    -dton_ksp_rtol 1e-5 \
     -dton_ksp_monitor_true_residual \
-    -dton_ksp_max_it 100 \
     -assembling \
     -mx $i \
-    -my $i
+    -my $i \
+    #-xperiod \
+    #-dton_ksp_initial_guess_nonzero true \
     #-dton_ksp_norm_type UNPRECONDITIONED \
+    # -strain_tensor \
+    #-on_error_attach_debugger lldb \
+    #-dton_ksp_rtol 1e-4 \
+
+    
 done
 #-dton_ksp_atol 5.e-4 \
 
