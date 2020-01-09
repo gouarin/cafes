@@ -185,11 +185,11 @@ namespace cafes
       if (rigid_motion)
       { 
         ierr = interp_rigid_motion_(ctx.particles, ctx.radial_vec, g);CHKERRQ(ierr);
+        if (singularity)
+        { 
+          ierr = singularity::add_singularity_to_surf<Dimensions, Ctx>(ctx, g);CHKERRQ(ierr);
+        }
       }
-      // if (singularity)
-      // { 
-      //   ierr = singularity::add_singularity_to_surf<Dimensions, Ctx>(ctx, g);CHKERRQ(ierr);
-      // }
 
       PetscFunctionReturn(0);
     }
@@ -249,7 +249,7 @@ namespace cafes
         // remove this line !!
         auto gammak = ctx.particles[ipart].surface_area()/ctx.nb_surf_points[ipart];
         for(std::size_t isurf=0; isurf<ctx.surf_points[ipart].size(); ++isurf){
-          auto bfunc = fem::P1_integration(get_position(ctx.surf_points[ipart][isurf]), ctx.problem.ctx->h);
+          auto bfunc = fem::P1_integration(get_position(ctx.surf_points[ipart][isurf]), ctx.problem.ctx->h); /// !!!! P1_integration ou P1_integration_sing ?
           auto ielem = fem::get_element(get_index(ctx.surf_points[ipart][isurf]));
           for (std::size_t j=0; j<bfunc.size(); ++j){
             auto u = sol.at(ielem[j]);
@@ -283,7 +283,9 @@ namespace cafes
       if (ctx.compute_rhs)
       {
         ierr = ctx.problem.setup_RHS();CHKERRQ(ierr);
+        std::cout << "compute rhs..." << "\n";
       }
+
       if (ctx.compute_singularity)
       {
         ierr = singularity::add_singularity_in_fluid<Dimensions, Ctx>(ctx);CHKERRQ(ierr);
