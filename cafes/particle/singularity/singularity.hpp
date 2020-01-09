@@ -74,7 +74,7 @@ namespace cafes
       physics::velocity<Dimensions> vector_space_;
 
       singularity(particle<Shape> const& p1, particle<Shape> const& p2, double h, double alpha=4, double treshold=1./5)
-      : alpha_{alpha}, threshold_{treshold}
+      : alpha_{alpha}, threshold_{treshold}//, scale_{scale}
       {
         double dist = distance<Shape, Dimensions>(p1, p2);
 
@@ -542,6 +542,23 @@ namespace cafes
       auto get_p_sing(position_type& pos)
       {
         return get_p_sing(pos, std::integral_constant<int, Dimensions>{});
+      }
+
+      double get_x_truncation(position_type& pos)
+      {
+        double l = .5*(contact_length_+r1_); //param_;
+        double eps = .25*r1_;
+        assert(l>=eps);
+        double X = pos[0] - (x1_+r1_+.5*contact_length_);
+        double X2 = abs(X); //*X;
+
+        if(0<=X2<l-eps)
+          return 1.;
+        else 
+          if(l-eps<=X2 && X2<l+eps)
+            return 0.5*( 1-alphaTrunc((X2-l)/eps) );
+          else
+            return 0.;
       }
 
     };
