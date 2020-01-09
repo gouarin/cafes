@@ -48,6 +48,17 @@ namespace cafes
             return that;
         }
 
+         auto P1_integration_sing(geometry::position<double, 2> const &x,
+                            std::array<double, 2> const &h)
+        {
+            std::array<double, 4> that;
+            that[0] = (x[0] - h[0]) * (x[1] - h[1]);
+            that[1] = x[0] * (h[1] - x[1]);
+            that[2] = (h[0] - x[0]) * x[1];
+            that[3] = x[0] * x[1];
+            return that;
+        }
+
         auto P1_integration_grad(geometry::position<double, 2> const &x,
                                  std::array<double, 2> const &h)
         {
