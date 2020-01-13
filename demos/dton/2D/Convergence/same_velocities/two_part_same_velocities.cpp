@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 {
     PetscErrorCode ierr;
     std::size_t const dim = 2;
-    int const nref = 400;
+    int const nref = 256;
     std::string saverep = "Results/";
     std::string refrep = "Reference/";
     const char * srep = saverep.c_str();
@@ -186,7 +186,7 @@ int main(int argc, char **argv)
 
 
     // Fill pressure
-    op << rrep << "reference_sem_pressure.txt";
+    op << rrep << "reference_sem_pressure_" << nref << ".txt";
     file.open(op.str());
     for (std::size_t j =0; j<infop.my; j++ )
     {
@@ -211,7 +211,7 @@ int main(int argc, char **argv)
 
     // Fill velocity
     //ov << "reference_sem_velocity.txt";
-    ov << rrep << "reference_sem_velocity.txt";
+    ov << rrep << "reference_sem_velocity_" << nref << ".txt";
     file.open(ov.str());
     for (std::size_t j =0; j<infov.my; j++ )
     {

@@ -3,7 +3,7 @@
 exec=../../../../../build/demos/convergence_same_velocities
 nproc=1
 
-for i in  '11' '21' '26' '51' '101' '201' #'126' '201' '251' #'101' '126' '201' '251'
+for i in  '9' '17' '33' '65' '129' #'11' '21' '26' '51' '101' #'201' #'126' '201' '251' #'101' '126' '201' '251'
 do
 mpirun -np $nproc $exec \
     -stokes_ksp_type preonly \
