@@ -154,8 +154,8 @@ int main(int argc, char **argv)
     auto solpref = cafes::petsc::petsc_vec<dim>(st.ctx->dm, s.sol_reg, 1, false);
 
     std::ofstream outrefv, outrefp;
-    std::string savevel = saverep + "reference_sem_velocity.txt";
-    std::string savepres = saverep + "reference_sem_pressure.txt";
+    std::string savevel = saverep + "reference_sem_velocity_" + std::to_string(mx) + ".txt";
+    std::string savepres = saverep + "reference_sem_pressure_" + std::to_string(mx) + ".txt";
     const char * svel = savevel.c_str();
     const char * spres = savepres.c_str();
     outrefv.open(svel, std::ofstream::out);
