@@ -9,7 +9,7 @@ mpirun -np $nproc $exec \
     -stokes_ksp_type preonly \
     -stokes_pc_type lu \
     -dton_ksp_type lgmres \
-    -dton_ksp_max_it 500 \
+    -dton_ksp_max_it 5000 \
     -dton_ksp_rtol 1e-5 \
     -dton_ksp_monitor_true_residual \
     -assembling \
