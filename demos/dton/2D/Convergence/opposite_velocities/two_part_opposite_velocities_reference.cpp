@@ -156,7 +156,13 @@ int main(int argc, char **argv)
     ierr = cafes::io::save_VTK(srep, stw1, s.sol_reg, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
 
     // SAVE TO READ BACK
+    PetscViewer viewer;
+    char filename[PETSC_MAX_PATH_LEN] = "reference.dat";
+    PetscViewerBinaryOpen(PETSC_COMM_WORLD, filename, FILE_MODE_WRITE, &viewer);
+    VecView(s.sol_reg, viewer);
+    PetscViewerDestroy(&viewer);
 
+    /*
     auto soluref = cafes::petsc::petsc_vec<dim>(st.ctx->dm, s.sol_reg, 0, false);
     auto solpref = cafes::petsc::petsc_vec<dim>(st.ctx->dm, s.sol_reg, 1, false);
 
@@ -192,6 +198,7 @@ int main(int argc, char **argv)
     }
     outrefv.close();
     outrefp.close();
+    */
     
     ierr = PetscFinalize();
     CHKERRQ(ierr);
