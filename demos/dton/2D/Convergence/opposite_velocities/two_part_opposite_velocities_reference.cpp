@@ -7,6 +7,8 @@
 
 #include <particle/singularity/add_singularity.hpp>
 
+
+
 void zeros(const PetscReal x[], PetscScalar *u)
 {
     *u = 0.;
@@ -24,15 +26,16 @@ void ones_m(const PetscReal x[], PetscScalar *u)
 
 int main(int argc, char **argv)
 {
+    
     PetscErrorCode ierr;
     std::size_t const dim = 2;
     std::string saverep = "Reference/";
     const char * srep = saverep.c_str();
-
+    
 
     ierr = PetscInitialize(&argc, &argv, (char *)0, (char *)0);
     CHKERRQ(ierr);
-
+    
     auto bc = cafes::make_bc<dim>({
         {{zeros, zeros}} // gauche
         ,
@@ -55,23 +58,24 @@ int main(int argc, char **argv)
 
     auto se1 = cafes::make_circle({.5 - R1 - dist / 2, .5}, R1, 0);
     auto se2 = cafes::make_circle({.5 + R2 + dist / 2, .5}, R2, 0);
-
+    
+    
     std::vector<cafes::particle<decltype(se1)>> pt{
         cafes::make_particle_with_velocity(se1, {1., 0.}, 0.),
         cafes::make_particle_with_velocity(se2, {-1., 0.}, 0.)};
-
+    
     auto s = cafes::make_DtoN(pt, st, .1);
-
+    
     ierr = s.create_Mat_and_Vec();
     CHKERRQ(ierr);
-
+    
     ierr = s.setup_RHS();
     CHKERRQ(ierr);
     ierr = s.setup_KSP();
     CHKERRQ(ierr);
     ierr = s.solve();
     CHKERRQ(ierr);
-
+    
     // COARSE DMDA INFO
     DM davCoarse, dapCoarse;
     DMDALocalInfo infopCoarse, infovCoarse;
@@ -108,7 +112,10 @@ int main(int argc, char **argv)
     ierr = DMCompositeGetEntries(st.ctx->dm, &dav, &dap);CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(dav, &infov);CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(dap, &infop);CHKERRQ(ierr);
+    
 
+
+    
     // ZEROS IN PARTICLES (REG SOLUTION)
     auto box = cafes::fem::get_DM_bounds<dim>(st.ctx->dm, 0);
     auto boxp = cafes::fem::get_DM_bounds<dim>(st.ctx->dm, 1);
@@ -131,40 +138,10 @@ int main(int argc, char **argv)
             }
         }
     }
-
+    
     for(std::size_t j=boxp.bottom_left[1]; j<boxp.upper_right[1]; ++j)
     {
         for(std::size_t i=boxp.bottom_left[0]; i<boxp.upper_right[0]; ++i)
-        {
-            auto pos = cafes::geometry::position<int, dim>{i,j};
-            auto pts = cafes::geometry::position<double, dim>{i*st.ctx->h[0], j*st.ctx->h[1]};
-            auto psol = solu.at_g(pos);
-            if (se1.contains(pts) or se2.contains(pts))
-            {
-                psol[0] = 0.;
-            }
-        }
-    }
-
-    // for (std::size_t j =0; j< infov.my; j++ )
-    // {
-    //     for (std::size_t i = 0; i <infov.mx; i++)
-    //     {
-    //         auto pos = cafes::geometry::position<int, dim>{i,j};
-    //         auto pts = cafes::geometry::position<double, dim>{i*st.ctx->h[0], j*st.ctx->h[1]};
-    //         auto usol = solu.at_g(pos);
-    //         if (se1.contains(pts) or se2.contains(pts))
-    //         {
-    //             usol[0] = 0.;
-    //             usol[1] = 0.;
-    //         }
-    //     }
-    // }
-
-    /*
-    for (std::size_t j =0; j<infop.my; j++ )
-    {
-        for (std::size_t i = 0; i <infop.mx; i++)
         {
             auto pos = cafes::geometry::position<int, dim>{i,j};
             auto pts = cafes::geometry::position<double, dim>{2*i*st.ctx->h[0], 2*j*st.ctx->h[1]};
@@ -175,6 +152,7 @@ int main(int argc, char **argv)
             }
         }
     }
+    
 
     std::string stout1 = "two_part_reg_zerosInParts";
     stout1.append(std::to_string(mx));
@@ -201,17 +179,17 @@ int main(int argc, char **argv)
     VecView(s.sol_reg, viewer);
     PetscViewerDestroy(&viewer);
 
-    Vec readtest;
-    VecDuplicate(s.sol_reg, &readtest);
-    PetscViewerBinaryOpen(PETSC_COMM_WORLD, filename, FILE_MODE_READ, &viewer);
-    VecLoad(readtest, viewer);
-    PetscViewerDestroy(&viewer);
+    // Vec readtest;
+    // VecDuplicate(s.sol_reg, &readtest);
+    // PetscViewerBinaryOpen(PETSC_COMM_WORLD, filename, FILE_MODE_READ, &viewer);
+    // VecLoad(readtest, viewer);
+    // PetscViewerDestroy(&viewer);
 
-    stout1 = "test_read_binary_";
-    stout1.append(std::to_string(mx));
-    stw1 = stout1.c_str();
-    ierr = cafes::io::save_VTK(srep, stw1, readtest, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
-    */
+    // stout1 = "test_read_binary_";
+    // stout1.append(std::to_string(mx));
+    // stw1 = stout1.c_str();
+    // ierr = cafes::io::save_VTK(srep, stw1, readtest, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
+    
 
     /*
     auto soluref = cafes::petsc::petsc_vec<dim>(st.ctx->dm, s.sol_reg, 0, false);
