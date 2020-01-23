@@ -68,13 +68,6 @@ int main(int argc, char **argv)
     
     ierr = s.create_Mat_and_Vec();
     CHKERRQ(ierr);
-
-    std::string stoutinit = "init_";
-    stoutinit.append(std::to_string(mx));
-    const char * stwinit = stoutinit.c_str();
-    ierr = cafes::io::save_VTK(srep, stwinit, s.sol_rhs, st.ctx->dm,
-                               st.ctx->h);
-    CHKERRQ(ierr);
     
     ierr = s.setup_RHS();
     CHKERRQ(ierr);
