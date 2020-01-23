@@ -162,6 +162,17 @@ int main(int argc, char **argv)
     VecView(s.sol_reg, viewer);
     PetscViewerDestroy(&viewer);
 
+    Vec readtest;
+    VecDuplicate(s.sol_reg, &readtest);
+    PetscViewerBinaryOpen(PETSC_COMM_WORLD, filename, FILE_MODE_READ, &viewer);
+    VecLoad(readtest, viewer);
+    PetscViewerDestroy(&viewer);
+
+    stout1 = "test_read_binary_";
+    stout1.append(std::to_string(mx));
+    stw1 = stout1.c_str();
+    ierr = cafes::io::save_VTK(srep, stw1, readtest, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
+
     /*
     auto soluref = cafes::petsc::petsc_vec<dim>(st.ctx->dm, s.sol_reg, 0, false);
     auto solpref = cafes::petsc::petsc_vec<dim>(st.ctx->dm, s.sol_reg, 1, false);
