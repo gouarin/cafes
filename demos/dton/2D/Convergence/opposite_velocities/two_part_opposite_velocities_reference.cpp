@@ -115,7 +115,7 @@ int main(int argc, char **argv)
     auto solu = cafes::petsc::petsc_vec<dim>(st.ctx->dm, s.sol_reg, 0, false);
     auto solp = cafes::petsc::petsc_vec<dim>(st.ctx->dm, s.sol_reg, 1, false);
 
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "Put zeros in particles for regular solution..."); CHKERRQ(ierr);
+    std::cout << "Put zeros in particles for regular solution..." << std::endl;
 
     for(std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j)
     {
@@ -251,6 +251,7 @@ int main(int argc, char **argv)
     outrefp.close();
     */
     
+    std::cout << "Ended well !" << std::endl;
     ierr = PetscFinalize();
     CHKERRQ(ierr);
 
