@@ -115,6 +115,8 @@ int main(int argc, char **argv)
     auto solu = cafes::petsc::petsc_vec<dim>(st.ctx->dm, s.sol_reg, 0, false);
     auto solp = cafes::petsc::petsc_vec<dim>(st.ctx->dm, s.sol_reg, 1, false);
 
+    std::cout << "Begin loop to put zeros in particles..." << std::endl;
+
     for(std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j)
     {
         for(std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i)
