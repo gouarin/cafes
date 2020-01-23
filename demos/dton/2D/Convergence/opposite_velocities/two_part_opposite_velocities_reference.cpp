@@ -115,7 +115,7 @@ int main(int argc, char **argv)
     auto solu = cafes::petsc::petsc_vec<dim>(st.ctx->dm, s.sol_reg, 0, false);
     auto solp = cafes::petsc::petsc_vec<dim>(st.ctx->dm, s.sol_reg, 1, false);
 
-    std::cout << "Begin loop to put zeros in particles..." << std::endl;
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "Put zeros in particles for regular solution..."); CHKERRQ(ierr);
 
     for(std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j)
     {
@@ -131,6 +131,21 @@ int main(int argc, char **argv)
             }
         }
     }
+
+    for(std::size_t j=boxp.bottom_left[1]; j<boxp.upper_right[1]; ++j)
+    {
+        for(std::size_t i=boxp.bottom_left[0]; i<boxp.upper_right[0]; ++i)
+        {
+            auto pos = cafes::geometry::position<int, dim>{i,j};
+            auto pts = cafes::geometry::position<double, dim>{i*st.ctx->h[0], j*st.ctx->h[1]};
+            auto psol = solu.at_g(pos);
+            if (se1.contains(pts) or se2.contains(pts))
+            {
+                psol[0] = 0.;
+            }
+        }
+    }
+
     // for (std::size_t j =0; j< infov.my; j++ )
     // {
     //     for (std::size_t i = 0; i <infov.mx; i++)
