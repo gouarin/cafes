@@ -110,12 +110,14 @@ int main(int argc, char **argv)
     ierr = DMDAGetLocalInfo(dap, &infop);CHKERRQ(ierr);
 
     // ZEROS IN PARTICLES (REG SOLUTION)
+    auto box = cafes::fem::get_DM_bounds<dim>(st.ctx->dm, 0);
+    auto boxp = cafes::fem::get_DM_bounds<dim>(st.ctx->dm, 1);
     auto solu = cafes::petsc::petsc_vec<dim>(st.ctx->dm, s.sol_reg, 0, false);
     auto solp = cafes::petsc::petsc_vec<dim>(st.ctx->dm, s.sol_reg, 1, false);
 
-    for (std::size_t j =0; j< infov.my; j++ )
+    for(std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j)
     {
-        for (std::size_t i = 0; i <infov.mx; i++)
+        for(std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i)
         {
             auto pos = cafes::geometry::position<int, dim>{i,j};
             auto pts = cafes::geometry::position<double, dim>{i*st.ctx->h[0], j*st.ctx->h[1]};
@@ -127,7 +129,22 @@ int main(int argc, char **argv)
             }
         }
     }
+    // for (std::size_t j =0; j< infov.my; j++ )
+    // {
+    //     for (std::size_t i = 0; i <infov.mx; i++)
+    //     {
+    //         auto pos = cafes::geometry::position<int, dim>{i,j};
+    //         auto pts = cafes::geometry::position<double, dim>{i*st.ctx->h[0], j*st.ctx->h[1]};
+    //         auto usol = solu.at_g(pos);
+    //         if (se1.contains(pts) or se2.contains(pts))
+    //         {
+    //             usol[0] = 0.;
+    //             usol[1] = 0.;
+    //         }
+    //     }
+    // }
 
+    /*
     for (std::size_t j =0; j<infop.my; j++ )
     {
         for (std::size_t i = 0; i <infop.mx; i++)
@@ -157,7 +174,12 @@ int main(int argc, char **argv)
 
     // SAVE TO READ BACK
     PetscViewer viewer;
-    char filename[PETSC_MAX_PATH_LEN] = "reference.dat";
+    std::string refout = "reference_";
+    refout.append(std::to_string(mx));
+    refout.append(".dat");
+    const char * filename = refout.c_str();
+    //char filename[PETSC_MAX_PATH_LEN] = "reference";
+    //filename = filename + std::to_string(mx) + ".dat";
     PetscViewerBinaryOpen(PETSC_COMM_WORLD, filename, FILE_MODE_WRITE, &viewer);
     VecView(s.sol_reg, viewer);
     PetscViewerDestroy(&viewer);
@@ -172,6 +194,7 @@ int main(int argc, char **argv)
     stout1.append(std::to_string(mx));
     stw1 = stout1.c_str();
     ierr = cafes::io::save_VTK(srep, stw1, readtest, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
+    */
 
     /*
     auto soluref = cafes::petsc::petsc_vec<dim>(st.ctx->dm, s.sol_reg, 0, false);
