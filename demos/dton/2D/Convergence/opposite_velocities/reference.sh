@@ -1,7 +1,7 @@
 #!/bin/bash
 
 exec=../../../../../build/demos/convergence_opposite_velocities_reference
-nproc=2
+nproc=1
 
 for i in '52'
 do
