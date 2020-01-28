@@ -63,20 +63,74 @@ namespace cafes
     //
     //                                    DM dm :   mesh of the solution
     //                                  Vec sol :   solution of the Stokes problem
-    //                             DM dm_refine :   refined mesh on wich sol will be interpolated (construct within the function)
-    //                           Vec sol_refine :   refined solution (construct within the function)
+    //                             DM dm_refine :   refined mesh on which sol will be interpolated (construct within the function)
+    //                           Vec sol_refine :   refined solution (filled within the function)
     // const std::array<int, Dimensions> refine :   refinement factor of the mesh in each direction
     //  const std::array<double, Dimensions>& h :   size of the mesh dm
     template<std::size_t Dimensions>
     PetscErrorCode linear_interpolation(DM& dm, Vec& sol, DM& dm_refine, Vec& sol_refine, const std::array<int, Dimensions>& refine, const std::array<double, Dimensions>& h)
     {
     	PetscErrorCode ierr;
-    	PetscFunctionBeginUser;
     	DM dav, dap, dav_refine, dap_refine;
     	Vec solv_refine, solp_refine, coord_dav;
       PetscInt xstart, xend, ystart, yend, zstart, zend;
       PetscInt localsize;
+      PetscInt         mpx, mpy, npx, npy, mvx, mvy;
+      const PetscInt   *lx, *ly;
+      PetscInt         *lxu, *lyu;
 
+      PetscFunctionBeginUser;
+
+      PetscInt rank;
+      ierr=MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
+
+      /*
+
+      DMCompositeGetEntries(dm, &dav, &dap);
+      std::cout << "View dap" << std::endl;
+      DMView(dap, PETSC_VIEWER_STDOUT_WORLD);
+      DMClone(dap, &dap_refine);
+      ierr = DMDASetRefinementFactor(dap, refine[0], refine[1], PETSC_NULL);CHKERRQ(ierr);
+      ierr = DMRefine(dap, PETSC_COMM_WORLD, &dap_refine);
+      ierr = DMDASetFieldName(dap_refine, 0, "p");CHKERRQ(ierr);
+      std::cout << "View dap_refine" << std::endl;
+      DMView(dap_refine, PETSC_VIEWER_STDOUT_WORLD);
+
+      
+
+      ierr = DMDAGetInfo(dap_refine, NULL, &mpx, &mpy, NULL, &npx, &npy, NULL, NULL, NULL, NULL, NULL, NULL, NULL);CHKERRQ(ierr);
+      ierr = DMDAGetOwnershipRanges(dap_refine, &lx, &ly, 0);CHKERRQ(ierr);
+
+      lxu = fem::set_lxu(PETSC_FALSE, npx, lx);
+      lyu = fem::set_lxu(PETSC_FALSE, npy, ly);
+
+      mvx = 2*mpx - 1;
+      mvy = 2*mpy - 1;
+
+      ierr = DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_BOX,
+                          mvx, mvy, npx, npy,
+                          2, 1, lxu, lyu, &dav_refine);CHKERRQ(ierr);
+      ierr = DMSetUp(dav_refine);CHKERRQ(ierr);
+      std::cout << "View dav" << std::endl;
+      DMView(dav, PETSC_VIEWER_STDOUT_WORLD);
+      std::cout << "View dav_refine" << std::endl;
+      DMView(dav_refine, PETSC_VIEWER_STDOUT_WORLD);
+      ierr = DMDASetFieldName(dav_refine, 0, "u");CHKERRQ(ierr);
+      ierr = DMDASetFieldName(dav_refine, 1, "v");CHKERRQ(ierr);
+      
+      ierr = DMCompositeCreate(PETSC_COMM_WORLD, &dm_refine);CHKERRQ(ierr);
+      ierr = DMCompositeAddDM(dm_refine, dav_refine);CHKERRQ(ierr);
+      ierr = DMCompositeAddDM(dm_refine, dap_refine);CHKERRQ(ierr);
+      ierr = DMSetFromOptions(dm_refine);CHKERRQ(ierr);
+
+      // ierr = DMDestroy(&dap);CHKERRQ(ierr);
+      // ierr = DMDestroy(&dav);CHKERRQ(ierr);
+      // ierr = PetscFree2(lxu, lyu);CHKERRQ(ierr);
+
+      */
+      
+
+      
     	DMCompositeGetEntries(dm, &dav, &dap);
       DMClone(dav, &dav_refine);
       DMClone(dap, &dap_refine);
@@ -87,6 +141,8 @@ namespace cafes
       DMCompositeCreate(PETSC_COMM_WORLD, &dm_refine);
       DMCompositeAddDM(dm_refine, dav_refine);
       DMCompositeAddDM(dm_refine, dap_refine);
+      
+
     	ierr = DMCreateGlobalVector(dm_refine, &sol_refine);CHKERRQ(ierr);
     	auto solv = petsc::petsc_vec<Dimensions>(dm, sol, 0);
       auto solv_ref = petsc::petsc_vec<Dimensions>(dm_refine, sol_refine, 0, false);
@@ -102,15 +158,20 @@ namespace cafes
       {
         auto const kernel_pos = [&](auto const &pos)
         {
+          using position_type = geometry::position<double, Dimensions>;
+          using position_type_i = geometry::position<int, Dimensions>;
+          std::array<double, Dimensions> hr = {{h[0]/refine[0], h[1]/refine[1]}};
+
           auto ielem = fem::get_element(pos);
-          for(std::size_t j=0; j<refine[0]+1; j++)
+          for(std::size_t j=0; j<refine[1]; ++j)
           {
-            for(std::size_t i =0; i<refine[1]+1; i++)
+            for(std::size_t i =0; i<refine[0]; ++i)
             {
-              auto refcoord = pos*h + geometry::position<double, Dimensions>{i*h[0]/refine[0], j*h[1]/refine[1]};
-              auto bfunc = fem::P1_integration(geometry::position<double,Dimensions>{refcoord[0] - h[0]*pos[0], refcoord[1] - h[1]*pos[1]}, h);
-              auto refpos = geometry::position<int, Dimensions>{i+pos[0]*refine[0],j+pos[1]*refine[1]};
-              auto uref = solv_ref.at(refpos);
+              position_type_i pts_i = {pos[0]*refine[0] + i, pos[1]*refine[1] + j};
+              position_type pts_loc = {i*hr[0], j*hr[1]};
+              auto bfunc = fem::P1_integration(pts_loc, h);
+              auto uref = solv_ref.at_g(pts_i);
+
               for (std::size_t d=0; d<Dimensions; d++)
               {
                 uref[d] = 0;
@@ -129,17 +190,57 @@ namespace cafes
         return kernel_pos;
       };
 
+
+      auto const kernelbis = [](const auto& solv, auto& solv_ref, const auto& refine, const auto& h)
+      {
+        auto const kernel_pos = [&](auto const &pos)
+        {
+          using position_type = geometry::position<double, Dimensions>;
+          using position_type_i = geometry::position<int, Dimensions>;
+          std::array<double, Dimensions> hr = {{h[0]/refine[0], h[1]/refine[1]}};
+          position_type_i pos_coarse = {std::floor(pos[0]/refine[0]), std::floor(pos[1]/refine[1])};
+          auto ielem_coarse = fem::get_element(pos_coarse);
+          // std::cout << ielem_coarse[0][0] << " " << ielem_coarse[0][1] << " " << ielem_coarse[1][0] << " " << ielem_coarse[1][1] << " " << ielem_coarse[2][0] << " " << ielem_coarse[2][1] << " "<< ielem_coarse[3][0] << " " << ielem_coarse[3][1]  << std::endl;
+          auto ielem = fem::get_element(pos);
+
+          for (std::size_t i=0; i<ielem.size(); ++i)
+          {
+            auto uref = solv_ref.at(ielem[i]);
+            position_type pts_loc = {ielem[i][0]*hr[0]-pos_coarse[0]*h[0], ielem[i][1]*hr[1]-pos_coarse[1]*h[1]};
+            auto bfunc = fem::P1_integration(pts_loc, h);
+            for (std::size_t d=0; d<Dimensions; d++)
+            {
+              uref[d] = 0;
+            }
+            for (std::size_t j=0; j<ielem_coarse.size(); j++)
+            {
+              auto u = solv.at(ielem_coarse[j]);
+              for (std::size_t d=0; d<Dimensions; d++)
+              {
+                uref[d] += u[d]*bfunc[j];
+              }
+            }
+          }
+        };
+        return kernel_pos;
+      };
+
+
       // VELOCITY INTERPOLATION
-      auto box = fem::get_DM_bounds<Dimensions>(dav);
-      algorithm::iterate(box, kernel(solv, solv_ref, refine, h));
+      auto box = fem::get_DM_bounds<Dimensions>(dav_refine);
+      algorithm::iterate(box, kernelbis(solv, solv_ref, refine, h));
+      // std::cout << "ici" << " " << rank << std::endl;
 
       // PRESSURE INTERPOLATION
-      auto boxp = fem::get_DM_bounds<Dimensions>(dap);
-      algorithm::iterate(boxp, kernel(solp, solp_ref, refine, h));
+      std::array<double, Dimensions> hp {2*h[0], 2*h[1]};
+      auto boxp = fem::get_DM_bounds<Dimensions>(dap_refine);
+      algorithm::iterate(boxp, kernelbis(solp, solp_ref, refine, hp));
 
       // LOCAL TO GLOBAL
       ierr = solv_ref.local_to_global(INSERT_VALUES);CHKERRQ(ierr);
       ierr = solp_ref.local_to_global(INSERT_VALUES);CHKERRQ(ierr);
+
+      
 
       PetscFunctionReturn(0);
     }
