@@ -115,7 +115,7 @@ namespace cafes
 
                   auto gradUsing = sing.get_grad_u_sing(pts_border);
                   auto psing = sing.get_p_sing(pts_border);
-                  auto chi = cafes::singularity::alphaTrunc(pts_polar[0]/p1.shape_factors_[0]);
+                  auto chi = cafes::singularity::singTrunc(pts_polar[0]/p1.shape_factors_[0]);
                   //auto chix = sing.get_x_truncation(pts_border);
                   
                   for (std::size_t je=0; je<bfunc.size(); ++je)
@@ -145,7 +145,7 @@ namespace cafes
 
                   auto gradUsing = sing.get_grad_u_sing(pts_border);
                   auto psing = sing.get_p_sing(pts_border);
-                  auto chi = cafes::singularity::alphaTrunc(pts_polar[0]/p2.shape_factors_[0]);
+                  auto chi = cafes::singularity::singTrunc(pts_polar[0]/p2.shape_factors_[0]);
                   //auto chix = sing.get_x_truncation(pts_border);
                   
                   for (std::size_t je=0; je<bfunc.size(); ++je)
@@ -302,8 +302,8 @@ namespace cafes
                   // Get u^{sing}, its partial derivatives and \chi
                   auto gradUsing = sing.get_grad_u_sing(pts_border);
                   auto Using = sing.get_u_sing(pts_border);
-                  auto chi = cafes::singularity::alphaTrunc(pts_polar[0]/p1.shape_factors_[0]);
-                  auto drChi = cafes::singularity::dalphaTrunc(pts_polar[0]/p1.shape_factors_[0]);
+                  auto chi = cafes::singularity::singTrunc(pts_polar[0]/p1.shape_factors_[0]);
+                  auto drChi = cafes::singularity::dsingTrunc(pts_polar[0]/p1.shape_factors_[0]);
                   
                   for (std::size_t je=0; je<bfunc.size(); ++je)
                   {
@@ -357,8 +357,8 @@ namespace cafes
                   // Get u^{sing}, its partial derivatives and \chi
                   auto gradUsing = sing.get_grad_u_sing(pts_border);
                   auto Using = sing.get_u_sing(pts_border);
-                  auto chi = cafes::singularity::alphaTrunc(pts_polar[0]/p2.shape_factors_[0]);
-                  auto drChi = cafes::singularity::dalphaTrunc(pts_polar[0]/p2.shape_factors_[0]);
+                  auto chi = cafes::singularity::singTrunc(pts_polar[0]/p2.shape_factors_[0]);
+                  auto drChi = cafes::singularity::dsingTrunc(pts_polar[0]/p2.shape_factors_[0]);
                   
                   for (std::size_t je=0; je<bfunc.size(); ++je)
                   {
@@ -1388,7 +1388,7 @@ namespace cafes
       vtkXMLStructuredGridWriter* singDataWriter = vtkXMLStructuredGridWriter::New();
       std::stringstream oc;
 
-      oc << path << "/" << filename << "_sing_" << 0 << "_" << 1 << ".vts";//a changer
+      oc << path << "/" << filename << "_sing_" << rank << "_" << ".vts";//a changer
       singDataWriter->SetFileName(oc.str().data());
       //dataWriter->SetDataModeToAscii();
 #if VTK_MAJOR_VERSION <= 5
@@ -1423,6 +1423,9 @@ namespace cafes
     {
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
+
+      int rank;
+      MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
 
       using position_type = geometry::position<double, Dimensions>;
       using position_type_i = geometry::position<int, Dimensions>;
