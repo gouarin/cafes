@@ -185,26 +185,22 @@ namespace cafes
 
    PetscScalar singTrunc(PetscReal X, PetscReal l=1., PetscReal eps=0.1)
    {
-     assert(l>=2*eps);
-     assert(0<=X<=1);
+     assert(l>=eps);
+     assert(0<=X<=l);
      if (X<=eps)
        return 0.;
-     else if (l-eps<=X)
-       return 1.;
      else
-       return .5*alphaTrunc((2*X-l)/(l-2*eps)) + .5;
+       return .5*alphaTrunc((2*X-l-eps)/(l-eps)) + .5;
    }
 
    PetscScalar dsingTrunc(PetscReal X, PetscReal l=1., PetscReal eps=0.1)
    {
-     assert(l>=2*eps);
-     assert(0<=X<=1);
+     assert(l>=eps);
+     assert(0<=X<=l);
      if (X<=eps)
        return 0.;
-     else if (l-eps<=X)
-       return 1.;
      else
-       return dalphaTrunc((2*X-l)/(l-2*eps))/(l-2*eps);
+       return dalphaTrunc((2*X-l-eps)/(l-eps))/(l-eps);
    }
 
 

@@ -623,14 +623,14 @@ namespace cafes
           }
 
           // Pressure
-          //auto singp = singularity<shape_type, Dimensions>(p1, p2, hp[0]);
+          auto singp = singularity<shape_type, Dimensions>(p1, p2, hp[0]);
           if (sing.is_singularity_)
           {
-            auto pboxp = sing.get_box(hp);
+            auto pboxp = singp.get_box(hp);
             if (geometry::intersect(boxp, pboxp))
             {
               auto new_box = geometry::box_inside(boxp, pboxp);
-              ierr = computesingularST_pressure(sing, p1, p2, solp, new_box, hp);CHKERRQ(ierr);
+              ierr = computesingularST_pressure(singp, p1, p2, solp, new_box, hp);CHKERRQ(ierr);
             }
           }
         }
