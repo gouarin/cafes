@@ -173,9 +173,13 @@ int main(int argc, char **argv)
     refout.append(std::to_string(mx));
     refout.append(".dat");
     const char * filename = refout.c_str();
-    //char filename[PETSC_MAX_PATH_LEN] = "reference";
-    //filename = filename + std::to_string(mx) + ".dat";
+
+    // PetscViewerCreate(PetscObjectComm((PetscObject)st.ctx->dm), &viewer);
+    // PetscViewerSetType(viewer, PETSCVIEWERHDF5);
+    // PetscViewerFileSetName(viewer, filename);
+    
     PetscViewerBinaryOpen(PETSC_COMM_WORLD, filename, FILE_MODE_WRITE, &viewer);
+    
     VecView(s.sol_reg, viewer);
     PetscViewerDestroy(&viewer);
 

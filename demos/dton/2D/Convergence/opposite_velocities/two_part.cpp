@@ -26,9 +26,9 @@ int main(int argc, char **argv)
 {
     PetscErrorCode ierr;
     std::size_t const dim = 2;
-    int const nref = 256;
-    std::string saverep = "Results/";
-    std::string refrep = "Reference/";
+    int const nref = 128;
+    std::string saverep = "Resultats";
+    std::string refrep = "";
     const char * srep = saverep.c_str();
     const char * rrep = refrep.c_str();
 
@@ -51,16 +51,13 @@ int main(int argc, char **argv)
     int const mx = st.opt.mx[0] - 1;
     
 
-    double R1 = .05;
-    double R2 = .05;
-    double dist = .05/5;
+    double R1 = .1;
+    double R2 = .1;
+    double dist = .1/5;
 
     auto se1 = cafes::make_circle({.5 - R1 - dist / 2, .5}, R1, 0);
     auto se2 = cafes::make_circle({.5 + R2 + dist / 2, .5}, R2, 0);
-    // std::vector<cafes::particle<decltype(se1)>> pt{ cafes::make_particle(se1,
-    // { 1., 0.}, {0.,0.,0.}),
-    //                                           cafes::make_particle(se2, {-1.,
-    //                                           0.}, {0.,0.,0.})};
+
     std::vector<cafes::particle<decltype(se1)>> pt{
         cafes::make_particle_with_velocity(se1, {1., 0.}, 0.),
         cafes::make_particle_with_velocity(se2, {-1., 0.}, 0.)};
@@ -69,11 +66,23 @@ int main(int argc, char **argv)
 
     ierr = s.create_Mat_and_Vec();
     CHKERRQ(ierr);
-    ierr = cafes::singularity::save_singularity_chi<dim,
-    decltype(*(s.ctx))>("Resultats", "two_part_test_chi", *(s.ctx));CHKERRQ(ierr);
+    ierr = cafes::singularity::save_singularity<dim,
+    decltype(*(s.ctx))>("Resultats", "two_part_singularity", *(s.ctx));CHKERRQ(ierr);
 
     ierr = s.setup_RHS();
     CHKERRQ(ierr);
+
+    std::string stoutinit = "two_part_setup_rhs_";
+    stoutinit.append(std::to_string(mx));
+    const char * stwinit = stoutinit.c_str();
+    ierr = cafes::io::save_VTK("Resultats", stwinit, st.sol, st.ctx->dm,
+                               st.ctx->h);
+    CHKERRQ(ierr);
+
+    ierr = PetscFinalize();
+    CHKERRQ(ierr);
+    return 0;
+
     ierr = s.setup_KSP();
     CHKERRQ(ierr);
     ierr = s.solve();
@@ -95,64 +104,6 @@ int main(int argc, char **argv)
     ierr = DMDAGetLocalInfo(davCoarse, &infovCoarse);CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(dapCoarse, &infopCoarse);CHKERRQ(ierr);
     std::cout << "Size Coarse Mesh.   Pressure : " << infopCoarse.mx << " " << infopCoarse.my << " Velocity : " << infovCoarse.mx << " " << infovCoarse.my  << std::endl;
-    
-    // // ZEROS IN PARTICLES
-    // auto soltmpu = cafes::petsc::petsc_vec<dim>(st.ctx->dm, s.sol_tmp, 0, false);
-    // auto soltmpp = cafes::petsc::petsc_vec<dim>(st.ctx->dm, s.sol_tmp, 1, false);
-    // auto solregu = cafes::petsc::petsc_vec<dim>(st.ctx->dm, s.sol_reg, 0, false);
-    // auto solregp = cafes::petsc::petsc_vec<dim>(st.ctx->dm, s.sol_reg, 1, false);
-    // auto solrhsu = cafes::petsc::petsc_vec<dim>(st.ctx->dm, s.sol_rhs, 0, false);
-    // auto solrhsp = cafes::petsc::petsc_vec<dim>(st.ctx->dm, s.sol_rhs, 1, false); 
-    // for (std::size_t j =0; j< infovCoarse.my; j++ )
-    // {   
-    //     for (std::size_t i = 0; i <infovCoarse.mx; i++)
-    //     {
-    //         auto pos = cafes::geometry::position<int, dim>{i,j};
-    //         auto pts = cafes::geometry::position<double, dim>{i*st.ctx->h[0], j*st.ctx->h[1]};
-    //         auto usoltmp = soltmpu.at_g(pos);
-    //         auto usolreg = solregu.at_g(pos);
-    //         auto usolrhs = solrhsu.at_g(pos);
-    //         if (se1.contains(pts) or se2.contains(pts))
-    //         //if (())
-    //         {
-    //             usoltmp[0] = 0.;
-    //             usoltmp[1] = 0.;
-    //             usolreg[0] = 0.;
-    //             usolreg[1] = 0.;
-    //             usolrhs[0] = 0.;
-    //             usolrhs[1] = 0.;
-    //         }
-    //     }
-    // }
-    
-    // for (std::size_t j =0; j<infopCoarse.my; j++ )
-    // {
-    //     for (std::size_t i = 0; i <infopCoarse.mx; i++)
-    //     {
-    //         auto pos = cafes::geometry::position<int, dim>{i,j};
-    //         auto pts = cafes::geometry::position<double, dim>{2*i*st.ctx->h[0], 2*j*st.ctx->h[1]};
-    //         auto psoltmp = soltmpp.at_g(pos);
-    //         auto psolreg = solregp.at_g(pos);
-    //         auto psolrhs = solrhsp.at_g(pos);
-    //         if (se1.contains(pts) or se2.contains(pts))
-    //         //if ( ((pts[0]-se1.center_[0])*(pts[0]-se1.center_[0]) + (pts[1]-se1.center_[1])*(pts[1]-se1.center_[1]) < se1.shape_factors_[0]*se1.shape_factors_[0]) or ((pts[0]-se2.center_[0])*(pts[0]-se2.center_[0]) + (pts[1]-se2.center_[1])*(pts[1]-se2.center_[1]) < se2.shape_factors_[0]*se2.shape_factors_[0]) )
-    //         {
-    //             psoltmp[0] = 0.;
-    //             psolreg[0] = 0.;
-    //             psolrhs[0] = 0.;
-    //         }
-    //     }
-    // }
-
-    //cafes::singularity::add_singularity_to_ureg(st.ctx->dm, st.ctx->h, s.sol_reg, pt);
-    
-    // SAVE SOLUTIONS
-    // std::string stout0 = "two_part_last_";
-    // stout0.append(std::to_string(mx));
-    // const char * stw0 = stout0.c_str();
-    // ierr = cafes::io::save_VTK("Resultats", stw0, s.sol_last, st.ctx->dm,
-    //                            st.ctx->h);
-    // CHKERRQ(ierr);
 
     stout0 = "two_part_rhs_";
     stout0.append(std::to_string(mx));
@@ -175,6 +126,7 @@ int main(int argc, char **argv)
                                st.ctx->h);
     CHKERRQ(ierr);
 
+    /*
     // REFINEMENT AND INTERPOLATION
     int const fine = nref/mx;
     std::array<int, dim> refine = {fine,fine};
@@ -184,8 +136,11 @@ int main(int argc, char **argv)
     std::array<double, dim> h_refine;
     h_refine[0] = st.ctx->h[0]/refine[0];
     h_refine[1] = st.ctx->h[1]/refine[1];
-
+    std::cout << "Interpolating to reference mesh..." << std::endl;
     ierr = cafes::posttraitement::linear_interpolation(st.ctx->dm, s.sol_reg, dm_refine, sol_refine, refine, st.ctx->h);CHKERRQ(ierr);
+    std::cout << "Done." << std::endl;
+    
+    
     
     // DMDA INFO
     DM dav, dap;
@@ -195,13 +150,16 @@ int main(int argc, char **argv)
     ierr = DMDAGetLocalInfo(dav, &infov);CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(dap, &infop);CHKERRQ(ierr);
 
+    
     // ZEROS IN PARTICLES (REFINED SOLUTION)
+    auto bbox = cafes::fem::get_DM_bounds<dim>(dm_refine, 0);
+    auto bboxp = cafes::fem::get_DM_bounds<dim>(dm_refine, 1);
     auto solu = cafes::petsc::petsc_vec<dim>(dm_refine, sol_refine, 0, false);
     auto solp = cafes::petsc::petsc_vec<dim>(dm_refine, sol_refine, 1, false);
 
-    for (std::size_t j =0; j< infov.my; j++ )
+    for(std::size_t j=bbox.bottom_left[1]; j<bbox.upper_right[1]; ++j)
     {
-        for (std::size_t i = 0; i <infov.mx; i++)
+        for(std::size_t i=bbox.bottom_left[0]; i<bbox.upper_right[0]; ++i)
         {
             auto pos = cafes::geometry::position<int, dim>{i,j};
             auto pts = cafes::geometry::position<double, dim>{i*h_refine[0], j*h_refine[1]};
@@ -214,9 +172,9 @@ int main(int argc, char **argv)
         }
     }
 
-    for (std::size_t j =0; j<infop.my; j++ )
+    for(std::size_t j=bboxp.bottom_left[1]; j<bboxp.upper_right[1]; ++j)
     {
-        for (std::size_t i = 0; i <infop.mx; i++)
+        for(std::size_t i=bboxp.bottom_left[0]; i<bboxp.upper_right[0]; ++i)
         {
             auto pos = cafes::geometry::position<int, dim>{i,j};
             auto pts = cafes::geometry::position<double, dim>{2*i*h_refine[0], 2*j*h_refine[1]};
@@ -240,7 +198,9 @@ int main(int argc, char **argv)
     stout1.append(std::to_string(mx));
     stw1 = stout1.c_str();
     ierr = cafes::io::save_VTK("Resultats", stw1, sol_refine, dm_refine, h_refine);CHKERRQ(ierr);
+    */
 
+    
     // SAVE TO READ BACK
     /*
     auto soluref = cafes::petsc::petsc_vec<dim>(dm_refine, sol_refine, 0, false);
@@ -282,6 +242,8 @@ int main(int argc, char **argv)
     // return 0;
 
     
+    /*
+    
     // READ REFERENCE SOLUTION
     Vec solref;
     //DM dav, dap;
@@ -296,6 +258,23 @@ int main(int argc, char **argv)
     std::cout << "Size Reference Mesh.   Pressure : " << infop.mx << " " << infop.my << " Velocity : " << infov.mx << " " << infov.my  << std::endl;
 
     ierr = DMCreateGlobalVector(dm_refine, &solref);CHKERRQ(ierr);
+    std::string refout = "reference_";
+    refout.append(std::to_string(nref));
+    refout.append(".dat");
+    const char * filename = refout.c_str();
+    PetscViewer viewer;
+    PetscViewerBinaryOpen(PETSC_COMM_WORLD, filename, FILE_MODE_READ, &viewer);
+    VecLoad(solref, viewer);
+    PetscViewerDestroy(&viewer);
+
+    stout1 = "reference_solution_";
+    stout1.append(std::to_string(nref));
+    stw1 = stout1.c_str();
+    ierr = cafes::io::save_VTK(srep, stw1, solref, dm_refine, h_refine);CHKERRQ(ierr);
+    */
+    
+
+    /*
     auto solrefu = cafes::petsc::petsc_vec<dim>(dm_refine, solref, 0, false);
     auto solrefp = cafes::petsc::petsc_vec<dim>(dm_refine, solref, 1, false);
     //ierr = solrefu.global_to_local(INSERT_VALUES);CHKERRQ(ierr);
@@ -359,7 +338,9 @@ int main(int argc, char **argv)
     //ierr = solrefp.local_to_global(INSERT_VALUES);CHKERRQ(ierr);
 
     ierr = cafes::io::save_VTK("Resultats", "reference_solution_256", solref, dm_refine, h_refine);CHKERRQ(ierr);
+    */
 
+    /*
     // COMPUTE ERROR
     Vec error;
     VecDuplicate(sol_refine, &error);
@@ -587,6 +568,7 @@ int main(int argc, char **argv)
     ofs.open(stout3, std::ofstream::out);
     ofs << st.ctx->h[0] << " " << erroruL2x << " " << erroruL2y << " " << erroruH1x << " " << erroruH1y << " " << errorpL2 <<  " " << s.kspiter << " " << s.kspresnorm << std::endl;
     ofs.close();
+    */
 
     // // OTHER WAY TO INTEGRATE
     // erroruL2 = 0;
