@@ -266,7 +266,7 @@ namespace cafes
         PetscErrorCode ierr;
         PetscFunctionBegin;
 
-        io::save_VTK(path, filename, problem_.sol, problem_.ctx->dm, problem_.ctx->h);
+        // io::save_VTK(path, filename, problem_.sol, problem_.ctx->dm, problem_.ctx->h);
     
         std::vector<geometry::vector<double, Dimensions>> forces(parts_.size());
         using torques_type  = typename std::conditional<Dimensions==2,
@@ -276,7 +276,7 @@ namespace cafes
 
         get_new_forces_torques(forces, torques);
 
-        io::saveParticles(path, filename, parts_, forces, torques);
+        // io::saveParticles(path, filename, parts_, forces, torques);
 
         PetscFunctionReturn(0);
       }

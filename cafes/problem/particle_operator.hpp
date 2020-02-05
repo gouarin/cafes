@@ -42,7 +42,7 @@
 #include <particle/geometry/vector.hpp>
 #include <petsc/vec.hpp>
 
-#include <io/vtk.hpp>
+//#include <io/vtk.hpp>
 
 
 #include <petsc.h>
