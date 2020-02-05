@@ -612,8 +612,8 @@ static PetscErrorCode convergeTest2(KSP ksp, PetscInt it, PetscReal rnorm, KSPCo
                     // ctx->compute_singularity = false;
                     ctx->compute_singularity = false;
                 }
-                //ierr = VecSet(sol, 0.1);
-                //CHKERRQ(ierr);
+                ierr = VecSet(sol, 0.1);
+                CHKERRQ(ierr);
                 ierr = KSPSolve(ksp, rhs, sol);
                 CHKERRQ(ierr);
                 ierr = init_problem<Dimensions, Ctx>(*ctx, sol);
