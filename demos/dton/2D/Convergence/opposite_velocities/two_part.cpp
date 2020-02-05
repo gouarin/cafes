@@ -74,12 +74,12 @@ int main(int argc, char **argv)
     CHKERRQ(ierr);
 
 
-    // std::string stoutinit = "two_part_setup_rhs_";
-    // stoutinit.append(std::to_string(mx));
-    // const char * stwinit = stoutinit.c_str();
-    // ierr = cafes::io::save_VTK("Resultats", stwinit, st.sol, st.ctx->dm,
-    //                            st.ctx->h);
-    // CHKERRQ(ierr);
+    std::string stoutinit = "two_part_setup_rhs_";
+    stoutinit.append(std::to_string(mx));
+    const char * stwinit = stoutinit.c_str();
+    ierr = cafes::io::save_hdf5("Resultats", stwinit, st.sol, st.ctx->dm,
+                               st.ctx->h);
+    CHKERRQ(ierr);
 
     // ierr = PetscFinalize();
     // CHKERRQ(ierr);
