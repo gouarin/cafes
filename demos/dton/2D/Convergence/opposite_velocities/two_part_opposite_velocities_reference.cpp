@@ -87,21 +87,21 @@ int main(int argc, char **argv)
     std::string stout0 = "two_part_rhs_";
     stout0.append(std::to_string(mx));
     const char * stw0 = stout0.c_str();
-    ierr = cafes::io::save_VTK(srep, stw0, s.sol_rhs, st.ctx->dm,
+    ierr = cafes::io::save_hdf5(srep, stw0, s.sol_rhs, st.ctx->dm,
                                st.ctx->h);
     CHKERRQ(ierr);
 
     stout0 = "two_part_tmp_";
     stout0.append(std::to_string(mx));
     stw0 = stout0.c_str();
-    ierr = cafes::io::save_VTK(srep, stw0, s.sol_tmp, st.ctx->dm,
+    ierr = cafes::io::save_hdf5(srep, stw0, s.sol_tmp, st.ctx->dm,
                                st.ctx->h);
     CHKERRQ(ierr);
 
     stout0 = "two_part_reg_";
     stout0.append(std::to_string(mx));
     stw0 = stout0.c_str();
-    ierr = cafes::io::save_VTK(srep, stw0, s.sol_reg, st.ctx->dm,
+    ierr = cafes::io::save_hdf5(srep, stw0, s.sol_reg, st.ctx->dm,
                                st.ctx->h);
     CHKERRQ(ierr);
     
@@ -154,34 +154,40 @@ int main(int argc, char **argv)
     }
     
 
-    std::string stout1 = "two_part_reg_zerosInParts";
-    stout1.append(std::to_string(mx));
-    const char * stw1 = stout1.c_str();
-    ierr = cafes::io::save_VTK(srep, stw1, s.sol_reg, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
+    // std::string stout1 = "two_part_reg_zerosInParts";
+    // stout1.append(std::to_string(mx));
+    // const char * stw1 = stout1.c_str();
+    // ierr = cafes::io::save_hdf5(srep, stw1, s.sol_reg, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
 
     // ADD SINGULARITY TO UREG
-    cafes::singularity::add_singularity_to_ureg(st.ctx->dm, st.ctx->h, s.sol_reg, pt);
+    // cafes::singularity::add_singularity_to_ureg(st.ctx->dm, st.ctx->h, s.sol_reg, pt);
 
-    stout1 = "two_part_total_";
-    stout1.append(std::to_string(mx));
-    stw1 = stout1.c_str();
-    ierr = cafes::io::save_VTK(srep, stw1, s.sol_reg, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
+    stout0 = "two_part_total_";
+    stout0.append(std::to_string(mx));
+    stw0 = stout0.c_str();
+    ierr = cafes::io::save_hdf5(srep, stw0, s.sol_reg, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
 
     // SAVE TO READ BACK
-    PetscViewer viewer;
-    std::string refout = "reference_";
-    refout.append(std::to_string(mx));
-    refout.append(".dat");
-    const char * filename = refout.c_str();
+
+    // stout1 = "reference_";
+    // stout1.append(std::to_string(mx));
+    // stw1 = stout1.c_str();
+    // ierr = cafes::io::save_hdf5(srep, stw1, s.sol_reg, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
+
+    // PetscViewer viewer;
+    // std::string refout = "reference_";
+    // refout.append(std::to_string(mx));
+    // refout.append(".dat");
+    // const char * filename = refout.c_str();
 
     // PetscViewerCreate(PetscObjectComm((PetscObject)st.ctx->dm), &viewer);
     // PetscViewerSetType(viewer, PETSCVIEWERHDF5);
     // PetscViewerFileSetName(viewer, filename);
     
-    PetscViewerBinaryOpen(PETSC_COMM_WORLD, filename, FILE_MODE_WRITE, &viewer);
+    // PetscViewerBinaryOpen(PETSC_COMM_WORLD, filename, FILE_MODE_WRITE, &viewer);
     
-    VecView(s.sol_reg, viewer);
-    PetscViewerDestroy(&viewer);
+    // VecView(s.sol_reg, viewer);
+    // PetscViewerDestroy(&viewer);
 
     // Vec readtest;
     // VecDuplicate(s.sol_reg, &readtest);
