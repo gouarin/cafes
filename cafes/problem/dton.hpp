@@ -41,7 +41,7 @@
 #include <problem/problem.hpp>
 #include <problem/stokes.hpp>
 
-#include <io/vtk.hpp>
+//#include <io/vtk.hpp>
 
 #include <algorithm>
 #include <iostream>
@@ -196,8 +196,10 @@ namespace cafes
 
                 // ierr = VecCopy(sol_tmp, sol_rhs);
                 // CHKERRQ(ierr);
-                // ierr = cafes::io::save_VTK("Resultats", "two_part_u0", sol_tmp,
-                //                            problem_.ctx->dm, problem_.ctx->h);
+                // ierr = cafes::io::save_VTK("Resultats", "two_part_u0",
+                // sol_tmp,
+                //                            problem_.ctx->dm,
+                //                            problem_.ctx->h);
                 // CHKERRQ(ierr);
                 // ierr = cafes::io::save_VTK("Resultats", "two_part_w0",
                 //                            problem_.sol, problem_.ctx->dm,
