@@ -6,6 +6,7 @@
 #include <string>
 
 #include <particle/singularity/add_singularity.hpp>
+#include <petscviewerhdf5.h>
 
 void zeros(const PetscReal x[], PetscScalar *u)
 {
@@ -26,7 +27,7 @@ int main(int argc, char **argv)
 {
     PetscErrorCode ierr;
     std::size_t const dim = 2;
-    int const nref = 128;
+    int const nref = 300;
     std::string saverep = "Resultats";
     std::string refrep = "";
     const char * srep = saverep.c_str();
@@ -66,29 +67,48 @@ int main(int argc, char **argv)
 
     ierr = s.create_Mat_and_Vec();
     CHKERRQ(ierr);
-    ierr = cafes::singularity::save_singularity<dim,
-    decltype(*(s.ctx))>("Resultats", "two_part_singularity", *(s.ctx));CHKERRQ(ierr);
+    // ierr = cafes::singularity::save_singularity<dim,
+    // decltype(*(s.ctx))>("Resultats", "two_part_singularity", *(s.ctx));CHKERRQ(ierr);
 
     ierr = s.setup_RHS();
     CHKERRQ(ierr);
 
-    std::string stoutinit = "two_part_setup_rhs_";
-    stoutinit.append(std::to_string(mx));
-    const char * stwinit = stoutinit.c_str();
-    ierr = cafes::io::save_VTK("Resultats", stwinit, st.sol, st.ctx->dm,
-                               st.ctx->h);
-    CHKERRQ(ierr);
 
-    ierr = PetscFinalize();
-    CHKERRQ(ierr);
-    return 0;
+    // std::string stoutinit = "two_part_setup_rhs_";
+    // stoutinit.append(std::to_string(mx));
+    // const char * stwinit = stoutinit.c_str();
+    // ierr = cafes::io::save_VTK("Resultats", stwinit, st.sol, st.ctx->dm,
+    //                            st.ctx->h);
+    // CHKERRQ(ierr);
 
+    // ierr = PetscFinalize();
+    // CHKERRQ(ierr);
+    // return 0;
+
+
+    
     ierr = s.setup_KSP();
     CHKERRQ(ierr);
     ierr = s.solve();
     CHKERRQ(ierr);
 
+    // PetscViewer       viewer;
+    // PetscViewerCreate(MPI_COMM_WORLD, &viewer);
+    // PetscViewerSetType(viewer, PETSCVIEWERHDF5);
+    // PetscViewerFileSetMode(viewer, FILE_MODE_WRITE);
+    // PetscViewerFileSetName(viewer, "test.h5");
+    // PetscViewerHDF5PushGroup(viewer, "/fields");
+    // VecView(s.sol_reg,viewer);
+    // PetscViewerHDF5PopGroup(viewer);
+    // PetscViewerDestroy(&viewer);
 
+
+    ierr = PetscFinalize();
+    CHKERRQ(ierr);
+
+    return 0;
+
+    /*
 
     std::string stout0 = "two_part_reg_nozeros";
     stout0.append(std::to_string(mx));
@@ -126,7 +146,7 @@ int main(int argc, char **argv)
                                st.ctx->h);
     CHKERRQ(ierr);
 
-    /*
+    
     // REFINEMENT AND INTERPOLATION
     int const fine = nref/mx;
     std::array<int, dim> refine = {fine,fine};
@@ -198,8 +218,8 @@ int main(int argc, char **argv)
     stout1.append(std::to_string(mx));
     stw1 = stout1.c_str();
     ierr = cafes::io::save_VTK("Resultats", stw1, sol_refine, dm_refine, h_refine);CHKERRQ(ierr);
+    
     */
-
     
     // SAVE TO READ BACK
     /*
@@ -258,6 +278,10 @@ int main(int argc, char **argv)
     std::cout << "Size Reference Mesh.   Pressure : " << infop.mx << " " << infop.my << " Velocity : " << infov.mx << " " << infov.my  << std::endl;
 
     ierr = DMCreateGlobalVector(dm_refine, &solref);CHKERRQ(ierr);
+
+    */
+
+    /*
     std::string refout = "reference_";
     refout.append(std::to_string(nref));
     refout.append(".dat");
@@ -273,8 +297,8 @@ int main(int argc, char **argv)
     ierr = cafes::io::save_VTK(srep, stw1, solref, dm_refine, h_refine);CHKERRQ(ierr);
     */
     
-
-    /*
+   /*
+    
     auto solrefu = cafes::petsc::petsc_vec<dim>(dm_refine, solref, 0, false);
     auto solrefp = cafes::petsc::petsc_vec<dim>(dm_refine, solref, 1, false);
     //ierr = solrefu.global_to_local(INSERT_VALUES);CHKERRQ(ierr);
@@ -283,7 +307,7 @@ int main(int argc, char **argv)
     // Fill pressure
     //op << "reference_sem_pressure.txt";
     //op << "fenics_reference/Results/Rsur5_nref2000_samevel" << "/" <<  "pressure.txt";
-    op << rrep << "reference_sem_pressure_" << nref << ".txt";
+    // op << rrep << "reference_sem_pressure_" << nref << ".txt";
     file.open(op.str());
     for (std::size_t j =0; j<infop.my; j++ )
     {
@@ -338,9 +362,9 @@ int main(int argc, char **argv)
     //ierr = solrefp.local_to_global(INSERT_VALUES);CHKERRQ(ierr);
 
     ierr = cafes::io::save_VTK("Resultats", "reference_solution_256", solref, dm_refine, h_refine);CHKERRQ(ierr);
-    */
+    
 
-    /*
+    
     // COMPUTE ERROR
     Vec error;
     VecDuplicate(sol_refine, &error);
@@ -568,7 +592,7 @@ int main(int argc, char **argv)
     ofs.open(stout3, std::ofstream::out);
     ofs << st.ctx->h[0] << " " << erroruL2x << " " << erroruL2y << " " << erroruH1x << " " << erroruH1y << " " << errorpL2 <<  " " << s.kspiter << " " << s.kspresnorm << std::endl;
     ofs.close();
-    */
+    
 
     // // OTHER WAY TO INTEGRATE
     // erroruL2 = 0;
@@ -599,4 +623,5 @@ int main(int argc, char **argv)
     CHKERRQ(ierr);
 
     return 0;
+    */
 }
