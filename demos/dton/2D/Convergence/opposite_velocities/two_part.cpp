@@ -6,7 +6,6 @@
 #include <string>
 
 #include <particle/singularity/add_singularity.hpp>
-#include <petscviewerhdf5.h>
 
 void zeros(const PetscReal x[], PetscScalar *u)
 {
@@ -27,9 +26,9 @@ int main(int argc, char **argv)
 {
     PetscErrorCode ierr;
     std::size_t const dim = 2;
-    int const nref = 300;
+    int const nref = 2048;
     std::string saverep = "Resultats";
-    std::string refrep = "";
+    std::string refrep = "Reference";
     const char * srep = saverep.c_str();
     const char * rrep = refrep.c_str();
 
@@ -67,54 +66,12 @@ int main(int argc, char **argv)
 
     ierr = s.create_Mat_and_Vec();
     CHKERRQ(ierr);
-    // ierr = cafes::singularity::save_singularity<dim,
-    // decltype(*(s.ctx))>("Resultats", "two_part_singularity", *(s.ctx));CHKERRQ(ierr);
 
     ierr = s.setup_RHS();
     CHKERRQ(ierr);
-
-
-    std::string stoutinit = "two_part_setup_rhs_";
-    stoutinit.append(std::to_string(mx));
-    const char * stwinit = stoutinit.c_str();
-    ierr = cafes::io::save_hdf5("Resultats", stwinit, st.sol, st.ctx->dm,
-                               st.ctx->h);
-    CHKERRQ(ierr);
-
-    // ierr = PetscFinalize();
-    // CHKERRQ(ierr);
-    // return 0;
-
-
-    
     ierr = s.setup_KSP();
     CHKERRQ(ierr);
     ierr = s.solve();
-    CHKERRQ(ierr);
-
-    // PetscViewer       viewer;
-    // PetscViewerCreate(MPI_COMM_WORLD, &viewer);
-    // PetscViewerSetType(viewer, PETSCVIEWERHDF5);
-    // PetscViewerFileSetMode(viewer, FILE_MODE_WRITE);
-    // PetscViewerFileSetName(viewer, "test.h5");
-    // PetscViewerHDF5PushGroup(viewer, "/fields");
-    // VecView(s.sol_reg,viewer);
-    // PetscViewerHDF5PopGroup(viewer);
-    // PetscViewerDestroy(&viewer);
-
-
-    ierr = PetscFinalize();
-    CHKERRQ(ierr);
-
-    return 0;
-
-    /*
-
-    std::string stout0 = "two_part_reg_nozeros";
-    stout0.append(std::to_string(mx));
-    const char * stw0 = stout0.c_str();
-    ierr = cafes::io::save_VTK("Resultats", stw0, s.sol_reg, st.ctx->dm,
-                               st.ctx->h);
     CHKERRQ(ierr);
 
     // COARSE DMDA INFO
@@ -125,24 +82,24 @@ int main(int argc, char **argv)
     ierr = DMDAGetLocalInfo(dapCoarse, &infopCoarse);CHKERRQ(ierr);
     std::cout << "Size Coarse Mesh.   Pressure : " << infopCoarse.mx << " " << infopCoarse.my << " Velocity : " << infovCoarse.mx << " " << infovCoarse.my  << std::endl;
 
-    stout0 = "two_part_rhs_";
+    std::string stout0 = "two_part_rhs_";
     stout0.append(std::to_string(mx));
-    stw0 = stout0.c_str();
-    ierr = cafes::io::save_VTK("Resultats", stw0, s.sol_rhs, st.ctx->dm,
+    const char * stw0 = stout0.c_str();
+    ierr = cafes::io::save_hdf5(srep, stw0, s.sol_rhs, st.ctx->dm,
                                st.ctx->h);
     CHKERRQ(ierr);
 
     stout0 = "two_part_tmp_";
     stout0.append(std::to_string(mx));
     stw0 = stout0.c_str();
-    ierr = cafes::io::save_VTK("Resultats", stw0, s.sol_tmp, st.ctx->dm,
+    ierr = cafes::io::save_hdf5(srep, stw0, s.sol_tmp, st.ctx->dm,
                                st.ctx->h);
     CHKERRQ(ierr);
 
     stout0 = "two_part_reg_";
     stout0.append(std::to_string(mx));
     stw0 = stout0.c_str();
-    ierr = cafes::io::save_VTK("Resultats", stw0, s.sol_reg, st.ctx->dm,
+    ierr = cafes::io::save_hdf5(srep, stw0, s.sol_reg, st.ctx->dm,
                                st.ctx->h);
     CHKERRQ(ierr);
 
@@ -160,8 +117,6 @@ int main(int argc, char **argv)
     ierr = cafes::posttraitement::linear_interpolation(st.ctx->dm, s.sol_reg, dm_refine, sol_refine, refine, st.ctx->h);CHKERRQ(ierr);
     std::cout << "Done." << std::endl;
     
-    
-    
     // DMDA INFO
     DM dav, dap;
     DMDALocalInfo infop, infov;
@@ -169,7 +124,6 @@ int main(int argc, char **argv)
     ierr = DMCompositeGetEntries(dm_refine, &dav, &dap);CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(dav, &infov);CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(dap, &infop);CHKERRQ(ierr);
-
     
     // ZEROS IN PARTICLES (REFINED SOLUTION)
     auto bbox = cafes::fem::get_DM_bounds<dim>(dm_refine, 0);
@@ -205,21 +159,20 @@ int main(int argc, char **argv)
             }
         }
     }
-    
-    std::string stout1 = "two_part_refined";
-    stout1.append(std::to_string(mx));
-    const char * stw1 = stout1.c_str();
-    ierr = cafes::io::save_VTK("Resultats", stw1, sol_refine, dm_refine, h_refine);CHKERRQ(ierr);
+
+    stout0 = "two_part_refined_";
+    stout0.append(std::to_string(mx));
+    stw0 = stout0.c_str();
+    ierr = cafes::io::save_hdf5(srep, stw0, sol_refine, dm_refine, h_refine);CHKERRQ(ierr);
 
     // ADD SINGULARITY TO UREG REFINED
     cafes::singularity::add_singularity_to_ureg(dm_refine, h_refine, sol_refine, pt);
 
-    stout1 = "two_part_total_";
-    stout1.append(std::to_string(mx));
-    stw1 = stout1.c_str();
-    ierr = cafes::io::save_VTK("Resultats", stw1, sol_refine, dm_refine, h_refine);CHKERRQ(ierr);
+    stout0 = "two_part_total_";
+    stout0.append(std::to_string(mx));
+    stw0 = stout0.c_str();
+    ierr = cafes::io::save_hdf5(srep, stw0, sol_refine, dm_refine, h_refine);CHKERRQ(ierr);
     
-    */
     
     // SAVE TO READ BACK
     /*

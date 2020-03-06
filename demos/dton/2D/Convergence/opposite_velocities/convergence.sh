@@ -1,23 +1,32 @@
 #!/bin/bash
 
 exec=../../../../../build/demos/convergence
-nproc=4
+nproc=1
 
-for i in '54' #'16' '26' '31' '51' '61' '76' '101' '151'
+for i in '65' #'16' '26' '31' '51' '61' '76' '101' '151'
 do
-mpirun -np $nproc $exec \
+$exec \
+    -assembling \
     -stokes_ksp_type preonly \
     -stokes_pc_type lu \
-    -stokes_pc_factor_mat_solver_type superlu_dist \
-    -mat_superlu_dist_replacetinypivot \
-    -dton_ksp_initial_guess_nonzero true \
-    -assembling \
-    -dton_ksp_type gmres \
-    -dton_ksp_max_it 5000 \
-    -dton_ksp_rtol 1e-5 \
+    -dton_ksp_type lgmres \
+    -dton_ksp_max_it 10 \
+    -dton_ksp_rtol 1e-10 \
     -dton_ksp_monitor_true_residual \
     -mx $i \
-    -my $i \
+    -my $i
+    #-stokes_ksp_type preonly \
+    #-stokes_pc_type lu \
+    #-stokes_pc_factor_mat_solver_type mumps \
+    #-mat_superlu_dist_replacetinypivot \
+    #-dton_ksp_initial_guess_nonzero true \
+    #-assembling \
+    #-dton_ksp_type gmres \
+    #-dton_ksp_max_it 5 \
+    #-dton_ksp_rtol 1e-5 \
+    #-dton_ksp_monitor_true_residual \
+    #-mx $i \
+    #-my $i \
     #-stokes_pc_factor_mat_solver_type mumps \
     #-start_in_debugger lldb \
     # -xperiod \
@@ -37,8 +46,8 @@ mpirun -np $nproc $exec \
     
 done
 
-cat Resultats/L2errors* > Resultats/convergence.txt
-rm -f Resultats/L2errors*
+#cat Resultats/L2errors* > Resultats/convergence.txt
+#rm -f Resultats/L2errors*
 
 
 # mpirun -np $nproc $exec \
