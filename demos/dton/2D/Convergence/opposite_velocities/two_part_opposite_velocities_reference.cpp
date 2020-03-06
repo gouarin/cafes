@@ -7,8 +7,6 @@
 
 #include <particle/singularity/add_singularity.hpp>
 
-
-
 void zeros(const PetscReal x[], PetscScalar *u)
 {
     *u = 0.;
@@ -58,7 +56,6 @@ int main(int argc, char **argv)
 
     auto se1 = cafes::make_circle({.5 - R1 - dist / 2, .5}, R1, 0);
     auto se2 = cafes::make_circle({.5 + R2 + dist / 2, .5}, R2, 0);
-    
     
     std::vector<cafes::particle<decltype(se1)>> pt{
         cafes::make_particle_with_velocity(se1, {1., 0.}, 0.),
