@@ -271,7 +271,7 @@ namespace cafes
                     }
 
                     B_BT_assembling(mesh, A, hu);
-                    diagonal_assembling<Dimensions>(mesh, A, 1.e-8); //0 à la place de 1e-8 (d'après H.)
+                    diagonal_assembling<Dimensions>(mesh, A, 0.); //0 à la place de 1e-8 (d'après H.)
                     cafes::mass_assembling(mesh, P, hp);
 
                     MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);
@@ -282,7 +282,7 @@ namespace cafes
                     cafes::fem::SetDirichletOnMat(A, bc);
                     cafes::fem::SetDirichletOnMat(P, bc);
 
-                    // CreatePressureNullSpace(mesh); 
+                    CreatePressureNullSpace(mesh); 
                 }
                 else
                 {
