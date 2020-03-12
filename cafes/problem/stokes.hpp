@@ -46,9 +46,54 @@ namespace cafes
     namespace problem
     {
 
-#undef __FUNCT__
-#define __FUNCT__ "setPMMSolver"
-        PetscErrorCode setPMMSolver(KSP ksp, DM dm)
+        #undef __FUNCT__
+        #define __FUNCT__ "createLevelMatrices"
+        template<typename CTX, std::size_t Dim>
+        PetscErrorCode createLevelMatrices(KSP ksp, Mat Alevel, Mat Plevel, void *ctx)
+        {
+            PetscErrorCode ierr;
+            PetscFunctionBeginUser;
+
+            CTX *ctx_ = (CTX *)ctx;
+
+            DM dm;
+            ierr = KSPGetDM(ksp, &dm);CHKERRQ(ierr);
+
+            int localsize, totalsize;
+            int localsize_0, totalsize_0;
+            ierr = fem::get_DM_sizes(dm, localsize, totalsize);CHKERRQ(ierr);
+            ierr = fem::get_DM_sizes(ctx_->dm, localsize_0, totalsize_0);CHKERRQ(ierr);
+
+            int nx_0 = sqrt(totalsize_0/2), nx = sqrt(totalsize/2);
+            int level = 0;
+            // find the level in MG
+            while(nx_0 != nx)
+            {
+                level++;
+                nx_0 = (nx_0+1)/Dim;
+            }
+
+            auto mg_h = ctx_->h;
+            std::for_each(mg_h.begin(), mg_h.end(), [&](auto &x) {x *= (1 << level);});
+            
+            auto *mg_ctx = new CTX{dm, mg_h, ctx_->apply, ctx_->apply_diag};
+            mg_ctx->set_dirichlet_bc(ctx_->bc_);
+
+            ierr = MatSetSizes(Alevel, localsize, localsize, totalsize, totalsize);CHKERRQ(ierr);
+            ierr = MatSetType(Alevel, MATSHELL);CHKERRQ(ierr);
+            ierr = MatShellSetContext(Alevel, mg_ctx);CHKERRQ(ierr);
+            ierr = MatShellSetOperation(Alevel, MATOP_MULT, (void (*)())fem::diag_block_matrix<CTX>);CHKERRQ(ierr);
+            ierr = MatShellSetOperation(Alevel, MATOP_GET_DIAGONAL,(void (*)())fem::diag_diag_block_matrix<CTX>);CHKERRQ(ierr);
+            ierr = MatSetDM(Alevel, dm);CHKERRQ(ierr);
+            ierr = MatSetFromOptions(Alevel);CHKERRQ(ierr);
+
+            PetscFunctionReturn(0);
+        }
+
+        #undef __FUNCT__
+        #define __FUNCT__ "setPMMSolver"
+        template<class Ctx, std::size_t Dim>
+        PetscErrorCode setPMMSolver(KSP ksp, DM dm, Ctx *ctx)
         {
             PetscErrorCode ierr;
             PetscFunctionBeginUser;
@@ -60,50 +105,34 @@ namespace cafes
 
             PetscFunctionBeginUser;
 
-            ierr = DMCompositeGetEntries(dm, &dav, &dap);
-            CHKERRQ(ierr);
-            ierr = DMDAGetLocalInfo(dav, &info);
-            CHKERRQ(ierr);
 
-            ierr = KSPSetType(ksp, KSPGCR);
-            CHKERRQ(ierr);
-            ierr = KSPGetPC(ksp, &pc);
-            CHKERRQ(ierr);
-            ierr = PCSetType(pc, PCFIELDSPLIT);
-            CHKERRQ(ierr);
-            ierr = PCFieldSplitSetType(pc, PC_COMPOSITE_SCHUR);
-            CHKERRQ(ierr);
-            ierr = PCFieldSplitSetOffDiagUseAmat(pc, PETSC_TRUE);
-            CHKERRQ(ierr);
-            ierr = PCFieldSplitSetSchurFactType(pc,
-                                                PC_FIELDSPLIT_SCHUR_FACT_UPPER);
-            CHKERRQ(ierr);
-            ierr = PCFieldSplitSetSchurPre(pc, PC_FIELDSPLIT_SCHUR_PRE_USER,
-                                           PETSC_NULL);
-            CHKERRQ(ierr);
-            ierr = KSPSetUp(ksp);
-            CHKERRQ(ierr);
+            ierr = KSPSetType(ksp, KSPGCR);CHKERRQ(ierr);
+            ierr = KSPGetPC(ksp, &pc);CHKERRQ(ierr);
+            ierr = PCSetType(pc, PCFIELDSPLIT);CHKERRQ(ierr);
+            ierr = PCFieldSplitSetType(pc, PC_COMPOSITE_SCHUR);CHKERRQ(ierr);
+            ierr = PCFieldSplitSetOffDiagUseAmat(pc, PETSC_TRUE);CHKERRQ(ierr);
+            ierr = PCFieldSplitSetSchurFactType(pc, PC_FIELDSPLIT_SCHUR_FACT_UPPER);CHKERRQ(ierr);
+            ierr = PCFieldSplitSetSchurPre(pc, PC_FIELDSPLIT_SCHUR_PRE_USER, PETSC_NULL);CHKERRQ(ierr);
 
-            ierr = PCFieldSplitGetSubKSP(pc, nullptr, &sub_ksp);
-            CHKERRQ(ierr);
+            ierr = DMCompositeGetEntries(dm, &dav, &dap);CHKERRQ(ierr);
+            auto *mg_ctx = new Ctx{dav, ctx->h, ctx->apply, fem::diag_laplacian_mult};
+            mg_ctx->set_dirichlet_bc(ctx->bc_);
+            ierr = DMKSPSetComputeOperators(dav, createLevelMatrices<Ctx, Dim>, (void *)mg_ctx);CHKERRQ(ierr);
+
+            ierr = PCSetUp(pc);CHKERRQ(ierr);
+
+            ierr = PCFieldSplitGetSubKSP(pc, nullptr, &sub_ksp);CHKERRQ(ierr);
 
             /* Set MG solver on velocity field*/
-            ierr = KSPGetPC(sub_ksp[0], &pc_i);
-            CHKERRQ(ierr);
-            ierr = KSPSetDM(sub_ksp[0], dav);
-            CHKERRQ(ierr);
-            ierr = KSPSetDMActive(sub_ksp[0], PETSC_FALSE);
-            CHKERRQ(ierr);
+            ierr = KSPGetPC(sub_ksp[0], &pc_i);CHKERRQ(ierr);
+            ierr = KSPSetDM(sub_ksp[0], dav);CHKERRQ(ierr);
+            ierr = KSPSetDMActive(sub_ksp[0], PETSC_FALSE);CHKERRQ(ierr);
 
-            // ierr = KSPSetType(sub_ksp[0], KSPCG);CHKERRQ(ierr);
-            ierr = KSPSetType(sub_ksp[0], KSPGCR);
-            CHKERRQ(ierr);
-            ierr = KSPSetTolerances(sub_ksp[0], 1e-2, PETSC_DEFAULT,
-                                    PETSC_DEFAULT, PETSC_DEFAULT);
-            CHKERRQ(ierr);
-            ierr = PCSetType(pc_i, PCMG);
-            CHKERRQ(ierr);
+            ierr = KSPSetType(sub_ksp[0], KSPGCR);CHKERRQ(ierr);
+            ierr = KSPSetTolerances(sub_ksp[0], 1e-2, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);CHKERRQ(ierr);
+            ierr = PCSetType(pc_i, PCMG);CHKERRQ(ierr);
 
+            ierr = DMDAGetLocalInfo(dav, &info);CHKERRQ(ierr);
             auto i = (info.mx < info.my) ? info.mx : info.my;
             i = (info.mz == 1 || i < info.mz) ? i : info.mz;
 
@@ -114,19 +143,23 @@ namespace cafes
                 MGlevels++;
             }
 
-            ierr = PCMGSetLevels(pc_i, MGlevels, PETSC_NULL);
-            CHKERRQ(ierr);
+            ierr = PCMGSetLevels(pc_i, MGlevels, PETSC_NULL);CHKERRQ(ierr);
+
+            for (std::size_t i = 0; i < MGlevels; ++i)
+            {
+                KSP smoother;
+                PC pcsmoother;
+                ierr = PCMGGetSmoother(pc_i, i, &smoother);CHKERRQ(ierr);
+                ierr = KSPSetType(smoother, KSPCG);CHKERRQ(ierr);
+                ierr = KSPGetPC(smoother, &pcsmoother);CHKERRQ(ierr);
+                ierr = PCSetType(pcsmoother, PCJACOBI);CHKERRQ(ierr);
+            }
 
             /* Set Jacobi preconditionner on pressure field*/
-            ierr = KSPSetType(sub_ksp[1], KSPPREONLY);
-            CHKERRQ(ierr);
-            ierr = KSPSetTolerances(sub_ksp[1], 1e-1, PETSC_DEFAULT,
-                                    PETSC_DEFAULT, PETSC_DEFAULT);
-            CHKERRQ(ierr);
-            ierr = KSPGetPC(sub_ksp[1], &pc_i);
-            CHKERRQ(ierr);
-            ierr = PCSetType(pc_i, PCJACOBI);
-            CHKERRQ(ierr);
+            ierr = KSPSetType(sub_ksp[1], KSPPREONLY);CHKERRQ(ierr);
+            ierr = KSPSetTolerances(sub_ksp[1], 1e-1, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);CHKERRQ(ierr);
+            ierr = KSPGetPC(sub_ksp[1], &pc_i);CHKERRQ(ierr);
+            ierr = PCSetType(pc_i, PCJACOBI);CHKERRQ(ierr);
 
             // /* Set MG solver on pressure field*/
             // ierr = KSPGetPC(sub_ksp[1], &pc_i);CHKERRQ(ierr);
@@ -152,47 +185,6 @@ namespace cafes
             PetscFunctionReturn(0);
         }
 
-#undef __FUNCT__
-#define __FUNCT__ "createLevelMatrices"
-        template<typename CTX>
-        PetscErrorCode createLevelMatrices(KSP ksp, Mat Alevel, Mat Plevel,
-                                           void *ctx)
-        {
-            DM dm;
-            PetscErrorCode ierr;
-            CTX *ctx_ = (CTX *)ctx;
-            int localsize, totalsize;
-            PetscFunctionBeginUser;
-
-            ierr = KSPGetDM(ksp, &dm);
-            CHKERRQ(ierr);
-            ctx_->dm = dm;
-
-            ierr = fem::get_DM_sizes(dm, localsize, totalsize);
-            CHKERRQ(ierr);
-
-            ierr =
-                MatSetSizes(Alevel, localsize, localsize, totalsize, totalsize);
-            CHKERRQ(ierr);
-            ierr = MatSetType(Alevel, MATSHELL);
-            CHKERRQ(ierr);
-            ierr = MatShellSetContext(Alevel, ctx);
-            CHKERRQ(ierr);
-            ierr = MatShellSetOperation(
-                Alevel, MATOP_MULT, (void (*)())fem::diag_block_matrix<CTX>);
-            CHKERRQ(ierr);
-            ierr = MatShellSetOperation(
-                Alevel, MATOP_GET_DIAGONAL,
-                (void (*)())fem::diag_diag_block_matrix<CTX>);
-            CHKERRQ(ierr);
-            ierr = MatSetDM(Alevel, dm);
-            CHKERRQ(ierr);
-            ierr = MatSetFromOptions(Alevel);
-            CHKERRQ(ierr);
-
-            PetscFunctionReturn(0);
-        }
-
         //!
         //! Stokes class
         //!
@@ -201,6 +193,7 @@ namespace cafes
         {
             // using parent = Problem<Dimensions>::Problem;
             using Ctx = context<Dimensions>;
+            static constexpr std::size_t Dim = Dimensions;
             fem::rhs_conditions<Dimensions> rhsc_;
             options<Dimensions> opt{};
 
@@ -295,13 +288,11 @@ namespace cafes
                     DMSetMatType(dav, MATSHELL);
                     DMSetMatType(dap, MATSHELL);
 
-                    Ctx *slap =
-                        new Ctx{dav, hu, method, fem::diag_laplacian_mult};
+                    Ctx *slap = new Ctx{dav, hu, method, fem::diag_laplacian_mult};
                     slap->set_dirichlet_bc(bc);
                     auto A11 = fem::make_matrix<Ctx>(slap);
 
-                    Ctx *smass =
-                        new Ctx{dap, hp, fem::mass_mult, fem::diag_mass_mult};
+                    Ctx *smass = new Ctx{dap, hp, fem::mass_mult, fem::diag_mass_mult};
                     auto A22 = fem::make_matrix<Ctx>(smass);
 
                     Mat bA[2][2];
@@ -316,8 +307,8 @@ namespace cafes
                 }
             }
 
-#undef __FUNCT__
-#define __FUNCT__ "setup_RHS"
+            #undef __FUNCT__
+            #define __FUNCT__ "setup_RHS"
             virtual PetscErrorCode setup_RHS() override
             {
                 PetscErrorCode ierr;
@@ -325,202 +316,60 @@ namespace cafes
 
                 if (rhsc_.has_condition())
                 {
-                    ierr = fem::set_rhs<Dimensions, 1>(ctx->dm, rhs, rhsc_,
-                                                       ctx->h);
-                    CHKERRQ(ierr);
+                    ierr = fem::set_rhs<Dimensions, 1>(ctx->dm, rhs, rhsc_, ctx->h);CHKERRQ(ierr);
                 }
 
                 auto petsc_rhs = petsc::petsc_vec<Dimensions>(ctx->dm, rhs, 0);
-                ierr = SetDirichletOnRHS(petsc_rhs, ctx->bc_, ctx->h);
-                CHKERRQ(ierr);
+                ierr = SetDirichletOnRHS(petsc_rhs, ctx->bc_, ctx->h);CHKERRQ(ierr);
 
                 PetscFunctionReturn(0);
             }
 
-#undef __FUNCT__
-#define __FUNCT__ "setup_KSP"
+            #undef __FUNCT__
+            #define __FUNCT__ "setup_KSP"
             virtual PetscErrorCode setup_KSP() override
             {
                 PetscErrorCode ierr;
-                PC pc;
                 PetscFunctionBeginUser;
+                PC pc;
 
-                ierr = KSPCreate(PETSC_COMM_WORLD, &ksp);
-                CHKERRQ(ierr);
-                ierr = KSPSetDM(ksp, ctx->dm);
-                CHKERRQ(ierr);
-                ierr = KSPSetDMActive(ksp, PETSC_FALSE);
-                CHKERRQ(ierr);
-                ierr = KSPSetOptionsPrefix(ksp, "stokes_");
-                CHKERRQ(ierr);
-                ierr = KSPSetFromOptions(ksp);
-                CHKERRQ(ierr);
+                ierr = KSPCreate(PETSC_COMM_WORLD, &ksp);CHKERRQ(ierr);
+                ierr = KSPSetDM(ksp, ctx->dm);CHKERRQ(ierr);
+                ierr = KSPSetDMActive(ksp, PETSC_FALSE);CHKERRQ(ierr);
+                ierr = KSPSetOptionsPrefix(ksp, "stokes_");CHKERRQ(ierr);
+                ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
 
-                ierr = KSPSetOperators(ksp, A, P);
-                CHKERRQ(ierr);
+                ierr = KSPSetOperators(ksp, A, P);CHKERRQ(ierr);
 
                 if (opt.assembling)
                 {
-                    ierr = KSPSetUp(ksp);
-                    CHKERRQ(ierr);
-                    ierr = KSPGetPC(ksp, &pc);
-                    CHKERRQ(ierr);
+                    ierr = KSPSetUp(ksp);CHKERRQ(ierr);
+                    ierr = KSPGetPC(ksp, &pc);CHKERRQ(ierr);
 
                     PetscBool ksp_preonly;
-                    ierr = PetscObjectTypeCompare((PetscObject)ksp, KSPPREONLY,
-                                                  &ksp_preonly);
+                    ierr = PetscObjectTypeCompare((PetscObject)ksp, KSPPREONLY, &ksp_preonly);CHKERRQ(ierr);
 
                     PetscBool pc_lu;
-                    ierr =
-                        PetscObjectTypeCompare((PetscObject)pc, PCLU, &pc_lu);
+                    ierr = PetscObjectTypeCompare((PetscObject)pc, PCLU, &pc_lu);CHKERRQ(ierr);
+
                     if (ksp_preonly && pc_lu)
                     {
-                        ierr = KSPSetOperators(ksp, A, A);
-                        CHKERRQ(ierr);
-                        ierr = PCFactorSetShiftType(pc, MAT_SHIFT_NONZERO);
-                        CHKERRQ(ierr);
+                        ierr = KSPSetOperators(ksp, A, A);CHKERRQ(ierr);
+                        ierr = PCFactorSetShiftType(pc, MAT_SHIFT_NONZERO);CHKERRQ(ierr);
                     }
                 }
                 else
                 {
                     if (opt.pmm)
                     {
-                        ierr = setPMMSolver(ksp, ctx->dm);
-                        CHKERRQ(ierr);
-                    }
-
-                    ierr = KSPSetUp(ksp);
-                    CHKERRQ(ierr);
-                    ierr = KSPGetPC(ksp, &pc);
-                    CHKERRQ(ierr);
-
-                    PetscBool same;
-                    ierr = PetscObjectTypeCompare((PetscObject)pc, PCFIELDSPLIT,
-                                                  &same);
-
-                    // If we use fieldsplit for the preconditionner
-                    if (same)
-                    {
-                        KSP *subksp;
-                        DM dav, dap;
-                        ierr = PCFieldSplitGetSubKSP(pc, nullptr, &subksp);
-                        CHKERRQ(ierr);
-                        ierr = DMCompositeGetEntries(ctx->dm, &dav, &dap);
-                        CHKERRQ(ierr);
-
-                        ierr = KSPGetPC(subksp[0], &pc);
-                        CHKERRQ(ierr);
-                        ierr = KSPSetType(subksp[0], KSPGCR);
-                        CHKERRQ(ierr);
-                        ierr = KSPSetDM(subksp[0], dav);
-                        CHKERRQ(ierr);
-                        ierr = KSPSetDMActive(subksp[0], PETSC_FALSE);
-                        CHKERRQ(ierr);
-                        ierr = PetscObjectTypeCompare((PetscObject)pc, PCMG,
-                                                      &same);
-                        CHKERRQ(ierr);
-
-                        // if MG is set for fieldsplit_0
-                        if (same)
-                        {
-                            PetscErrorCode (*method)(
-                                petsc::petsc_vec<Dimensions> &,
-                                petsc::petsc_vec<Dimensions> &,
-                                std::array<double, Dimensions> const &);
-
-                            if (opt.strain_tensor)
-                                method = fem::strain_tensor_mult;
-                            else
-                                method = fem::laplacian_mult;
-
-                            PetscInt MGlevels;
-                            KSP smoother;
-                            ierr = PCMGGetLevels(pc, &MGlevels);
-                            CHKERRQ(ierr);
-
-                            for (std::size_t i = 0; i < MGlevels; ++i)
-                            {
-                                auto mg_h = ctx->h;
-                                std::for_each(
-                                    mg_h.begin(), mg_h.end(), [&](auto &x) {
-                                        x *= (1 << (MGlevels - 1 - i));
-                                    });
-
-                                auto *mg_ctx =
-                                    new Ctx{dav, mg_h, method,
-                                            fem::diag_laplacian_mult};
-                                mg_ctx->set_dirichlet_bc(ctx->bc_);
-
-                                PC pcsmoother;
-                                ierr = PCMGGetSmoother(pc, i, &smoother);
-                                CHKERRQ(ierr);
-
-                                ierr = KSPSetComputeOperators(
-                                    smoother, createLevelMatrices<Ctx>,
-                                    (void *)mg_ctx);
-                                CHKERRQ(ierr);
-                                // ierr = KSPSetType(smoother,
-                                // KSPCG);CHKERRQ(ierr);
-                                ierr = KSPSetType(smoother, KSPCG);
-                                CHKERRQ(ierr);
-                                ierr = KSPGetPC(smoother, &pcsmoother);
-                                CHKERRQ(ierr);
-                                ierr = PCSetType(pcsmoother, PCJACOBI);
-                                CHKERRQ(ierr);
-                            }
-
-                            ierr = PCSetUp(pc);
-                            CHKERRQ(ierr);
-                        }
-
-                        // ierr = KSPGetPC(subksp[1], &pc);CHKERRQ(ierr);
-                        // ierr = KSPSetType(subksp[1],
-                        // KSPFGMRES);CHKERRQ(ierr); ierr = KSPSetDM(subksp[1],
-                        // dap);CHKERRQ(ierr); ierr = KSPSetDMActive(subksp[1],
-                        // PETSC_FALSE);CHKERRQ(ierr); ierr =
-                        // PetscObjectTypeCompare((PetscObject)pc, PCMG,
-                        // &same);CHKERRQ(ierr);
-
-                        // // if MG is set for fieldsplit_1
-                        // if (same) {
-                        //   PetscInt MGlevels;
-                        //   KSP smoother;
-                        //   ierr = PCMGGetLevels(pc, &MGlevels);CHKERRQ(ierr);
-
-                        //   for(std::size_t i=0; i<MGlevels; ++i){
-                        //     auto mg_h{ctx->h};
-                        //     std::for_each(mg_h.begin(), mg_h.end(), [&](auto&
-                        //     x){x*=2;});
-
-                        //     std::for_each(mg_h.begin(), mg_h.end(), [&](auto&
-                        //     x){x*=(1<<(MGlevels-1-i));});
-
-                        //     auto *mg_ctx = new Ctx{dap, mg_h, fem::mass_mult,
-                        //     fem::mass_mult_diag};
-                        //     //mg_ctx->set_dirichlet_bc(ctx->bc_);
-
-                        //     PC pcsmoother;
-                        //     ierr = PCMGGetSmoother(pc, i,
-                        //     &smoother);CHKERRQ(ierr);
-
-                        //     ierr = KSPSetComputeOperators(smoother,
-                        //     createLevelMatrices<Ctx>, (void *)
-                        //     mg_ctx);CHKERRQ(ierr); ierr =
-                        //     KSPSetType(smoother, KSPFGMRES);CHKERRQ(ierr);
-                        //     ierr = KSPGetPC(smoother,
-                        //     &pcsmoother);CHKERRQ(ierr); ierr =
-                        //     PCSetType(pcsmoother, PCJACOBI);CHKERRQ(ierr);
-                        //   }
-
-                        //   ierr = PCSetUp(pc);CHKERRQ(ierr);
-                        // }
+                        ierr = setPMMSolver<Ctx, Dim>(ksp, ctx->dm, ctx);CHKERRQ(ierr);
                     }
                 }
                 PetscFunctionReturn(0);
             }
 
-#undef __FUNCT__
-#define __FUNCT__ "CreatePressureNullSpace"
+            #undef __FUNCT__
+            #define __FUNCT__ "CreatePressureNullSpace"
             PetscErrorCode CreatePressureNullSpace(DM mesh)
             {
                 PetscErrorCode ierr;
@@ -529,44 +378,39 @@ namespace cafes
                 MatNullSpace nullSpacePres;
 
                 Vec tmp;
-                ierr = DMGetGlobalVector(mesh, &tmp);
-                CHKERRQ(ierr);
-                ierr = VecSet(tmp, 0.);
-                CHKERRQ(ierr);
+                ierr = DMGetGlobalVector(mesh, &tmp);CHKERRQ(ierr);
+                ierr = VecSet(tmp, 0.);CHKERRQ(ierr);
 
                 auto lambda = [](const auto &dm, auto &v) {
                     auto xpetsc = petsc::petsc_vec<Dimensions>(dm, v, 1, false);
-
                     xpetsc.fill_global(1.);
                 };
 
                 lambda(mesh, tmp);
-                ierr = VecNormalize(tmp, NULL);
-                CHKERRQ(ierr);
+                ierr = VecNormalize(tmp, NULL);CHKERRQ(ierr);
 
                 ierr = MatNullSpaceCreate(PetscObjectComm((PetscObject)mesh),
-                                          PETSC_FALSE, 1, &tmp, &nullSpacePres);
+                                          PETSC_FALSE, 1, &tmp, &nullSpacePres);CHKERRQ(ierr);
 
-                ierr = MatSetNullSpace(A, nullSpacePres);
-                CHKERRQ(ierr);
+                ierr = MatSetNullSpace(A, nullSpacePres);CHKERRQ(ierr);
                 PetscFunctionReturn(0);
             }
 
-#undef __FUNCT__
-#define __FUNCT__ "solve"
+            #undef __FUNCT__
+            #define __FUNCT__ "solve"
             virtual PetscErrorCode solve() override
             {
                 PetscErrorCode ierr;
-                PC pc;
                 PetscFunctionBeginUser;
+                PC pc;
 
-                ierr = KSPSolve(ksp, rhs, sol);
-                CHKERRQ(ierr);
+                ierr = KSPSolve(ksp, rhs, sol);CHKERRQ(ierr);
 
                 PetscFunctionReturn(0);
             }
         };
     } // namespace problem
+
     template<std::size_t Dimensions, std::size_t Ndof>
     problem::stokes<Dimensions>
     make_stokes(fem::dirichlet_conditions<Dimensions> const &dc,
