@@ -3,18 +3,32 @@
 exec=../../../../../build/demos/convergence
 nproc=1
 
-for i in '65' #'16' '26' '31' '51' '61' '76' '101' '151'
+for i in '17' '33' '65' '129' '257' '513' '1025'
 do
-$exec \
+    $exec \
     -assembling \
     -stokes_ksp_type preonly \
     -stokes_pc_type lu \
+    -stokes_pc_factor_mat_solver_type mumps \
+    -mat_mumps_icntl_2 1 \
+    -mat_mumps_icntl_4 2 \
     -dton_ksp_type lgmres \
-    -dton_ksp_max_it 10 \
-    -dton_ksp_rtol 1e-10 \
+    -dton_ksp_max_it 10000 \
+    -dton_ksp_rtol 1e-6 \
     -dton_ksp_monitor_true_residual \
-    -mx $i \
-    -my $i
+    -mx $nx \
+    -my $nx 
+done
+
+    # -assembling \
+    # -stokes_ksp_type preonly \
+    # -stokes_pc_type lu \
+    # -dton_ksp_type lgmres \
+    # -dton_ksp_max_it 10 \
+    # -dton_ksp_rtol 1e-10 \
+    # -dton_ksp_monitor_true_residual \
+    # -mx $i \
+    # -my $i
     #-stokes_ksp_type preonly \
     #-stokes_pc_type lu \
     #-stokes_pc_factor_mat_solver_type mumps \
@@ -44,7 +58,7 @@ $exec \
     # -stokes_pc_type lu \
 
     
-done
+# done
 
 #cat Resultats/L2errors* > Resultats/convergence.txt
 #rm -f Resultats/L2errors*
