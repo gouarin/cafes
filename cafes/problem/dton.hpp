@@ -231,8 +231,8 @@ struct convergence_context2
                 {
                     ctx->compute_rhs = true;
                     ctx->add_rigid_motion = true;
-                    ctx->compute_singularity = true;
-                    //ctx->compute_singularity = false;
+                    // ctx->compute_singularity = true;
+                    ctx->compute_singularity = false;
                 }
 
                 ierr = MatMult(A, sol, rhs);

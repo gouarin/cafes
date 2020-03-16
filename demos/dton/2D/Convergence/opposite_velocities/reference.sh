@@ -1,13 +1,13 @@
 #!/bin/bash
 
 exec=../../../../../build/demos/convergence_opposite_velocities_reference
-nx=2049
+nx=257
 
 $exec \
 -assembling \
 -stokes_ksp_type preonly \
 -stokes_pc_type lu \
--stokes_pc_factor_mat_solver_type mumps \
+-stokes_pc_factor_mat_solver_type petsc \
 -mat_mumps_icntl_2 1 \
 -mat_mumps_icntl_4 2 \
 -dton_ksp_type lgmres \
