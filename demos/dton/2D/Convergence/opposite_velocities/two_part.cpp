@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 {
     PetscErrorCode ierr;
     std::size_t const dim = 2;
-    int const nref = 2048;
+    int const nref = 256;
     std::string saverep = "Resultats";
     std::string refrep = "Reference";
     const char * srep = saverep.c_str();
@@ -117,48 +117,48 @@ int main(int argc, char **argv)
     ierr = cafes::posttraitement::linear_interpolation(st.ctx->dm, s.sol_reg, dm_refine, sol_refine, refine, st.ctx->h);CHKERRQ(ierr);
     std::cout << "Done." << std::endl;
     
-    // DMDA INFO
-    DM dav, dap;
-    DMDALocalInfo infop, infov;
+    // // DMDA INFO
+    // DM dav, dap;
+    // DMDALocalInfo infop, infov;
 
-    ierr = DMCompositeGetEntries(dm_refine, &dav, &dap);CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(dav, &infov);CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(dap, &infop);CHKERRQ(ierr);
+    // ierr = DMCompositeGetEntries(dm_refine, &dav, &dap);CHKERRQ(ierr);
+    // ierr = DMDAGetLocalInfo(dav, &infov);CHKERRQ(ierr);
+    // ierr = DMDAGetLocalInfo(dap, &infop);CHKERRQ(ierr);
     
-    // ZEROS IN PARTICLES (REFINED SOLUTION)
-    auto bbox = cafes::fem::get_DM_bounds<dim>(dm_refine, 0);
-    auto bboxp = cafes::fem::get_DM_bounds<dim>(dm_refine, 1);
-    auto solu = cafes::petsc::petsc_vec<dim>(dm_refine, sol_refine, 0, false);
-    auto solp = cafes::petsc::petsc_vec<dim>(dm_refine, sol_refine, 1, false);
+    // // ZEROS IN PARTICLES (REFINED SOLUTION)
+    // auto bbox = cafes::fem::get_DM_bounds<dim>(dm_refine, 0);
+    // auto bboxp = cafes::fem::get_DM_bounds<dim>(dm_refine, 1);
+    // auto solu = cafes::petsc::petsc_vec<dim>(dm_refine, sol_refine, 0, false);
+    // auto solp = cafes::petsc::petsc_vec<dim>(dm_refine, sol_refine, 1, false);
 
-    for(std::size_t j=bbox.bottom_left[1]; j<bbox.upper_right[1]; ++j)
-    {
-        for(std::size_t i=bbox.bottom_left[0]; i<bbox.upper_right[0]; ++i)
-        {
-            auto pos = cafes::geometry::position<int, dim>{i,j};
-            auto pts = cafes::geometry::position<double, dim>{i*h_refine[0], j*h_refine[1]};
-            auto usol = solu.at_g(pos);
-            if (se1.contains(pts) or se2.contains(pts))
-            {
-                usol[0] = 0.;
-                usol[1] = 0.;
-            }
-        }
-    }
+    // for(std::size_t j=bbox.bottom_left[1]; j<bbox.upper_right[1]; ++j)
+    // {
+    //     for(std::size_t i=bbox.bottom_left[0]; i<bbox.upper_right[0]; ++i)
+    //     {
+    //         auto pos = cafes::geometry::position<int, dim>{i,j};
+    //         auto pts = cafes::geometry::position<double, dim>{i*h_refine[0], j*h_refine[1]};
+    //         auto usol = solu.at_g(pos);
+    //         if (se1.contains(pts) or se2.contains(pts))
+    //         {
+    //             usol[0] = 0.;
+    //             usol[1] = 0.;
+    //         }
+    //     }
+    // }
 
-    for(std::size_t j=bboxp.bottom_left[1]; j<bboxp.upper_right[1]; ++j)
-    {
-        for(std::size_t i=bboxp.bottom_left[0]; i<bboxp.upper_right[0]; ++i)
-        {
-            auto pos = cafes::geometry::position<int, dim>{i,j};
-            auto pts = cafes::geometry::position<double, dim>{2*i*h_refine[0], 2*j*h_refine[1]};
-            auto psol = solp.at_g(pos);
-            if (se1.contains(pts) or se2.contains(pts))
-            {
-                psol[0] = 0.;
-            }
-        }
-    }
+    // for(std::size_t j=bboxp.bottom_left[1]; j<bboxp.upper_right[1]; ++j)
+    // {
+    //     for(std::size_t i=bboxp.bottom_left[0]; i<bboxp.upper_right[0]; ++i)
+    //     {
+    //         auto pos = cafes::geometry::position<int, dim>{i,j};
+    //         auto pts = cafes::geometry::position<double, dim>{2*i*h_refine[0], 2*j*h_refine[1]};
+    //         auto psol = solp.at_g(pos);
+    //         if (se1.contains(pts) or se2.contains(pts))
+    //         {
+    //             psol[0] = 0.;
+    //         }
+    //     }
+    // }
 
     stout0 = "two_part_refined_";
     stout0.append(std::to_string(mx));
