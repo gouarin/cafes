@@ -3,13 +3,13 @@
 exec=../../../../../build/demos/convergence
 nproc=1
 
-for i in '65' '129'
+for i in '33' '65' '129' '257' '513' '1025'
 do
     $exec \
     -assembling \
     -stokes_ksp_type preonly \
     -stokes_pc_type lu \
-    -stokes_pc_factor_mat_solver_type petsc \
+    -stokes_pc_factor_mat_solver_type mumps \
     -mat_mumps_icntl_2 1 \
     -mat_mumps_icntl_4 2 \
     -dton_ksp_type lgmres \
@@ -17,7 +17,8 @@ do
     -dton_ksp_rtol 1e-6 \
     -dton_ksp_monitor_true_residual \
     -mx $i \
-    -my $i 
+    -my $i \
+    -compute_singularity
 done
 
     # -assembling \
