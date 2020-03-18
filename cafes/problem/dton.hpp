@@ -613,7 +613,6 @@ static PetscErrorCode convergeTest2(KSP ksp, PetscInt it, PetscReal rnorm, KSPCo
                 {
                     ctx->compute_rhs = false;
                     ctx->add_rigid_motion = false;
-                    // ctx->compute_singularity = false;
                     ctx->compute_singularity = false;
                 }
                 //ierr = VecSet(sol, 0.1);
