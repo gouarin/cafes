@@ -834,6 +834,18 @@ namespace cafes
                     }
                     //std::cout << "u new" << u[0] << " " << u[1] << "\n";
                   }
+                  
+                  // // Inside P1 (put imposed velocity)
+                  // else if (p1.contains(pts))
+                  // {
+                  //   auto u = sol_u.at_g(pts_i);
+                  //   for (std::size_t d=0; d<Dimensions; ++d)
+                  //   {
+                  //     u[d] = p1.velocity_[d];
+                  //   }
+                      
+                  // } // End Inside P1
+
                   // // Inside P1
                   // else if (p1.contains(pts))
                   // {
@@ -894,6 +906,41 @@ namespace cafes
                     auto p = sol_p.at_g(pts_i);
                     p[0] += p_sing;
                   }
+
+                  // Inside P1
+                  else if (p1.contains(pts))
+                  {
+                    auto pos_ref_part = sing.get_pos_in_part_ref(pts);
+
+                    if (std::abs(pos_ref_part[1]) <= sing.cutoff_dist_)
+                    {
+                      position_type pts_polar = {sqrt( (pts[0]- p1.center_[0])*(pts[0]- p1.center_[0]) + (pts[1]- p1.center_[1])*(pts[1]- p1.center_[1]) ), atan2(pts[1]- p1.center_[1], pts[0]- p1.center_[0])};
+                      position_type pts_border = {p1.center_[0] + p1.shape_factors_[0]*cos(pts_polar[1]), p1.center_[1] + p1.shape_factors_[0]*sin(pts_polar[1])};
+
+                      auto psing = sing_p.get_p_sing(pts_border);
+                      auto chi = cafes::singularity::singTrunc(pts_polar[0]/p1.shape_factors_[0]);
+                      auto p = sol_p.at_g(pts_i);
+                      p[0] += psing*chi;
+                    }
+                  }
+
+                  // Inside P2
+                  else if (p2.contains(pts))
+                  {
+                    auto pos_ref_part = sing.get_pos_in_part_ref(pts);
+
+                    if (std::abs(pos_ref_part[1]) <= sing.cutoff_dist_)
+                    {
+                      position_type pts_polar = {sqrt( (pts[0]- p2.center_[0])*(pts[0]- p2.center_[0]) + (pts[1]- p2.center_[1])*(pts[1]- p2.center_[1]) ), atan2(pts[1]- p2.center_[1], pts[0]- p2.center_[0])};
+                      position_type pts_border = {p2.center_[0] + p2.shape_factors_[0]*cos(pts_polar[1]), p2.center_[1] + p2.shape_factors_[0]*sin(pts_polar[1])};
+
+                      auto psing = sing_p.get_p_sing(pts_border);
+                      auto chi = cafes::singularity::singTrunc(pts_polar[0]/p2.shape_factors_[0]);
+                      auto p = sol_p.at_g(pts_i);
+                      p[0] += psing*chi;
+                    }
+                  }
+
                 }
               }
             }
