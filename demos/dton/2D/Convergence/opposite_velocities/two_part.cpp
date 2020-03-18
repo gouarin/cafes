@@ -125,26 +125,30 @@ int main(int argc, char **argv)
     // ierr = DMDAGetLocalInfo(dav, &infov);CHKERRQ(ierr);
     // ierr = DMDAGetLocalInfo(dap, &infop);CHKERRQ(ierr);
     
-    // // ZEROS IN PARTICLES (REFINED SOLUTION)
-    // auto bbox = cafes::fem::get_DM_bounds<dim>(dm_refine, 0);
-    // auto bboxp = cafes::fem::get_DM_bounds<dim>(dm_refine, 1);
-    // auto solu = cafes::petsc::petsc_vec<dim>(dm_refine, sol_refine, 0, false);
-    // auto solp = cafes::petsc::petsc_vec<dim>(dm_refine, sol_refine, 1, false);
+    // ZEROS IN PARTICLES (REFINED SOLUTION)
+    auto bbox = cafes::fem::get_DM_bounds<dim>(dm_refine, 0);
+    auto bboxp = cafes::fem::get_DM_bounds<dim>(dm_refine, 1);
+    auto solu = cafes::petsc::petsc_vec<dim>(dm_refine, sol_refine, 0, false);
+    auto solp = cafes::petsc::petsc_vec<dim>(dm_refine, sol_refine, 1, false);
 
-    // for(std::size_t j=bbox.bottom_left[1]; j<bbox.upper_right[1]; ++j)
-    // {
-    //     for(std::size_t i=bbox.bottom_left[0]; i<bbox.upper_right[0]; ++i)
-    //     {
-    //         auto pos = cafes::geometry::position<int, dim>{i,j};
-    //         auto pts = cafes::geometry::position<double, dim>{i*h_refine[0], j*h_refine[1]};
-    //         auto usol = solu.at_g(pos);
-    //         if (se1.contains(pts) or se2.contains(pts))
-    //         {
-    //             usol[0] = 0.;
-    //             usol[1] = 0.;
-    //         }
-    //     }
-    // }
+    for(std::size_t j=bbox.bottom_left[1]; j<bbox.upper_right[1]; ++j)
+    {
+        for(std::size_t i=bbox.bottom_left[0]; i<bbox.upper_right[0]; ++i)
+        {
+            auto pos = cafes::geometry::position<int, dim>{i,j};
+            auto pts = cafes::geometry::position<double, dim>{i*h_refine[0], j*h_refine[1]};
+            auto usol = solu.at_g(pos);
+            for(std::size_t ipart=0; ipart<pt.size(); ++ipart)
+            {
+                auto part = pt[ipart];
+                if (part.contains(pts))
+                {
+                    usol[0] = part.velocity_[0];
+                    usol[1] = part.velocity_[1];
+                }
+            }
+        }
+    }
 
     // for(std::size_t j=bboxp.bottom_left[1]; j<bboxp.upper_right[1]; ++j)
     // {
