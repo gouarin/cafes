@@ -40,6 +40,7 @@
 #include <problem/particle_operator.hpp>
 #include <problem/problem.hpp>
 #include <problem/stokes.hpp>
+#include <problem/options.hpp>
 
 //#include <io/vtk.hpp>
 
@@ -226,13 +227,16 @@ struct convergence_context2
             {
                 PetscErrorCode ierr;
                 PetscFunctionBeginUser;
+                options<Dimensions> opt{};
+                opt.process_options();
+                std::cout << "COMPUTE_SINGULARITY = " << opt.compute_singularity << std::endl;
 
                 if (default_flags_)
                 {
                     ctx->compute_rhs = true;
                     ctx->add_rigid_motion = true;
-                    // ctx->compute_singularity = true;
-                    ctx->compute_singularity = false;
+                    ctx->compute_singularity = opt.compute_singularity;
+                    // ctx->compute_singularity = false;
                 }
 
                 ierr = MatMult(A, sol, rhs);
