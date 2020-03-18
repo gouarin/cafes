@@ -46,6 +46,7 @@ namespace cafes
             PetscBool strain_tensor = PETSC_FALSE;
             PetscBool assembling = PETSC_FALSE;
             PetscBool pmm = PETSC_FALSE;
+            PetscBool compute_singularity = PETSC_FALSE;
 
             options()
             {
@@ -99,6 +100,10 @@ namespace cafes
                 ierr = PetscOptionsBool(
                     "-PMM", "MG with Pressure Mass Matrix preconditionner",
                     "options.hpp", pmm, &pmm, nullptr);
+                CHKERRQ(ierr);
+                ierr = PetscOptionsBool(
+                    "-compute_singularity", "Compute singularity in Stokes solver",
+                    "options.hpp", compute_singularity, &compute_singularity, nullptr);
                 CHKERRQ(ierr);
                 ierr = PetscOptionsEnd();
                 CHKERRQ(ierr);
