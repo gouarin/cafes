@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 {
     PetscErrorCode ierr;
     std::size_t const dim = 2;
-    int const nref = 256;
+    int const nref = 2048;
     std::string saverep = "Resultats";
     std::string refrep = "Reference";
     const char * srep = saverep.c_str();
