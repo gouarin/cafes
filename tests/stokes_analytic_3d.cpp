@@ -41,7 +41,7 @@ int main(int argc, char **argv)
   st.setup_KSP();
   st.solve();
 
-  ierr = cafes::io::save_VTK("Resultats", "test", st.sol, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
+  ierr = cafes::io::save_hdf5("Resultats", "test", st.sol, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
   ierr = PetscFinalize();CHKERRQ(ierr);
 
   return 0;

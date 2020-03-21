@@ -196,16 +196,16 @@ namespace cafes
 
                 // ierr = VecCopy(sol_tmp, sol_rhs);
                 // CHKERRQ(ierr);
-                // ierr = cafes::io::save_VTK("Resultats", "two_part_u0",
+                // ierr = cafes::io::save_hdf5("Resultats", "two_part_u0",
                 // sol_tmp,
                 //                            problem_.ctx->dm,
                 //                            problem_.ctx->h);
                 // CHKERRQ(ierr);
-                // ierr = cafes::io::save_VTK("Resultats", "two_part_w0",
+                // ierr = cafes::io::save_hdf5("Resultats", "two_part_w0",
                 //                            problem_.sol, problem_.ctx->dm,
                 //                            problem_.ctx->h);
                 // CHKERRQ(ierr);
-                // ierr = cafes::io::save_VTK("Resultats", "two_part_w0_rhs",
+                // ierr = cafes::io::save_hdf5("Resultats", "two_part_w0_rhs",
                 //                            problem_.rhs, problem_.ctx->dm,
                 //                            problem_.ctx->h);
                 // CHKERRQ(ierr);
@@ -260,17 +260,17 @@ namespace cafes
                 CHKERRQ(ierr);
                 // std::cout<<ctx->compute_rhs<<", "<<ctx->add_rigid_motion<<",
                 // "<<ctx->compute_singularity<<"\n"; ierr =
-                // cafes::io::save_VTK("Resultats", "two_part_reg", sol,
+                // cafes::io::save_hdf5("Resultats", "two_part_reg", sol,
                 // ctx->problem.ctx->dm, ctx->problem.ctx->h);CHKERRQ(ierr);
 
                 ierr = ctx->problem.solve();
                 CHKERRQ(ierr);
-                // ierr = cafes::io::save_VTK("Resultats", "two_part_tilde_ug",
+                // ierr = cafes::io::save_hdf5("Resultats", "two_part_tilde_ug",
                 // problem_.sol, problem_.ctx->dm,
                 // problem_.ctx->h);CHKERRQ(ierr);
 
                 VecAXPY(problem_.sol, 1, sol_rhs);
-                // ierr = cafes::io::save_VTK("Resultats", "two_part_new_u",
+                // ierr = cafes::io::save_hdf5("Resultats", "two_part_new_u",
                 // problem_.sol, problem_.ctx->dm,
                 // problem_.ctx->h);CHKERRQ(ierr);
 
@@ -288,12 +288,12 @@ namespace cafes
                 CHKERRQ(ierr);
                 // std::cout<<ctx->compute_rhs<<", "<<ctx->add_rigid_motion<<",
                 // "<<ctx->compute_singularity<<"\n"; ierr =
-                // cafes::io::save_VTK("Resultats", "two_part_reg", sol,
+                // cafes::io::save_hdf5("Resultats", "two_part_reg", sol,
                 // ctx->problem.ctx->dm, ctx->problem.ctx->h);CHKERRQ(ierr);
 
                 ierr = ctx->problem.solve();
                 CHKERRQ(ierr);
-                // ierr = cafes::io::save_VTK("Resultats", "two_part_ureg",
+                // ierr = cafes::io::save_hdf5("Resultats", "two_part_ureg",
                 // problem_.sol, problem_.ctx->dm,
                 // problem_.ctx->h);CHKERRQ(ierr);
 
@@ -304,7 +304,7 @@ namespace cafes
                         *ctx, problem_.sol);
                     CHKERRQ(ierr);
                 }
-                // ierr = cafes::io::save_VTK("Resultats", "two_part_u",
+                // ierr = cafes::io::save_hdf5("Resultats", "two_part_u",
                 // problem_.sol, problem_.ctx->dm,
                 // problem_.ctx->h);CHKERRQ(ierr);
 

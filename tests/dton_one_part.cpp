@@ -93,7 +93,7 @@ int main(int argc, char **argv)
       std::cout << cross_prod[d] << " ";
     std::cout << "\n";
 
-    ierr = cafes::io::save_VTK("Resultats", "dton_one_part", st.sol, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
+    ierr = cafes::io::save_hdf5("Resultats", "dton_one_part", st.sol, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
     ierr = cafes::io::saveParticles("Resultats", "dton_one_part", pt);CHKERRQ(ierr);
 
     ierr = PetscFinalize();CHKERRQ(ierr);

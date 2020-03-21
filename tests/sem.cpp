@@ -44,7 +44,7 @@ int main(int argc, char **argv)
 
     s.get_new_velocities();
     std::cout << s.parts_[0].velocity_[0] << " " << s.parts_[0].velocity_[1] << "\n";
-    //ierr = cafes::io::save_VTK("Resultats", "test", st.sol, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
+    //ierr = cafes::io::save_hdf5("Resultats", "test", st.sol, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
     // // PetscViewer      viewer;
     // // ierr = PetscViewerHDF5Open(PETSC_COMM_WORLD, "solution.h5", FILE_MODE_WRITE, &viewer);CHKERRQ(ierr);
     // // ierr = VecView(st.sol, viewer);CHKERRQ(ierr);

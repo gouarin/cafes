@@ -15,9 +15,9 @@ Find_package(HDF5)
 
 #INCLUDE (${VTK_USE_FILE})
 #include_directories(${HDF5_C_INCLUDE_DIR} ${PETSC_INCLUDE_CONF} ${PETSC_INCLUDE_DIR} ${MPI_INCLUDE_PATH})
-include_directories(${PETSC_INCLUDE_DIRS} ${MPI_INCLUDE_PATH})
+include_directories(${PETSC_INCLUDE_DIRS} ${MPI_INCLUDE_PATH} ${HDF5_INCLUDE_DIRS})
 link_directories(${PETSC_LIBRARY_DIRS})
 
 ADD_SUBDIRECTORY(external_packages/qhull)
 ADD_SUBDIRECTORY(tests)
-ADD_SUBDIRECTORY(demos)
+# ADD_SUBDIRECTORY(demos)

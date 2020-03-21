@@ -48,7 +48,7 @@ int main(int argc, char **argv)
     s.get_new_velocities();
     std::cout << s.parts_[0].velocity_[0] << " " << s.parts_[0].velocity_[1] << "\n";
     std::cout << s.parts_[1].velocity_[0] << " " << s.parts_[1].velocity_[1] << "\n";
-    ierr = cafes::io::save_VTK("Resultats", "test", st.sol, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
+    ierr = cafes::io::save_hdf5("Resultats", "test", st.sol, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
 
     // Refinement and interpolation test
     std::array<int, 2> refine = {2,2};
@@ -60,7 +60,7 @@ int main(int argc, char **argv)
     std::cout << h_refine[0] << " " << h_refine[1] << std::endl;
 
     ierr = cafes::posttraitement::linear_interpolation(st.ctx->dm, st.sol, dm_refine, sol_refine, refine, st.ctx->h);CHKERRQ(ierr);
-    ierr = cafes::io::save_VTK("Resultats", "test_refine", sol_refine, dm_refine, h_refine);CHKERRQ(ierr);
+    ierr = cafes::io::save_hdf5("Resultats", "test_refine", sol_refine, dm_refine, h_refine);CHKERRQ(ierr);
     
     ierr = PetscFinalize();CHKERRQ(ierr);
 

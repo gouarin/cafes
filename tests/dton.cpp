@@ -60,7 +60,7 @@ int main(int argc, char **argv)
     ierr = cafes::singularity::save_singularity<dim, decltype(*(s.ctx))>("Resultats", "test", *(s.ctx));CHKERRQ(ierr);
     //ierr = s.solve();CHKERRQ(ierr);
 
-    ierr = cafes::io::save_VTK("Resultats", "test", st.sol, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
+    ierr = cafes::io::save_hdf5("Resultats", "test", st.sol, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
     ierr = cafes::io::saveParticles("Resultats", "test", pt);CHKERRQ(ierr);
 
     ierr = PetscFinalize();CHKERRQ(ierr);

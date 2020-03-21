@@ -235,7 +235,7 @@ namespace cafes
 
         // // save Stokes sol
         // ierr = VecCopy(dton_.problem_.sol, stokes_sol_save);CHKERRQ(ierr);
-        // ierr = cafes::io::save_VTK("Resultats", "stokes_sol_rhs", dton_.problem_.sol, dton_.problem_.ctx->dm, dton_.problem_.ctx->h);CHKERRQ(ierr);
+        // ierr = cafes::io::save_hdf5("Resultats", "stokes_sol_rhs", dton_.problem_.sol, dton_.problem_.ctx->dm, dton_.problem_.ctx->h);CHKERRQ(ierr);
 
         PetscFunctionReturn(0);
       }

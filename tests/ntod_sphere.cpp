@@ -62,7 +62,7 @@ int main(int argc, char **argv)
     ierr = s.setup_KSP();CHKERRQ(ierr);
     ierr = s.solve();CHKERRQ(ierr);
 
-    ierr = cafes::io::save_VTK("Resultats", "ntod_two_spheres", st.sol, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
+    ierr = cafes::io::save_hdf5("Resultats", "ntod_two_spheres", st.sol, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
     ierr = cafes::io::saveParticles("Resultats", "ntod_two_spheres", pt);CHKERRQ(ierr);
 
     ierr = PetscFinalize();CHKERRQ(ierr);
