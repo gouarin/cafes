@@ -1,0 +1,9 @@
+name: cafes-dev
+channels:
+  - gouarin
+  - conda-forge
+dependencies:
+  - hdf5=1.10.6=mpi*
+  - petsc
+  - cmake
+  - compilers
