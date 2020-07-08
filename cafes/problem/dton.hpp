@@ -249,10 +249,11 @@ struct convergence_context2
 
                 // ierr = VecSet(rhs,0.);
                 // CHKERRQ(ierr);
-                // ierr = cafes::io::save_hdf5("Resultats", "two_part_u0",
-                // sol_tmp,
-                //                            problem_.ctx->dm,
-                //                            problem_.ctx->h);
+                // ierr = VecSet(sol_rhs,0.);
+                // CHKERRQ(ierr);
+
+                // ierr = cafes::io::save_VTK("Resultats", "two_part_u0", sol_tmp,
+                //                            problem_.ctx->dm, problem_.ctx->h);
                 // CHKERRQ(ierr);
                 // ierr = cafes::io::save_hdf5("Resultats", "two_part_w0",
                 //                            problem_.sol, problem_.ctx->dm,
@@ -584,7 +585,11 @@ static PetscErrorCode convergeTest2(KSP ksp, PetscInt it, PetscReal rnorm, KSPCo
 
                 ierr = ctx->problem.solve();
                 CHKERRQ(ierr);
-                // ierr = cafes::io::save_hdf5("Resultats", "two_part_ureg",
+                ierr = VecDuplicate(ctx->problem.sol, &sol_last);
+                CHKERRQ(ierr);
+                ierr = VecCopy(ctx->problem.sol, sol_last);
+                CHKERRQ(ierr);
+                // ierr = cafes::io::save_VTK("Resultats", "two_part_ureg",
                 // problem_.sol, problem_.ctx->dm,
                 // problem_.ctx->h);CHKERRQ(ierr);
 

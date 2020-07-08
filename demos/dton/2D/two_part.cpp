@@ -74,6 +74,9 @@ int main(int argc, char **argv)
     ierr = cafes::io::save_VTK("Resultats", "two_part_ug", s.sol_tmp, st.ctx->dm,
                                st.ctx->h);
     CHKERRQ(ierr);
+    ierr = cafes::io::save_VTK("Resultats", "two_part_ug", s.sol_tmp, st.ctx->dm,
+                               st.ctx->h);
+    CHKERRQ(ierr);
     // ierr = cafes::io::saveParticles("Resultats", "two_part",
     // pt);CHKERRQ(ierr);
 
