@@ -66,7 +66,7 @@ namespace cafes
             ierr = ypetsc.fill(0.);
             CHKERRQ(ierr);
 
-            ierr = ctx->apply(xpetsc, ypetsc, ctx->h);
+            ierr = ctx->apply(xpetsc, ypetsc, ctx->h, ctx->order);
             CHKERRQ(ierr);
 
             ierr = ypetsc.local_to_global(ADD_VALUES);
@@ -114,7 +114,7 @@ namespace cafes
                 ierr = ypetsc.fill(0.);
                 CHKERRQ(ierr);
 
-                ierr = ctx->apply(xpetsc, ypetsc, ctx->h[i]);
+                ierr = ctx->apply(xpetsc, ypetsc, ctx->h[i], ctx->order);
                 CHKERRQ(ierr);
 
                 ierr = ypetsc.local_to_global(ADD_VALUES);
@@ -143,7 +143,7 @@ namespace cafes
             ierr = xpetsc.fill(0.);
             CHKERRQ(ierr);
 
-            ierr = ctx->apply_diag(xpetsc, ctx->h);
+            ierr = ctx->apply_diag(xpetsc, ctx->h, ctx->order);
             CHKERRQ(ierr);
 
             ierr = xpetsc.fill_global(0.);
@@ -180,7 +180,7 @@ namespace cafes
                 ierr = xpetsc.fill(0.);
                 CHKERRQ(ierr);
 
-                ierr = ctx->apply_diag(xpetsc, ctx->h[i]);
+                ierr = ctx->apply_diag(xpetsc, ctx->h[i], ctx->order);
                 CHKERRQ(ierr);
 
                 ierr = xpetsc.fill_global(0.);
@@ -224,10 +224,10 @@ namespace cafes
                 CHKERRQ(ierr);
             }
 
-            ierr = ctx->apply(xpetsc[0], ypetsc[0], ctx->h);
+            ierr = ctx->apply(xpetsc[0], ypetsc[0], ctx->h, ctx->order);
             CHKERRQ(ierr);
             ierr = B_and_BT_mult(xpetsc[0], xpetsc[1], ypetsc[0], ypetsc[1],
-                                 ctx->h);
+                                 ctx->h, ctx->order);
             CHKERRQ(ierr);
 
             for (std::size_t i = 0; i < xpetsc.size(); ++i)

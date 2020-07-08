@@ -43,6 +43,7 @@ namespace cafes
             std::array<PetscInt, Dimensions> mx;
             std::array<double, Dimensions> lx;
             std::array<PetscBool, Dimensions> xperiod;
+            PetscInt order = 1;
             PetscBool strain_tensor = PETSC_FALSE;
             PetscBool assembling = PETSC_FALSE;
             PetscBool pmm = PETSC_FALSE;
@@ -79,6 +80,10 @@ namespace cafes
                 CHKERRQ(ierr);
                 ierr = PetscOptionsReal("-Ly", "The size of y", "options.hpp",
                                         lx[1], &lx[1], nullptr);
+                CHKERRQ(ierr);
+                ierr = PetscOptionsInt("-order",
+                                       "Discretization order for the velocity (1 or 2)",
+                                       "options.hpp", order, &order, nullptr);
                 CHKERRQ(ierr);
                 ierr = PetscOptionsBool(
                     "-xperiod", "set periodic condition in x direction",
@@ -143,6 +148,10 @@ namespace cafes
                 ierr = PetscOptionsReal("-Lz", "The size of z", "options.hpp",
                                         lx[2], &lx[2], nullptr);
                 CHKERRQ(ierr);
+                ierr = PetscOptionsInt("-order",
+                                       "Discretization order for the velocity (1 or 2)",
+                                       "options.hpp", order, &order, nullptr);
+                CHKERRQ(ierr);
                 ierr = PetscOptionsBool(
                     "-xperiod", "set periodic condition in x direction",
                     "options.hpp", xperiod[0], &xperiod[0], nullptr);
@@ -181,8 +190,7 @@ namespace cafes
                 PetscErrorCode ierr;
                 PetscFunctionBeginUser;
 
-                ierr =
-                    process_options_(std::integral_constant<int, Dimensions>{});
+                ierr = process_options_(std::integral_constant<int, Dimensions>{});
                 CHKERRQ(ierr);
 
                 PetscFunctionReturn(0);

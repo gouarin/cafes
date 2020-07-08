@@ -53,8 +53,8 @@ TARGET_LINK_LIBRARIES(cavity2d ${PETSC_LIBRARIES} ${MPI_LIBRARIES})
 #ADD_EXECUTABLE(stokes_analytic_3d stokes_analytic_3d.cpp)
 #TARGET_LINK_LIBRARIES(stokes_analytic_3d ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
 
-#ADD_EXECUTABLE(stokes_analytic_2d stokes_analytic_2d.cpp)
-#TARGET_LINK_LIBRARIES(stokes_analytic_2d ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
+# ADD_EXECUTABLE(stokes_analytic_2d stokes_analytic_2d.cpp)
+# TARGET_LINK_LIBRARIES(stokes_analytic_2d ${PETSC_LIBRARIES} ${MPI_LIBRARIES})
 
 #ADD_EXECUTABLE(nested_loop nested_loop.cpp)
 #TARGET_LINK_LIBRARIES(nested_loop ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
@@ -69,4 +69,3 @@ TARGET_LINK_LIBRARIES(cavity2d ${PETSC_LIBRARIES} ${MPI_LIBRARIES})
 
 #ADD_EXECUTABLE(test_read_solution test_read_solution.cpp)
 #TARGET_LINK_LIBRARIES(test_read_solution ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
-

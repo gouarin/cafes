@@ -277,11 +277,13 @@ namespace cafes
         auto pts = find_fluid_points_insides(p, new_box, h);
         size += pts.size();
 
-        auto spts = p.surface(dpart);
+        // auto spts = p.surface(dpart);
+        auto spts = p.surface(hs[0]);
         auto spts_valid = find_surf_points_insides(spts, new_box, h);
         surf_points[ipart].assign(spts_valid.begin(), spts_valid.end());
         nb_surf_points[ipart] = surf_points[ipart].size();
-        
+
+        std::cout << "particle "<< ipart << " " << spts.size() << " " << hs[0] << "\n";
         auto radial_valid = find_radial_surf_points_insides(spts, new_box, h, p.center_);
         radial_vec[ipart].assign(radial_valid.begin(), radial_valid.end());
         

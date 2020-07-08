@@ -56,11 +56,13 @@ namespace cafes
       using array1d = std::array<double, Dimensions>;
       using array2d = std::array<std::array<double, Dimensions>, Ndm>;
       typename std::conditional<Ndm == 1, array1d, array2d>::type h;
+      int order;
       PetscErrorCode(*apply)(petsc::petsc_vec<Dimensions>&,
                              petsc::petsc_vec<Dimensions>&,
-                             std::array<double, Dimensions> const&);
+                             std::array<double, Dimensions> const&,
+                             std::size_t);
       PetscErrorCode(*apply_diag)(petsc::petsc_vec<Dimensions>&,
-                                  std::array<double, Dimensions> const&) = nullptr;
+                                  std::array<double, Dimensions> const&, std::size_t) = nullptr;
       fem::dirichlet_conditions<Dimensions> bc_{};
       bool set_bc_ = false;
 

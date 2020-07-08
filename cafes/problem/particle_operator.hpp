@@ -139,15 +139,14 @@ namespace cafes
       
       std::cout<<"add rigid motion to surf...\n";
 
-      std::size_t ipart=0;
-      for(auto& rpts: r)
+      for(std::size_t ipart=0; ipart<particles.size(); ++ipart)
       {
-        for(std::size_t i=0; i<rpts.size(); ++i){
+        for(std::size_t i=0; i<g[ipart].size(); ++i)
+        {
           g[ipart][i] -= particles[ipart].velocity_; 
           // TODO
           //g[ipart][i] -= geometry::cross_product(particles[ipart].angular_velocity_, r[ipart][i]);
         }
-        ipart++;
       }
       PetscFunctionReturn(0);
     }
@@ -248,13 +247,17 @@ namespace cafes
         //auto gammak = ctx.particles[ipart].perimeter/ctx.nb_surf_points[ipart];  
         // remove this line !!
         auto gammak = ctx.particles[ipart].surface_area()/ctx.nb_surf_points[ipart];
+        std::cout << "gamma_k " << gammak << "\n";
         for(std::size_t isurf=0; isurf<ctx.surf_points[ipart].size(); ++isurf){
           auto bfunc = fem::P1_integration(get_position(ctx.surf_points[ipart][isurf]), ctx.problem.ctx->h); /// !!!! P1_integration ou P1_integration_sing ?
           auto ielem = fem::get_element(get_index(ctx.surf_points[ipart][isurf]));
-          for (std::size_t j=0; j<bfunc.size(); ++j){
+          for (std::size_t j=0; j<bfunc.size(); ++j)
+          {
             auto u = sol.at(ielem[j]);
             for (std::size_t d=0; d<Dimensions; ++d)
-              u[d] += g[ipart][isurf][d]*bfunc[j]*gammak;
+            {
+              u[d] -= g[ipart][isurf][d]*bfunc[j]*gammak;
+            }
           }
         }
       }
@@ -267,8 +270,8 @@ namespace cafes
 
       ierr = sol.local_to_global(ADD_VALUES);CHKERRQ(ierr);
 
-      auto petsc_rhs = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, ctx.problem.rhs, 0);
-      ierr = SetNullDirichletOnRHS(petsc_rhs, ctx.problem.ctx->bc_);CHKERRQ(ierr);
+      // auto petsc_rhs = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, ctx.problem.rhs, 0);
+      ierr = SetNullDirichletOnRHS(sol, ctx.problem.ctx->bc_);CHKERRQ(ierr);
 
       PetscFunctionReturn(0);
     }

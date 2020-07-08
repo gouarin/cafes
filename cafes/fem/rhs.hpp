@@ -88,7 +88,7 @@ namespace cafes
     #define __FUNCT__ "set_rhs"
     template<std::size_t Ndof, std::size_t Ndm, std::size_t Dimensions>
     typename std::enable_if<Ndm==1, PetscErrorCode>::type
-    set_rhs(DM dm, Vec rhs, rhs_conditions<Ndof> const& rhs_cond, std::array<double, Dimensions> const& h)
+    set_rhs(DM dm, Vec rhs, rhs_conditions<Ndof> const& rhs_cond, std::array<double, Dimensions> const& h, std::size_t order)
     {
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
@@ -103,7 +103,7 @@ namespace cafes
       auto ypetsc = petsc::petsc_vec<Dimensions>(dm, rhs, 0, false);
       ierr = xpetsc.global_to_local(INSERT_VALUES);CHKERRQ(ierr);
       ierr = ypetsc.fill(0.);CHKERRQ(ierr);
-      ierr = mass_mult(xpetsc, ypetsc, h);CHKERRQ(ierr);
+      ierr = mass_mult(xpetsc, ypetsc, h, order);CHKERRQ(ierr);
       ierr = ypetsc.local_to_global(ADD_VALUES);CHKERRQ(ierr);
 
       ierr = DMRestoreGlobalVector(dm, &tmp);CHKERRQ(ierr);
