@@ -33,10 +33,6 @@
 #include <array>
 #include <petsc.h>
 
-using array_2d = std::array<std::array<double, 9>, 9>;
-using array_2d_Q1 = std::array<std::array<double, 4>, 4>;
-using array_2d_p = std::array<std::array<double, 9>, 4>;
-
 /* Elementary matrices for the 2D problem */
 
 /* \int dx(\phi_i) dx(\phi_j) */
@@ -129,6 +125,22 @@ std::vector<double> matElemMass2d(std::size_t order)
                 -4./225, -2./225, 1./225, 8./225, 4./225, -2./225, 16./225, 8./225, -4./225,
                 -2./225, -16./225, -2./225, 4./225, 32./225, 4./225, 8./225, 64./225, 8./225,
                 1./225, -2./225, -4./225, -2./225, 4./225, 8./225, -4./225, 8./225, 16./225};
+    }
+}
+
+std::vector<double> matElemMass_pu_2d(std::size_t order)
+{
+    if (order == 2)
+    {
+        return {1./9, 0, 0, 0,
+                2./9, 2./9, 0, 0,
+                0, 1./9, 0, 0,
+                2./9, 0, 2./9, 0,
+                4./9, 4./9, 4./9, 4./9,
+                0, 2./9, 0, 2./9,
+                0, 0, 1./9, 0,
+                0, 0, 2./9, 2./9,
+                0, 0, 0, 1./9};
     }
 }
 
@@ -260,6 +272,23 @@ auto getMatElemMass(std::array<double, 2> const &h, std::size_t order)
         for (std::size_t j = 0; j < size; ++j)
         {
             MatElem[i*size + j] = h[0] * h[1] * mass[i*size + j];
+        }
+    }
+
+    return MatElem;
+}
+
+auto getMatElemMassP2U(std::array<double, 2> const &h, std::size_t order)
+{
+    std::vector<double> MatElem(4*9);
+
+    auto mass = matElemMass_pu_2d(order);
+    
+    for (std::size_t i = 0; i < 9; ++i)
+    {
+        for (std::size_t j = 0; j < 4; ++j)
+        {
+            MatElem[i*4 + j] = h[0] * h[1] * mass[i*4 + j];
         }
     }
 

@@ -1,10 +1,10 @@
 // Copyright (c) 2016, Loic Gouarin <loic.gouarin@math.u-psud.fr>
 // All rights reserved.
 
-// Redistribution and use in source and binary forms, with or without modification, 
+// Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //
-// 1. Redistributions of source code must retain the above copyright notice, 
+// 1. Redistributions of source code must retain the above copyright notice,
 //    this list of conditions and the following disclaimer.
 //
 // 2. Redistributions in binary form must reproduce the above copyright notice,
@@ -94,7 +94,7 @@ namespace cafes
             else
               for(std::size_t i=0; i<Dimensions; ++i)
                 u[i] = px[num++];
-          }       
+          }
         }
       }
 
@@ -116,8 +116,11 @@ namespace cafes
       ierr = VecSet(forces, 0);CHKERRQ(ierr);
 
       auto petsc_forces = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, forces, 0, false);
-      
+
+      std::cout << "set_rhs_problem_impl\n";
       ierr = set_rhs_problem_impl(ctx, x, petsc_forces, apply_forces);CHKERRQ(ierr);
+
+      std::cout << "apply_mass_matrix\n";
 
       ierr = fem::apply_mass_matrix(ctx.problem.ctx->dm, forces, mass_mult, ctx.problem.ctx->h);CHKERRQ(ierr);
       ierr = VecAXPY(ctx.problem.rhs, 1., mass_mult);CHKERRQ(ierr);
@@ -129,21 +132,126 @@ namespace cafes
     }
 
     #undef __FUNCT__
+    #define __FUNCT__ "set_rhs_in_particles"
+    template<std::size_t Dimensions, typename Ctx>
+    PetscErrorCode set_rhs_in_particles(Ctx& ctx, Vec x, bool apply_forces=false)
+    {
+        PetscErrorCode ierr;
+        PetscFunctionBeginUser;
+
+        std::array<double, Dimensions> hp;
+        for(std::size_t i = 0; i<ctx.problem.ctx->h.size(); ++i)
+        {
+            hp[i] = 2*ctx.problem.ctx->h[i];
+        }
+
+        Vec constraint;
+        ierr = DMGetGlobalVector(ctx.problem.ctx->dm, &constraint);CHKERRQ(ierr);
+        ierr = VecSet(constraint, 0);CHKERRQ(ierr);
+
+        // The constraint is on pressure cells
+        auto petsc_constraint = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, constraint, 0, false);
+
+        int num = 0;
+        PetscScalar const *px;
+        ierr = VecGetArrayRead(x, &px);CHKERRQ(ierr);
+
+        // Set the constraint defined by x on the pressure points indide the particles
+        auto box = fem::get_DM_bounds<Dimensions>(ctx.problem.ctx->dm, 1);
+        for(auto& p: ctx.particles)
+        {
+            auto pbox = p.bounding_box(hp);
+            if (geometry::intersect(box, pbox))
+            {
+                auto new_box = geometry::overlap_box(box, pbox);
+                auto pts = find_fluid_points_insides(p, new_box, hp);
+                for(auto& ind: pts)
+                {
+                    auto g = petsc_constraint.at_g(2*ind);
+                    for (std::size_t d=0; d<Dimensions; ++d)
+                    {
+                        if (apply_forces)
+                        {
+                            g[d] = px[num++] + p.rho_*p.force_[d];
+                        }
+                        else
+                        {
+                            g[d] = px[num++];
+                        }
+                    }
+                }
+            }
+        }
+
+        ierr = petsc_constraint.global_to_local(INSERT_VALUES);CHKERRQ(ierr);
+
+        // std::cout << "constraint \n";
+        // VecView(constraint, PETSC_VIEWER_STDOUT_WORLD);
+
+        // Integrate on the test basis functions defined on the velocity cells
+        Vec rhs_term;
+        ierr = DMGetGlobalVector(ctx.problem.ctx->dm, &rhs_term);CHKERRQ(ierr);
+        ierr = VecSet(rhs_term, 0);CHKERRQ(ierr);
+        auto petsc_rhs_term = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, rhs_term, 0, false);
+
+        auto matelem = getMatElemMassP2U(ctx.problem.ctx->h, ctx.problem.ctx->order);
+        for(auto& p: ctx.particles)
+        {
+            auto pbox = p.bounding_box(hp);
+            if (geometry::intersect(box, pbox))
+            {
+                auto new_box = geometry::overlap_box(box, pbox);
+                auto pts = find_FE_insides(p, new_box, hp);
+                for(auto& ind: pts)
+                {
+                    auto ielem_p = fem::get_element(2*ind, 1, 2);
+                    auto ielem_v = fem::get_element(2*ind, 2);
+
+                    for (std::size_t k1 = 0; k1 < ielem_v.size(); ++k1)
+                    {
+                        auto u = petsc_rhs_term.at(ielem_v[k1]);
+                        for (std::size_t k2 = 0; k2 < ielem_p.size(); ++k2)
+                        {
+                            auto g = petsc_constraint.at(ielem_p[k2]);
+                            for (std::size_t d = 0; d < petsc_rhs_term.dof_; ++d)
+                            {           
+                                u[d] += g[d] * matelem[k1*4 + k2];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        ierr = petsc_rhs_term.local_to_global(ADD_VALUES);CHKERRQ(ierr);
+        
+        // std::cout << "rhs term \n";
+        // VecView(rhs_term, PETSC_VIEWER_STDOUT_WORLD);
+
+        ierr = VecAXPY(ctx.problem.rhs, 1., rhs_term);CHKERRQ(ierr);
+
+        ierr = DMRestoreGlobalVector(ctx.problem.ctx->dm, &rhs_term);CHKERRQ(ierr);
+        ierr = DMRestoreGlobalVector(ctx.problem.ctx->dm, &constraint);CHKERRQ(ierr);
+
+        PetscFunctionReturn(0);
+    }
+
+    #undef __FUNCT__
     #define __FUNCT__ "interp_rigid_motion_"
     template<typename Shape, std::size_t Dimensions>
     PetscErrorCode interp_rigid_motion_(std::vector<particle<Shape>> const& particles,
-                                        std::vector<std::vector<geometry::vector<double, Dimensions>>> const& r, 
+                                        std::vector<std::vector<geometry::vector<double, Dimensions>>> const& r,
                                         std::vector<std::vector<geometry::vector<double, Dimensions>>>& g){
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
-      
+
       std::cout<<"add rigid motion to surf...\n";
 
       for(std::size_t ipart=0; ipart<particles.size(); ++ipart)
       {
         for(std::size_t i=0; i<g[ipart].size(); ++i)
         {
-          g[ipart][i] -= particles[ipart].velocity_; 
+          g[ipart][i] -= particles[ipart].velocity_;
           // TODO
           //g[ipart][i] -= geometry::cross_product(particles[ipart].angular_velocity_, r[ipart][i]);
         }
@@ -167,26 +275,29 @@ namespace cafes
       std::size_t ipart=0;
       for(auto& spts: ctx.surf_points){
         for(std::size_t i=0; i<spts.size(); ++i){
-          auto bfunc = fem::P1_integration(get_position(spts[i]), ctx.problem.ctx->h);
-          auto ielem = fem::get_element(get_index(spts[i]));
-          
+          auto bfunc = fem::P2_integration(get_position(spts[i]), ctx.problem.ctx->h);
+          auto ielem = fem::get_element(2*get_index(spts[i]), 2);
+
           std::fill(g[ipart][i].begin(), g[ipart][i].end(), 0.);
-          
-          for (std::size_t j=0; j<bfunc.size(); ++j){
+
+          for (std::size_t j=0; j<bfunc.size(); ++j)
+          {
             auto u = sol.at(ielem[j]);
             for (std::size_t d=0; d<Dimensions; ++d)
+            {
               g[ipart][i][d] += u[d]*bfunc[j];
+            }
           }
         }
         ipart++;
       }
 
       if (rigid_motion)
-      { 
+      {
         ierr = interp_rigid_motion_(ctx.particles, ctx.radial_vec, g);CHKERRQ(ierr);
         if (singularity)
-        { 
-          ierr = singularity::add_singularity_to_surf<Dimensions, Ctx>(ctx, g);CHKERRQ(ierr);
+        {
+          // ierr = singularity::add_singularity_to_surf<Dimensions, Ctx>(ctx, g);CHKERRQ(ierr);
         }
       }
 
@@ -212,7 +323,7 @@ namespace cafes
 
       MPI_Allreduce(MPI_IN_PLACE, mean.data(), mean.size()*Dimensions, MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
       MPI_Allreduce(MPI_IN_PLACE, cross_prod.data(), cross_prod.size()*(Dimensions==2?1:3), MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
-      
+
       for(std::size_t ipart=0; ipart<g.size(); ++ipart)
       {
         mean[ipart] /= ctx.nb_surf_points[ipart];
@@ -224,7 +335,7 @@ namespace cafes
         for(std::size_t isurf=0; isurf<g[ipart].size(); ++isurf)
         {
           g[ipart][isurf] -= mean[ipart] + geometry::cross_product(cross_prod[ipart], ctx.radial_vec[ipart][isurf]);
-          
+
         }
       }
 
@@ -242,21 +353,20 @@ namespace cafes
       auto sol = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, ctx.problem.rhs, 0, false);
       ierr = sol.fill(0.);CHKERRQ(ierr);
 
-      for(std::size_t ipart=0; ipart<g.size(); ++ipart){ 
+      for(std::size_t ipart=0; ipart<g.size(); ++ipart){
         auto& radius = ctx.particles[ipart].shape_factors_[0];
-        //auto gammak = ctx.particles[ipart].perimeter/ctx.nb_surf_points[ipart];  
+        //auto gammak = ctx.particles[ipart].perimeter/ctx.nb_surf_points[ipart];
         // remove this line !!
         auto gammak = ctx.particles[ipart].surface_area()/ctx.nb_surf_points[ipart];
-        std::cout << "gamma_k " << gammak << "\n";
         for(std::size_t isurf=0; isurf<ctx.surf_points[ipart].size(); ++isurf){
-          auto bfunc = fem::P1_integration(get_position(ctx.surf_points[ipart][isurf]), ctx.problem.ctx->h); /// !!!! P1_integration ou P1_integration_sing ?
-          auto ielem = fem::get_element(get_index(ctx.surf_points[ipart][isurf]));
+          auto bfunc = fem::P2_integration(get_position(ctx.surf_points[ipart][isurf]), ctx.problem.ctx->h); /// !!!! P1_integration ou P1_integration_sing ?
+          auto ielem = fem::get_element(2*get_index(ctx.surf_points[ipart][isurf]), 2);
           for (std::size_t j=0; j<bfunc.size(); ++j)
           {
             auto u = sol.at(ielem[j]);
             for (std::size_t d=0; d<Dimensions; ++d)
             {
-              u[d] -= g[ipart][isurf][d]*bfunc[j]*gammak;
+              u[d] += g[ipart][isurf][d]*bfunc[j]*gammak;
             }
           }
         }
@@ -264,7 +374,7 @@ namespace cafes
 
       //if (ctx.compute_singularity and ctx.compute_rhs)
       // if (ctx.compute_rhs)
-      // { 
+      // {
       //   ierr = singularity::add_singularity_to_surf<Dimensions, Ctx>(ctx, sol);CHKERRQ(ierr);
       // }
 
@@ -291,11 +401,11 @@ namespace cafes
 
       if (ctx.compute_singularity)
       {
-        ierr = singularity::add_singularity_in_fluid<Dimensions, Ctx>(ctx);CHKERRQ(ierr);
+        // ierr = singularity::add_singularity_in_fluid<Dimensions, Ctx>(ctx);CHKERRQ(ierr);
       }
 
-      ierr = set_rhs_problem<Dimensions, Ctx>(ctx, x, apply_forces);CHKERRQ(ierr);
-      
+      ierr = set_rhs_in_particles<Dimensions, Ctx>(ctx, x, apply_forces);CHKERRQ(ierr);
+
       auto petsc_rhs = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, ctx.problem.rhs, 0);
 
       if (ctx.compute_rhs)
@@ -311,8 +421,8 @@ namespace cafes
     }
 
 
-    auto const kernel_projection = [](auto const& p, auto& sol, 
-                            auto const& h, auto const& hs, 
+    auto const kernel_projection = [](auto const& p, auto& sol,
+                            auto const& h, auto const& hs,
                             auto& box_scale, auto& mean, auto& cross)
     {
       auto const kernel_pos = [&](auto const& pos){
@@ -417,8 +527,8 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "compute_y"
     template<std::size_t Dimensions, typename Ctx, typename cross_type>
-    PetscErrorCode compute_y(Ctx& ctx, Vec y, 
-                             std::vector<geometry::vector<double, Dimensions>> const& mean, 
+    PetscErrorCode compute_y(Ctx& ctx, Vec y,
+                             std::vector<geometry::vector<double, Dimensions>> const& mean,
                              cross_type const& cross_prod)
     {
       PetscErrorCode ierr;
@@ -460,40 +570,47 @@ namespace cafes
     template<std::size_t Dimensions, typename Ctx>
     PetscErrorCode compute_y(Ctx& ctx, Vec y)
     {
-      PetscErrorCode ierr;
-      PetscFunctionBeginUser;
+        PetscErrorCode ierr;
+        PetscFunctionBeginUser;
 
 
-      auto box = fem::get_DM_bounds<Dimensions>(ctx.problem.ctx->dm, 0);
-      auto& h = ctx.problem.ctx->h;
-
-      auto sol = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, ctx.problem.sol, 0);
-
-      int num = 0;
-      PetscScalar *py;
-      ierr = VecGetArray(y, &py);CHKERRQ(ierr);
-
-      for(std::size_t ipart=0; ipart<ctx.particles.size(); ++ipart){
-        auto& p = ctx.particles[ipart];
-        auto pbox = p.bounding_box(h);
-        if (geometry::intersect(box, pbox)){
-          auto new_box = geometry::box_inside(box, pbox);
-          auto pts = find_fluid_points_insides(p, new_box, h);
-          for(auto& ind: pts)
-          {
-            auto usol = sol.at_g(ind);
-            for (std::size_t d=0; d<Dimensions; ++d)
-              {
-                py[num++] = usol[d];
-              }
-          }
+        auto box = fem::get_DM_bounds<Dimensions>(ctx.problem.ctx->dm, 1);
+        auto& h = ctx.problem.ctx->h;
+        std::array<double, Dimensions> hp;
+        for(std::size_t i = 0; i<ctx.problem.ctx->h.size(); ++i)
+        {
+            hp[i] = 2*ctx.problem.ctx->h[i];
         }
-      }
 
-      ierr = VecRestoreArray(y, &py);CHKERRQ(ierr);
-      PetscFunctionReturn(0);
+        auto sol = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, ctx.problem.sol, 0);
+
+        int num = 0;
+        PetscScalar *py;
+        ierr = VecGetArray(y, &py);CHKERRQ(ierr);
+
+        for(std::size_t ipart=0; ipart<ctx.particles.size(); ++ipart)
+        {
+            auto& p = ctx.particles[ipart];
+            auto pbox = p.bounding_box(hp);
+            if (geometry::intersect(box, pbox))
+            {
+                auto new_box = geometry::box_inside(box, pbox);
+                auto pts = find_fluid_points_insides(p, new_box, hp);
+                for(auto& ind: pts)
+                {
+                    auto usol = sol.at_g(2*ind);
+                    for (std::size_t d=0; d<Dimensions; ++d)
+                    {
+                        py[num++] = usol[d];
+                    }
+                }
+            }
+        }
+
+        ierr = VecRestoreArray(y, &py);CHKERRQ(ierr);
+        PetscFunctionReturn(0);
+        }
     }
-  }
 }
 
 #endif

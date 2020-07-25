@@ -4,8 +4,8 @@
 #ADD_EXECUTABLE(sem2d sem/sem.cpp)
 #TARGET_LINK_LIBRARIES(sem2d ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
 
-# ADD_EXECUTABLE(convergence dton/2D/Convergence/opposite_velocities/two_part.cpp)
-# TARGET_LINK_LIBRARIES(convergence ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})# HighFive)
+ADD_EXECUTABLE(convergence dton/2D/Convergence/opposite_velocities/two_part.cpp)
+TARGET_LINK_LIBRARIES(convergence ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})# HighFive)
 
 # ADD_EXECUTABLE(convergence_ana dton/2D/Convergence/opposite_velocities/two_part_ana.cpp)
 # TARGET_LINK_LIBRARIES(convergence_ana ${PETSC_LIBRARIES} ${MPI_LIBRARIES})

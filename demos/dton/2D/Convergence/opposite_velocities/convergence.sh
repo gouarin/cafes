@@ -9,11 +9,14 @@ for i in '11'
 do
     $exec \
     -assembling \
+    -order 2 \
+    -strian_tensor \
     -stokes_ksp_type preonly \
     -stokes_pc_type lu \
-    -dton_ksp_type gmres \
+    -dton_ksp_type cg \
     -dton_ksp_max_it 10000 \
     -dton_ksp_rtol 1e-3 \
+    -dton_ksp_max_it 10 \
     -dton_ksp_monitor_true_residual \
     -mx $i \
     -my $i \

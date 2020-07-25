@@ -208,9 +208,9 @@ namespace cafes
 
       template<typename T, std::size_t Dimensions>
       position<T, Dimensions> operator*(T coeff,
-                                             const position<T, Dimensions>& p)
+                                        const position<T, Dimensions>& p)
       {
-          position<double, Dimensions> that{p};
+          position<T, Dimensions> that{p};
           return that *= coeff;
       }
 

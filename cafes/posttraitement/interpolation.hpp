@@ -199,9 +199,9 @@ namespace cafes
           using position_type_i = geometry::position<int, Dimensions>;
           std::array<double, Dimensions> hr = {{h[0]/refine[0], h[1]/refine[1]}};
           position_type_i pos_coarse = {std::floor(pos[0]/refine[0]), std::floor(pos[1]/refine[1])};
-          auto ielem_coarse = fem::get_element(pos_coarse);
+          auto ielem_coarse = fem::get_element(pos_coarse, 1);
           // std::cout << ielem_coarse[0][0] << " " << ielem_coarse[0][1] << " " << ielem_coarse[1][0] << " " << ielem_coarse[1][1] << " " << ielem_coarse[2][0] << " " << ielem_coarse[2][1] << " "<< ielem_coarse[3][0] << " " << ielem_coarse[3][1]  << std::endl;
-          auto ielem = fem::get_element(pos);
+          auto ielem = fem::get_element(pos, 1);
 
           for (std::size_t i=0; i<ielem.size(); ++i)
           {

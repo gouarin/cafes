@@ -64,19 +64,19 @@ namespace cafes
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
-      const int Dimensions = 2;
+      constexpr std::size_t Dimensions = 2;
       using position_type = geometry::position<double, Dimensions>;
       using position_type_i = geometry::position<int, Dimensions>;
 
       std::array<double, Dimensions> hs = {{h[0]/sing.scale, h[1]/sing.scale}};
       double coef = 1./(sing.scale*sing.scale);
 
-      for(std::size_t j=box.bottom_left[1]; j<box.upper_right[1]; ++j)
+      for(int j=box.bottom_left[1]; j<box.upper_right[1]; ++j)
       {
-        for(std::size_t i=box.bottom_left[0]; i<box.upper_right[0]; ++i)
+        for(int i=box.bottom_left[0]; i<box.upper_right[0]; ++i)
         {
           position_type_i pts_i = {i, j};
-          auto ielem = fem::get_element(pts_i);
+          auto ielem = fem::get_element(pts_i, 1);
 
           for(std::size_t js=0; js<sing.scale; ++js)
           {

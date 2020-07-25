@@ -54,7 +54,8 @@ int main(int argc, char **argv)
         {{zeros, zeros}} // haut
     });
 
-    auto rhs = cafes::make_rhs<dim>({{ones, ones}});
+    // auto rhs = cafes::make_rhs<dim>({{ones, ones}});
+    auto rhs = cafes::make_rhs<dim>({{zeros, zeros}});
 
     auto st = cafes::make_stokes<dim>(bc, rhs);
     int const mx = st.opt.mx[0] - 1;
@@ -84,8 +85,8 @@ int main(int argc, char **argv)
     CHKERRQ(ierr);
     ierr = s.setup_KSP();
     CHKERRQ(ierr);
-    // ierr = s.solve();
-    ierr = s.test();
+    ierr = s.solve();
+    //ierr = s.test();
     CHKERRQ(ierr);
 
     // COARSE DMDA INFO

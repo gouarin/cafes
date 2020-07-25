@@ -87,54 +87,66 @@ struct convergence_context2
             PetscErrorCode ierr;
             PetscFunctionBeginUser;
 
+            std::cout << "dton x vecttor\n";
+            VecView(x, PETSC_VIEWER_STDOUT_WORLD);
+
             Ctx *ctx;
-            ierr = MatShellGetContext(A, (void **)&ctx);
-            CHKERRQ(ierr);
+            ierr = MatShellGetContext(A, (void **)&ctx);CHKERRQ(ierr);
 
-            ierr = VecSet(ctx->problem.rhs, 0.);
-            CHKERRQ(ierr);
+            ierr = VecSet(ctx->problem.rhs, 0.);CHKERRQ(ierr);
 
-            ierr = init_problem<Dimensions, Ctx>(*ctx, x);
-            CHKERRQ(ierr);
+            ierr = init_problem<Dimensions, Ctx>(*ctx, x);CHKERRQ(ierr);
 
-            ierr = ctx->problem.solve();
-            // if (!ctx->compute_rhs)
-            // {
-            //     ierr = cafes::io::save_VTK("Resultats", "two_part_ug_rhs",
-            //                                 ctx->problem.rhs, ctx->problem.ctx->dm,
-            //                                 ctx->problem.ctx->h);
-            //     CHKERRQ(ierr);
-            //     ierr = cafes::io::save_VTK("Resultats", "two_part_ug_sol",
-            //                                 ctx->problem.sol, ctx->problem.ctx->dm,
-            //                                 ctx->problem.ctx->h);
-            //     CHKERRQ(ierr);
-            //     std::exit(0);
-            // }
+            ierr = ctx->problem.solve();CHKERRQ(ierr);
 
-            ierr = VecCopy(ctx->problem.sol, ctx->sol_tmp);
-            CHKERRQ(ierr);
+            // std::cout << "solution\n";
+            // VecView(ctx->problem.sol, PETSC_VIEWER_STDOUT_WORLD);
+            if (!ctx->compute_rhs)
+            {
+                ierr = cafes::io::save_hdf5("Resultats", "two_part_ug_rhs",
+                                            ctx->problem.rhs, ctx->problem.ctx->dm,
+                                            ctx->problem.ctx->h);
+                CHKERRQ(ierr);
+                ierr = cafes::io::save_hdf5("Resultats", "two_part_ug_sol",
+                                            ctx->problem.sol, ctx->problem.ctx->dm,
+                                            ctx->problem.ctx->h);
+                CHKERRQ(ierr);
+                // std::exit(0);
+            }
+
+            ierr = VecCopy(ctx->problem.sol, ctx->sol_tmp);CHKERRQ(ierr);
 
             std::vector<std::vector<geometry::vector<double, Dimensions>>> g;
             g.resize(ctx->particles.size());
-            for (std::size_t ipart = 0; ipart < ctx->surf_points.size();
-                 ++ipart)
+            for (std::size_t ipart = 0; ipart < ctx->surf_points.size(); ++ipart)
+            {
                 g[ipart].resize(ctx->surf_points[ipart].size());
+            }
 
             // interpolation
             ierr = interp_fluid_to_surf(*ctx, g, ctx->add_rigid_motion,
                                         ctx->compute_singularity);
             CHKERRQ(ierr);
 
-            ierr = SL_to_Rhs(*ctx, g);
-            CHKERRQ(ierr);
+            // for (std::size_t ipart = 0; ipart < ctx->surf_points.size(); ++ipart)
+            // {
+            //     for(auto e: g[ipart])
+            //     {
+            //         std::cout << "g " << e << "\n";
+            //     }
+            // }
 
-            ierr = ctx->problem.solve();
-            CHKERRQ(ierr);
+            ierr = SL_to_Rhs(*ctx, g);CHKERRQ(ierr);
 
-            ierr = compute_y<Dimensions, Ctx>(*ctx, y);
+            // std::cout << "rhs\n";
+            // VecView(ctx->problem.rhs, PETSC_VIEWER_STDOUT_WORLD);
+
+            ierr = ctx->problem.solve();CHKERRQ(ierr);
+
+            ierr = compute_y<Dimensions, Ctx>(*ctx, y);CHKERRQ(ierr);
+            std::cout << "dton y vecttor\n";
+            ierr = VecView(y, PETSC_VIEWER_STDOUT_WORLD);
             CHKERRQ(ierr);
-            // ierr = VecView(y, PETSC_VIEWER_STDOUT_WORLD);
-            // CHKERRQ(ierr);
 
             PetscFunctionReturn(0);
         }
@@ -165,7 +177,7 @@ struct convergence_context2
             KSP ksp;
             PetscInt kspiter;
             PetscReal kspresnorm;
-            std::size_t scale_ = 10;
+            std::size_t scale_ = 4;
             bool default_flags_ = true;
             bool use_sing = false;
 
@@ -192,7 +204,7 @@ struct convergence_context2
                 PetscErrorCode ierr;
                 PetscFunctionBeginUser;
 
-                auto box = fem::get_DM_bounds<Dimensions>(problem_.ctx->dm, 0);
+                auto box = fem::get_DM_bounds<Dimensions>(problem_.ctx->dm, 1);
                 auto &h = problem_.ctx->h;
 
                 auto size = set_materials(parts_, surf_points_, radial_vec_,

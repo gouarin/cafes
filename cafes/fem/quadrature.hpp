@@ -48,6 +48,23 @@ namespace cafes
             return that;
         }
 
+        auto P2_integration(geometry::position<double, 2> const &x,
+                            std::array<double, 2> const &h)
+        {
+            std::array<double, 9> that;
+            double c = 1. / (h[0]*h[0]*h[1]*h[1]);
+            that[0] = .25*c*(-2*h[0] + x[0])*(-h[0] + x[0])*(-2*h[1] + x[1])*(-h[1] + x[1]);
+            that[1] = -.5*c*x[0]*(-2*h[0] + x[0])*(-2*h[1] + x[1])*(-h[1] + x[1]);
+            that[2] = .25*c*x[0]*(-h[0] + x[0])*(-2*h[1] + x[1])*(-h[1] + x[1]);
+            that[3] = -.5*c*x[1]*(-2*h[0] + x[0])*(-h[0] + x[0])*(-2*h[1] + x[1]);
+            that[4] =  c*x[0]*x[1]*(-2*h[0] + x[0])*(-2*h[1] + x[1]);
+            that[5] = -.5*c*x[0]*x[1]*(-h[0] + x[0])*(-2*h[1] + x[1]);
+            that[6] = .25*c*x[1]*(-2*h[0] + x[0])*(-h[0] + x[0])*(-h[1] + x[1]);
+            that[7] = -.5*c*x[0]*x[1]*(-2*h[0] + x[0])*(-h[1] + x[1]);
+            that[8] = .25*c*x[0]*x[1]*(-h[0] + x[0])*(-h[1] + x[1]);
+            return that;
+        }
+
          auto P1_integration_sing(geometry::position<double, 2> const &x,
                             std::array<double, 2> const &h)
         {
@@ -112,7 +129,7 @@ namespace cafes
             return that;
         }
 
-        auto get_element(geometry::position<int, 2> const &ix, std::size_t order)
+        auto get_element(geometry::position<int, 2> const &ix, std::size_t order, std::size_t step = 1)
         {
             std::size_t size = order + 1;
             std::vector<std::array<int, 2>> that(size*size);
@@ -123,7 +140,7 @@ namespace cafes
             {
                 for(int i=0; i<size; ++i)
                 {
-                    that[ind++] = {ix[0] + i, ix[1] + j};
+                    that[ind++] = {ix[0] + i*step, ix[1] + j*step};
                 }
             }
             return that;
