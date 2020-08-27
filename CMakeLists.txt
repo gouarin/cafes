@@ -7,6 +7,7 @@ include_directories(cafes external_packages/qhull)
 
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 set (CMAKE_CXX_STANDARD 14)
+#set(DOLFIN_SKIP_BUILD_TESTS true)
 
 FIND_PACKAGE(PETSc REQUIRED)
 FIND_PACKAGE(MPI)

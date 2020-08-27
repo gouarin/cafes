@@ -101,7 +101,7 @@ struct convergence_context2
 
             // std::cout << "solution\n";
             // VecView(ctx->problem.sol, PETSC_VIEWER_STDOUT_WORLD);
-            if (!ctx->compute_rhs)
+            if (ctx->compute_rhs)
             {
                 ierr = cafes::io::save_hdf5("Resultats", "two_part_ug_rhs",
                                             ctx->problem.rhs, ctx->problem.ctx->dm,
@@ -229,6 +229,57 @@ struct convergence_context2
                 CHKERRQ(ierr);
                 ierr = VecDuplicate(sol_tmp, &sol_previous);
                 CHKERRQ(ierr);
+
+                PetscFunctionReturn(0);
+            }
+
+#undef __FUNCT__
+#define __FUNCT__ "my_setup_RHS"
+            virtual PetscErrorCode my_setup_RHS()
+            {
+                PetscErrorCode ierr;
+                PetscFunctionBeginUser;
+                options<Dimensions> opt{};
+                opt.process_options();
+
+                if (default_flags_)
+                {
+                    ctx->compute_rhs = true;
+                    ctx->add_rigid_motion = true;
+                    ctx->compute_singularity = opt.compute_singularity;
+                }
+
+                ctx->problem.setup_RHS();
+
+                ierr = cafes::io::save_hdf5("Resultats", "rhs_direct_rhs",
+                                            ctx->problem.rhs, ctx->problem.ctx->dm,
+                                            ctx->problem.ctx->h);
+                CHKERRQ(ierr);
+
+                ctx->problem.setup_KSP();
+                ctx->problem.solve();
+
+                ierr = cafes::io::save_hdf5("Resultats", "rhs_direct_solution",
+                                            ctx->problem.sol, ctx->problem.ctx->dm,
+                                            ctx->problem.ctx->h);
+                CHKERRQ(ierr);
+
+                std::vector<std::vector<geometry::vector<double, Dimensions>>> g;
+                g.resize(ctx->particles.size());
+                for (std::size_t ipart = 0; ipart < ctx->surf_points.size(); ++ipart)
+                {
+                    g[ipart].resize(ctx->surf_points[ipart].size());
+                }
+
+                // interpolation
+                ierr = interp_fluid_to_surf(*ctx, g, ctx->add_rigid_motion,
+                                         ctx->compute_singularity);
+                CHKERRQ(ierr);
+
+                for (std::size_t i=0; i<ctx->surf_points.size(); i++)
+                {
+                    std::cout << ctx->particles.size() << " " << ctx->surf_points.size() << " " << g[0][i][0] << " " << g[0][i][1] << std::endl;
+                }
 
                 PetscFunctionReturn(0);
             }

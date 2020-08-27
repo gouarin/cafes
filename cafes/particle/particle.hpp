@@ -138,23 +138,23 @@ namespace cafes
       {
           for(x=b.bottom_left[0]*h[0], ix=b.bottom_left[0]; ix<b.upper_right[0]; x+=h[0], ++ix)
           {
-              bool found = true;
-              for(std::size_t i=0; i<2; ++i)
-              {
-                for(std::size_t j=0; j<2; ++j)
-                {
-                  cafes::geometry::position<double, 2> pt {x + i*h[0], y + j*h[1]};
-                  if(!p.contains(pt))
-                  {
-                      found = false;
-                      break;
-                  }
-                }
-              }
-              if (found)
-              {
+              // bool found = true;
+              // for(std::size_t i=0; i<2; ++i)
+              // {
+              //   for(std::size_t j=0; j<2; ++j)
+              //   {
+              //     cafes::geometry::position<double, 2> pt {x + i*h[0], y + j*h[1]};
+              //     if(!p.contains(pt))
+              //     {
+              //         found = false;
+              //         break;
+              //     }
+              //   }
+              // }
+              // if (found)
+              // {
                 that.push_back({ix, iy});
-              }
+              // }
           }
       }
       return that;
