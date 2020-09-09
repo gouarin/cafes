@@ -42,8 +42,7 @@
 #include <particle/geometry/vector.hpp>
 #include <petsc/vec.hpp>
 
-//#include <io/vtk.hpp>
-
+#include <io/hdf5.hpp>
 
 #include <petsc.h>
 #include <iostream>
@@ -122,7 +121,7 @@ namespace cafes
 
       std::cout << "apply_mass_matrix\n";
 
-      ierr = fem::apply_mass_matrix(ctx.problem.ctx->dm, forces, mass_mult, ctx.problem.ctx->h);CHKERRQ(ierr);
+      ierr = fem::apply_mass_matrix(ctx.problem.ctx->dm, forces, mass_mult, ctx.problem.ctx->h, ctx.problem.ctx->order);CHKERRQ(ierr);
       ierr = VecAXPY(ctx.problem.rhs, 1., mass_mult);CHKERRQ(ierr);
 
       ierr = DMRestoreGlobalVector(ctx.problem.ctx->dm, &mass_mult);CHKERRQ(ierr);
@@ -151,6 +150,7 @@ namespace cafes
 
         // The constraint is on pressure cells
         auto petsc_constraint = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, constraint, 0, false);
+        petsc_constraint.fill(0.);
 
         int num = 0;
         PetscScalar const *px;
@@ -193,6 +193,7 @@ namespace cafes
         ierr = DMGetGlobalVector(ctx.problem.ctx->dm, &rhs_term);CHKERRQ(ierr);
         ierr = VecSet(rhs_term, 0);CHKERRQ(ierr);
         auto petsc_rhs_term = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, rhs_term, 0, false);
+        petsc_rhs_term.fill(0.);
 
         auto matelem = getMatElemMassP2U(ctx.problem.ctx->h, ctx.problem.ctx->order);
         for(auto& p: ctx.particles)
@@ -404,7 +405,8 @@ namespace cafes
         // ierr = singularity::add_singularity_in_fluid<Dimensions, Ctx>(ctx);CHKERRQ(ierr);
       }
 
-      ierr = set_rhs_in_particles<Dimensions, Ctx>(ctx, x, apply_forces);CHKERRQ(ierr);
+      ierr = set_rhs_problem<Dimensions, Ctx>(ctx, x, apply_forces);CHKERRQ(ierr);
+      // ierr = set_rhs_in_particles<Dimensions, Ctx>(ctx, x, apply_forces);CHKERRQ(ierr);
 
       auto petsc_rhs = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, ctx.problem.rhs, 0);
 
@@ -573,14 +575,8 @@ namespace cafes
         PetscErrorCode ierr;
         PetscFunctionBeginUser;
 
-
-        auto box = fem::get_DM_bounds<Dimensions>(ctx.problem.ctx->dm, 1);
+        auto box = fem::get_DM_bounds<Dimensions>(ctx.problem.ctx->dm, 0);
         auto& h = ctx.problem.ctx->h;
-        std::array<double, Dimensions> hp;
-        for(std::size_t i = 0; i<ctx.problem.ctx->h.size(); ++i)
-        {
-            hp[i] = 2*ctx.problem.ctx->h[i];
-        }
 
         auto sol = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, ctx.problem.sol, 0);
 
@@ -591,14 +587,14 @@ namespace cafes
         for(std::size_t ipart=0; ipart<ctx.particles.size(); ++ipart)
         {
             auto& p = ctx.particles[ipart];
-            auto pbox = p.bounding_box(hp);
+            auto pbox = p.bounding_box(h);
             if (geometry::intersect(box, pbox))
             {
                 auto new_box = geometry::box_inside(box, pbox);
-                auto pts = find_fluid_points_insides(p, new_box, hp);
+                auto pts = find_fluid_points_insides(p, new_box, h);
                 for(auto& ind: pts)
                 {
-                    auto usol = sol.at_g(2*ind);
+                    auto usol = sol.at_g(ind);
                     for (std::size_t d=0; d<Dimensions; ++d)
                     {
                         py[num++] = usol[d];
@@ -606,6 +602,39 @@ namespace cafes
                 }
             }
         }
+
+        // auto box = fem::get_DM_bounds<Dimensions>(ctx.problem.ctx->dm, 1);
+        // auto& h = ctx.problem.ctx->h;
+        // std::array<double, Dimensions> hp;
+        // for(std::size_t i = 0; i<ctx.problem.ctx->h.size(); ++i)
+        // {
+        //     hp[i] = 2*ctx.problem.ctx->h[i];
+        // }
+
+        // auto sol = petsc::petsc_vec<Dimensions>(ctx.problem.ctx->dm, ctx.problem.sol, 0);
+
+        // int num = 0;
+        // PetscScalar *py;
+        // ierr = VecGetArray(y, &py);CHKERRQ(ierr);
+
+        // for(std::size_t ipart=0; ipart<ctx.particles.size(); ++ipart)
+        // {
+        //     auto& p = ctx.particles[ipart];
+        //     auto pbox = p.bounding_box(hp);
+        //     if (geometry::intersect(box, pbox))
+        //     {
+        //         auto new_box = geometry::box_inside(box, pbox);
+        //         auto pts = find_fluid_points_insides(p, new_box, hp);
+        //         for(auto& ind: pts)
+        //         {
+        //             auto usol = sol.at_g(2*ind);
+        //             for (std::size_t d=0; d<Dimensions; ++d)
+        //             {
+        //                 py[num++] = usol[d];
+        //             }
+        //         }
+        //     }
+        // }
 
         ierr = VecRestoreArray(y, &py);CHKERRQ(ierr);
         PetscFunctionReturn(0);

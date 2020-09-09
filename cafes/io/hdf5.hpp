@@ -37,7 +37,7 @@
 #include <petscviewerhdf5.h>
 // #include <highfive/H5File.hpp>
 
-#include "../problem/particle_operator.hpp"
+// #include "../problem/particle_operator.hpp"
 namespace cafes
 {
     namespace io
@@ -178,22 +178,22 @@ namespace cafes
 
             // HighFive::File file(output.str().data(), HighFive::File::ReadWrite | HighFive::File::Create | HighFive::File::Truncate);
 
-            for(std::size_t ipart=0; ipart< particles.size(); ++ipart)
-            {
-                std::vector<double> surf(surf_points[ipart].size()*dim);
-                for(std::size_t isurf=0; isurf < surf_points[ipart].size(); ++isurf)
-                {
-                    auto index = problem::get_index(surf_points[ipart][isurf]);
-                    auto pos = problem::get_position(surf_points[ipart][isurf]);
-                    auto new_pos = index*h + pos;
-                    // std::cout << "[" << new_pos[0] << ", " << new_pos[1] << "],\n";
-                    // surf[isurf] = new_pos[0];
-                    // surf[surf_points[ipart].size() + isurf] = new_pos[1];
-                }
+            // for(std::size_t ipart=0; ipart< particles.size(); ++ipart)
+            // {
+            //     std::vector<double> surf(surf_points[ipart].size()*dim);
+            //     for(std::size_t isurf=0; isurf < surf_points[ipart].size(); ++isurf)
+            //     {
+            //         auto index = problem::get_index(surf_points[ipart][isurf]);
+            //         auto pos = problem::get_position(surf_points[ipart][isurf]);
+            //         auto new_pos = index*h + pos;
+            //         // std::cout << "[" << new_pos[0] << ", " << new_pos[1] << "],\n";
+            //         // surf[isurf] = new_pos[0];
+            //         // surf[surf_points[ipart].size() + isurf] = new_pos[1];
+            //     }
 
-                // HighFive::DataSet dataset = file.createDataSet<double>("/particle_" + ipart,  HighFive::DataSpace{{dim, surf_points[ipart].size()}});
-                // dataset.write(surf);
-            }
+            //     // HighFive::DataSet dataset = file.createDataSet<double>("/particle_" + ipart,  HighFive::DataSpace{{dim, surf_points[ipart].size()}});
+            //     // dataset.write(surf);
+            // }
 
             PetscFunctionReturn(0);
         }

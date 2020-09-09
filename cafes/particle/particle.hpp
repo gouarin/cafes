@@ -351,13 +351,28 @@ namespace cafes
       hs[d] = hp[d]/scale;
 
     for(auto& p: parts){
-      auto pbox = p.bounding_box(hp);
+      auto pbox = p.bounding_box(h);
       if (geometry::intersect(box, pbox)){
         auto new_box = geometry::box_inside(box, pbox);
-        auto pts = find_fluid_points_insides(p, new_box, hp);
+        auto pts = find_fluid_points_insides(p, new_box, h);
         size += pts.size();
 
         // auto spts = p.surface(dpart);
+        // auto spts = p.surface(hs[0]);
+        // auto spts_valid = find_surf_points_insides(spts, new_box, hp);
+        // surf_points[ipart].assign(spts_valid.begin(), spts_valid.end());
+        // nb_surf_points[ipart] = surf_points[ipart].size();
+
+        // auto radial_valid = find_radial_surf_points_insides(spts, new_box, h, p.center_);
+        // radial_vec[ipart].assign(radial_valid.begin(), radial_valid.end());
+        
+        algorithm::iterate(new_box, kernel_num_count(p, h, hs, box_scale, num[ipart]));
+
+      }
+      
+      pbox = p.bounding_box(hp);
+      if (geometry::intersect(box, pbox)){
+        auto new_box = geometry::box_inside(box, pbox);
         auto spts = p.surface(hs[0]);
         auto spts_valid = find_surf_points_insides(spts, new_box, hp);
         surf_points[ipart].assign(spts_valid.begin(), spts_valid.end());
@@ -365,9 +380,6 @@ namespace cafes
 
         auto radial_valid = find_radial_surf_points_insides(spts, new_box, hp, p.center_);
         radial_vec[ipart].assign(radial_valid.begin(), radial_valid.end());
-        
-        algorithm::iterate(new_box, kernel_num_count(p, hp, hs, box_scale, num[ipart]));
-
       }
       ipart++;
     }
