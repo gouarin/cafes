@@ -78,3 +78,6 @@
 
 ADD_EXECUTABLE(dton_one_part Q2/dton_one_part.cpp)
 TARGET_LINK_LIBRARIES(dton_one_part ${PETSC_LIBRARIES} ${MPI_LIBRARIES})
+
+ADD_EXECUTABLE(dton_two_parts Q2/dton_two_parts.cpp)
+TARGET_LINK_LIBRARIES(dton_two_parts ${PETSC_LIBRARIES} ${MPI_LIBRARIES})
