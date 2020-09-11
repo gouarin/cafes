@@ -68,6 +68,8 @@ int main(int argc, char **argv)
 
     std::string stout = "two_parts_solution_";
     stout.append(std::to_string(mx));
+    stout.append("_distance_");
+    stout.append(std::to_string(distance));
     const char * stw = stout.c_str();
     ierr = cafes::io::save_hdf5("Resultats", stw, st.sol, st.ctx->dm,
                               st.ctx->h);

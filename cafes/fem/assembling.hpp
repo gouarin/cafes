@@ -81,10 +81,6 @@ PetscErrorCode PreallocateMat(Context *user, Options opt, const MatType mtype,
     ierr = MatSetType(A, (const MatType)mtype);CHKERRQ(ierr);
     ierr = MatSetDM(A, pack);CHKERRQ(ierr);
     ierr = MatSetFromOptions(A);CHKERRQ(ierr);
-    // ierr = MatSetUp(A);CHKERRQ(ierr);
-    // ierr = MatSetOption(A, MAT_NEW_NONZERO_LOCATIONS, PETSC_TRUE);CHKERRQ(ierr);
-    // ierr = MatSetOption(A, MAT_NEW_NONZERO_LOCATION_ERR, PETSC_FALSE);CHKERRQ(ierr);
-    // ierr = MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);CHKERRQ(ierr);
 
     // Get the local to global mapping
     ierr = DMGetLocalToGlobalMapping(pack, &ltog);CHKERRQ(ierr);
@@ -178,10 +174,6 @@ PetscErrorCode PreallocateMat(Context *user, Options opt, const MatType mtype,
     ierr = MatPreallocateFinalize(dnz, onz);CHKERRQ(ierr);
 
     ierr = MatSetLocalToGlobalMapping(A, ltog, ltog);CHKERRQ(ierr);
-
-    // ierr = MatSeqAIJSetPreallocation(A, PETSC_DEFAULT, PETSC_NULL);CHKERRQ(ierr);
-    // ierr = MatMPIAIJSetPreallocation(A, 0, PETSC_NULL, 0, PETSC_NULL);CHKERRQ(ierr);
-    // MatSetOption(A,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_FALSE);
 
     *J = A;
     PetscFunctionReturn(0);

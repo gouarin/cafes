@@ -37,7 +37,6 @@
 #include <petscviewerhdf5.h>
 // #include <highfive/H5File.hpp>
 
-// #include "../problem/particle_operator.hpp"
 namespace cafes
 {
     namespace io

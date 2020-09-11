@@ -338,7 +338,7 @@ namespace cafes
                 PetscFunctionBeginUser;
                 PC pc;
 
-                ierr = KSPCreate(PETSC_COMM_WORLD, &ksp);//CHKERRQ(ierr);
+                ierr = KSPCreate(PETSC_COMM_WORLD, &ksp);CHKERRQ(ierr);
                 ierr = KSPSetDM(ksp, ctx->dm);CHKERRQ(ierr);
                 ierr = KSPSetDMActive(ksp, PETSC_FALSE);CHKERRQ(ierr);
                 ierr = KSPSetOptionsPrefix(ksp, "stokes_");CHKERRQ(ierr);
