@@ -174,6 +174,7 @@ PetscErrorCode PreallocateMat(Context *user, Options opt, const MatType mtype,
     ierr = MatPreallocateFinalize(dnz, onz);CHKERRQ(ierr);
 
     ierr = MatSetLocalToGlobalMapping(A, ltog, ltog);CHKERRQ(ierr);
+
     *J = A;
     PetscFunctionReturn(0);
 }

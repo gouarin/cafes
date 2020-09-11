@@ -140,7 +140,9 @@ namespace cafes
             {
                 for(int i=0; i<size; ++i)
                 {
-                    that[ind++] = {ix[0] + i*step, ix[1] + j*step};
+                    that[ind][0] = ix[0] + i*step;
+                    that[ind][1] = ix[1] + j*step;
+                    ind++;
                 }
             }
             return that;

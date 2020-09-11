@@ -44,8 +44,8 @@
 #ADD_EXECUTABLE(laplacian laplacian.cpp)
 #TARGET_LINK_LIBRARIES(laplacian ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
 
-# ADD_EXECUTABLE(cavity2d cavity2d.cpp)
-# TARGET_LINK_LIBRARIES(cavity2d ${PETSC_LIBRARIES} ${MPI_LIBRARIES})
+#ADD_EXECUTABLE(cavity2d cavity2d.cpp)
+#TARGET_LINK_LIBRARIES(cavity2d ${PETSC_LIBRARIES} ${MPI_LIBRARIES})
 
 #ADD_EXECUTABLE(cavity3d cavity3d.cpp)
 #TARGET_LINK_LIBRARIES(cavity3d ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
@@ -69,3 +69,15 @@
 
 #ADD_EXECUTABLE(test_read_solution test_read_solution.cpp)
 #TARGET_LINK_LIBRARIES(test_read_solution ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
+
+#ADD_EXECUTABLE(cavite_entrainee Q2/cavite_entrainee.cpp)
+#TARGET_LINK_LIBRARIES(cavite_entrainee ${PETSC_LIBRARIES} ${MPI_LIBRARIES})
+
+#ADD_EXECUTABLE(second_membre Q2/second_membre.cpp)
+#TARGET_LINK_LIBRARIES(second_membre ${PETSC_LIBRARIES} ${MPI_LIBRARIES})
+
+ADD_EXECUTABLE(dton_one_part Q2/dton_one_part.cpp)
+TARGET_LINK_LIBRARIES(dton_one_part ${PETSC_LIBRARIES} ${MPI_LIBRARIES})
+
+ADD_EXECUTABLE(dton_two_parts Q2/dton_two_parts.cpp)
+TARGET_LINK_LIBRARIES(dton_two_parts ${PETSC_LIBRARIES} ${MPI_LIBRARIES})
