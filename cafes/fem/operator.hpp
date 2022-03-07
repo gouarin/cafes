@@ -48,7 +48,7 @@ namespace cafes
         auto const kernel_diag_block = [](auto const &x, auto &y,
                                           auto const &matelem,
                                           std::size_t order) {
-            auto const kernel_pos = [&](auto const &pos) {
+            auto const kernel_pos = [&, order](auto const &pos) {
                 auto const ielem = get_element(pos, order);
                 auto const nbasis = (order + 1)*(order + 1);
 
@@ -71,7 +71,7 @@ namespace cafes
         auto const kernel_tensor_block = [](auto const &x, auto &y,
                                             auto const &matelem,
                                             std::size_t order) {
-            auto const kernel_pos = [&](auto const &pos) {
+            auto const kernel_pos = [&, order](auto const &pos) {
                 auto const ielem = get_element(pos, order);
                 auto const nbasis = (order + 1)*(order + 1);
 
@@ -95,7 +95,7 @@ namespace cafes
         };
 
         auto const kernel_diag_diag_block = [](auto &x, auto const &matelem, std::size_t order) {
-            auto const kernel_pos = [&](auto const &pos) {
+            auto const kernel_pos = [&, order](auto const &pos) {
                 auto const ielem = get_element(pos, order);
                 auto const nbasis = (order + 1)*(order + 1);
 
@@ -104,7 +104,7 @@ namespace cafes
                     auto u = x.at(ielem[ie]);
                     for (std::size_t d = 0; d < x.dof_; ++d)
                     {
-                        u[d] += matelem[ie*order + ie];
+                        u[d] += matelem[ie*nbasis + ie];
                     }
                 }
             };
@@ -207,7 +207,7 @@ namespace cafes
             PetscErrorCode ierr;
             PetscFunctionBeginUser;
 
-            ierr = diag_block_mult(x, y, getMatElemLaplacian(h, order), order,  
+            ierr = diag_block_mult(x, y, getMatElemLaplacian(h, order), order,
                                    kernel_diag_block);
             CHKERRQ(ierr);
 
