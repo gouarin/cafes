@@ -94,6 +94,12 @@ namespace cafes
             return *this;
         }
 
+        position& operator*=(const T p)
+        {
+            for(std::size_t i=0;i<Dimensions;++i) (*this)[i] *= p;
+            return *this;
+        }
+
         position& operator*=(std::array<T, Dimensions> const& v)
         {
             for(std::size_t i=0;i<Dimensions;++i) (*this)[i] *= v[i];
@@ -198,6 +204,14 @@ namespace cafes
           position<double, Dimensions> that{p1};
           position<double, Dimensions> tmp{p2};
           return that *= p2;
+      }
+
+      template<typename T, std::size_t Dimensions>
+      position<T, Dimensions> operator*(T coeff,
+                                        const position<T, Dimensions>& p)
+      {
+          position<T, Dimensions> that{p};
+          return that *= coeff;
       }
 
       template<typename T, typename U, std::size_t Dimensions>

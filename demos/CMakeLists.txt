@@ -4,11 +4,14 @@
 #ADD_EXECUTABLE(sem2d sem/sem.cpp)
 #TARGET_LINK_LIBRARIES(sem2d ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
 
-ADD_EXECUTABLE(convergence dton/2D/Convergence/opposite_velocities/two_part.cpp)
-TARGET_LINK_LIBRARIES(convergence ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
+#ADD_EXECUTABLE(convergence dton/2D/Convergence/opposite_velocities/two_part.cpp)
+#TARGET_LINK_LIBRARIES(convergence ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})# HighFive)
 
-ADD_EXECUTABLE(convergence_opposite_velocities_reference dton/2D/Convergence/opposite_velocities/two_part_opposite_velocities_reference.cpp)
-TARGET_LINK_LIBRARIES(convergence_opposite_velocities_reference ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
+# ADD_EXECUTABLE(convergence_ana dton/2D/Convergence/opposite_velocities/two_part_ana.cpp)
+# TARGET_LINK_LIBRARIES(convergence_ana ${PETSC_LIBRARIES} ${MPI_LIBRARIES})
+
+# ADD_EXECUTABLE(convergence_opposite_velocities_reference dton/2D/Convergence/opposite_velocities/two_part_opposite_velocities_reference.cpp)
+# TARGET_LINK_LIBRARIES(convergence_opposite_velocities_reference ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})
 
 #ADD_EXECUTABLE(convergence_same_velocities dton/2D/Convergence/same_velocities/two_part_same_velocities.cpp)
 #TARGET_LINK_LIBRARIES(convergence_same_velocities ${PETSC_LIBRARIES} ${MPI_LIBRARIES} ${VTK_LIBRARIES})

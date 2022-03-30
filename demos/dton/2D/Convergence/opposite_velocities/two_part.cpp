@@ -14,7 +14,16 @@ void zeros(const PetscReal x[], PetscScalar *u)
 
 void ones(const PetscReal x[], PetscScalar *u)
 {
-    *u = 10.;
+    if (std::abs(x[0]-0.5)<= 0.1 and  std::abs(x[1]-0.5) <= 0.1)
+    // if ((x[0]-0.5)*(x[0]-0.5) + (x[1]-0.5)*(x[1]-0.5) <= 0.2*0.2)
+    // if (x[0] == 0.5 and x[1] == 0.5)
+    {
+        *u = 1.;
+    }
+    else
+    {
+        *u = 0;
+    }
 }
 
 void ones_m(const PetscReal x[], PetscScalar *u)
@@ -45,24 +54,29 @@ int main(int argc, char **argv)
         {{zeros, zeros}} // haut
     });
 
+    // auto rhs = cafes::make_rhs<dim>({{ones, ones}});
     auto rhs = cafes::make_rhs<dim>({{zeros, zeros}});
 
     auto st = cafes::make_stokes<dim>(bc, rhs);
     int const mx = st.opt.mx[0] - 1;
-    
 
-    double R1 = .1;
-    double R2 = .1;
-    double dist = .1/5;
+    // double R1 = .1;
+    // double R2 = .1;
+    // double dist = .1/5;
 
-    auto se1 = cafes::make_circle({.5 - R1 - dist / 2, .5}, R1, 0);
-    auto se2 = cafes::make_circle({.5 + R2 + dist / 2, .5}, R2, 0);
+    // auto se1 = cafes::make_circle({.5 - R1 - dist / 2, .5}, R1, 0);
+    // auto se2 = cafes::make_circle({.5 + R2 + dist / 2, .5}, R2, 0);
+
+    auto se1 = cafes::make_circle({.5, .5}, 0.2, 0);
+
+    // std::vector<cafes::particle<decltype(se1)>> pt{
+    //     cafes::make_particle_with_velocity(se1, {1., 0.}, 0.),
+    //     cafes::make_particle_with_velocity(se2, {-1., 0.}, 0.)};
 
     std::vector<cafes::particle<decltype(se1)>> pt{
-        cafes::make_particle_with_velocity(se1, {1., 0.}, 0.),
-        cafes::make_particle_with_velocity(se2, {-1., 0.}, 0.)};
+        cafes::make_particle_with_velocity(se1, {1., 0.}, 0.)};
 
-    auto s = cafes::make_DtoN(pt, st, .1);
+    auto s = cafes::make_DtoN(pt, st, .01);
 
     ierr = s.create_Mat_and_Vec();
     CHKERRQ(ierr);
@@ -72,6 +86,7 @@ int main(int argc, char **argv)
     ierr = s.setup_KSP();
     CHKERRQ(ierr);
     ierr = s.solve();
+    //ierr = s.test();
     CHKERRQ(ierr);
 
     // COARSE DMDA INFO
@@ -89,21 +104,54 @@ int main(int argc, char **argv)
                                st.ctx->h);
     CHKERRQ(ierr);
 
-    stout0 = "two_part_tmp_";
-    stout0.append(std::to_string(mx));
-    stw0 = stout0.c_str();
-    ierr = cafes::io::save_hdf5(srep, stw0, s.sol_tmp, st.ctx->dm,
-                               st.ctx->h);
-    CHKERRQ(ierr);
+    // stout0 = "two_part_tmp_";
+    // stout0.append(std::to_string(mx));
+    // stw0 = stout0.c_str();
+    // ierr = cafes::io::save_hdf5(srep, stw0, s.sol_tmp, st.ctx->dm,
+    //                            st.ctx->h);
+    // CHKERRQ(ierr);
+
+    // {
+    //     // ZEROS IN PARTICLES (REFINED SOLUTION)
+    //     auto bbox = cafes::fem::get_DM_bounds<dim>(st.ctx->dm, 0);
+    //     auto bboxp = cafes::fem::get_DM_bounds<dim>(st.ctx->dm, 1);
+    //     auto solu = cafes::petsc::petsc_vec<dim>(st.ctx->dm, s.sol_reg, 0, false);
+    //     auto solp = cafes::petsc::petsc_vec<dim>(st.ctx->dm, s.sol_reg, 1, false);
+
+    //     for(std::size_t j=bbox.bottom_left[1]; j<bbox.upper_right[1]; ++j)
+    //     {
+    //         for(std::size_t i=bbox.bottom_left[0]; i<bbox.upper_right[0]; ++i)
+    //         {
+    //             auto pos = cafes::geometry::position<int, dim>{i,j};
+    //             auto pts = cafes::geometry::position<double, dim>{i*st.ctx->h[0], j*st.ctx->h[0]};
+    //             auto usol = solu.at_g(pos);
+    //             for(std::size_t ipart=0; ipart<pt.size(); ++ipart)
+    //             {
+    //                 auto part = pt[ipart];
+    //                 if (part.contains(pts))
+    //                 {
+    //                     usol[0] = part.velocity_[0];
+    //                     usol[1] = part.velocity_[1];
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 
     stout0 = "two_part_reg_";
     stout0.append(std::to_string(mx));
     stw0 = stout0.c_str();
-    ierr = cafes::io::save_hdf5(srep, stw0, s.sol_reg, st.ctx->dm,
+    // ierr = cafes::io::save_hdf5(srep, stw0, s.sol_reg, st.ctx->dm,
+    //                            st.ctx->h);
+    ierr = cafes::io::save_hdf5(srep, stw0, st.sol, st.ctx->dm,
                                st.ctx->h);
     CHKERRQ(ierr);
 
-    
+    ierr = PetscFinalize();
+    CHKERRQ(ierr);
+
+    return 0;
+
     // REFINEMENT AND INTERPOLATION
     int const fine = nref/mx;
     std::array<int, dim> refine = {fine,fine};

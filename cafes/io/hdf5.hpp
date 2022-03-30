@@ -35,6 +35,7 @@
 #include <iostream>
 #include <petsc.h>
 #include <petscviewerhdf5.h>
+// #include <highfive/H5File.hpp>
 
 namespace cafes
 {
@@ -157,6 +158,41 @@ namespace cafes
             {
                 create_xdmf(path, filename, infou, h);
             }
+
+            PetscFunctionReturn(0);
+        }
+
+
+#undef __FUNCT__
+#define __FUNCT__ "save_particles"
+        template<typename Shape, std::size_t dim, typename Surf>
+        PetscErrorCode save_particles(const char *path, const char *filename,
+                                      std::array<double, dim> h,
+                                      const std::vector<particle<Shape>>& particles,
+                                      const Surf& surf_points)
+        {
+            PetscErrorCode ierr;
+            std::stringstream output;
+            output << path << "/" << filename << ".h5";
+
+            // HighFive::File file(output.str().data(), HighFive::File::ReadWrite | HighFive::File::Create | HighFive::File::Truncate);
+
+            // for(std::size_t ipart=0; ipart< particles.size(); ++ipart)
+            // {
+            //     std::vector<double> surf(surf_points[ipart].size()*dim);
+            //     for(std::size_t isurf=0; isurf < surf_points[ipart].size(); ++isurf)
+            //     {
+            //         auto index = problem::get_index(surf_points[ipart][isurf]);
+            //         auto pos = problem::get_position(surf_points[ipart][isurf]);
+            //         auto new_pos = index*h + pos;
+            //         // std::cout << "[" << new_pos[0] << ", " << new_pos[1] << "],\n";
+            //         // surf[isurf] = new_pos[0];
+            //         // surf[surf_points[ipart].size() + isurf] = new_pos[1];
+            //     }
+
+            //     // HighFive::DataSet dataset = file.createDataSet<double>("/particle_" + ipart,  HighFive::DataSpace{{dim, surf_points[ipart].size()}});
+            //     // dataset.write(surf);
+            // }
 
             PetscFunctionReturn(0);
         }

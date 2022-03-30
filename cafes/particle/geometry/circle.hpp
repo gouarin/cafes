@@ -46,8 +46,10 @@ namespace cafes
       using parent::perimeter;
       using parent::shape_factors_;
 
+      position_type center;
+
       circle(position_type const& c, double const& radius, quaternion q={}):
-             super_ellipsoid<T, 2>(c, {{radius, radius}}, 2, q)
+             super_ellipsoid<T, 2>(c, {{radius, radius}}, 2, q), center{c}
       {
       }
       
@@ -69,6 +71,21 @@ namespace cafes
       double Ci_R() const
       {
         return 2./(shape_factors_[0]*shape_factors_[0]);
+      }
+
+      std::vector<position_type>
+      surface(double const& k, double tol=1e-2) const
+      {
+        std::size_t npoints = surface_area()/k;
+        double step = 2*M_PI/npoints;
+        std::vector<position<double, 2>> that;
+        for(double theta=0; theta<2*M_PI; theta+=step)
+        {
+            that.push_back({shape_factors_[0]*std::cos(theta),
+                            shape_factors_[0]*std::sin(theta)});
+        }
+        std::for_each(that.begin(), that.end(),[&](auto& p){p += center;});
+        return that;
       }
       
     };

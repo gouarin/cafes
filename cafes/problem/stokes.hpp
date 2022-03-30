@@ -75,8 +75,8 @@ namespace cafes
 
             auto mg_h = ctx_->h;
             std::for_each(mg_h.begin(), mg_h.end(), [&](auto &x) {x *= (1 << level);});
-            
-            auto *mg_ctx = new CTX{dm, mg_h, ctx_->apply, ctx_->apply_diag};
+
+            auto *mg_ctx = new CTX{dm, mg_h, ctx_->order, ctx_->apply, ctx_->apply_diag};
             mg_ctx->set_dirichlet_bc(ctx_->bc_);
 
             ierr = MatSetSizes(Alevel, localsize, localsize, totalsize, totalsize);CHKERRQ(ierr);
@@ -115,7 +115,7 @@ namespace cafes
             ierr = PCFieldSplitSetSchurPre(pc, PC_FIELDSPLIT_SCHUR_PRE_USER, PETSC_NULL);CHKERRQ(ierr);
 
             ierr = DMCompositeGetEntries(dm, &dav, &dap);CHKERRQ(ierr);
-            auto *mg_ctx = new Ctx{dav, ctx->h, ctx->apply, fem::diag_laplacian_mult};
+            auto *mg_ctx = new Ctx{dav, ctx->h, ctx->order, ctx->apply, fem::diag_laplacian_mult};
             mg_ctx->set_dirichlet_bc(ctx->bc_);
             ierr = DMKSPSetComputeOperators(dav, createLevelMatrices<Ctx, Dim>, (void *)mg_ctx);CHKERRQ(ierr);
 
@@ -227,14 +227,15 @@ namespace cafes
                 PetscErrorCode (*method)(
                     petsc::petsc_vec<Dimensions> &,
                     petsc::petsc_vec<Dimensions> &,
-                    std::array<double, Dimensions> const &);
+                    std::array<double, Dimensions> const &,
+                    std::size_t);
 
                 if (opt.strain_tensor)
                     method = fem::strain_tensor_mult;
                 else
                     method = fem::laplacian_mult;
 
-                ctx = new Ctx{mesh, hu, method};
+                ctx = new Ctx{mesh, hu, opt.order, method};
                 ctx->set_dirichlet_bc(bc);
 
                 DM dav, dap;
@@ -245,8 +246,9 @@ namespace cafes
                 // set Stokes matrix
                 if (opt.assembling)
                 {
-                    PreallocateMat(ctx, opt, MATAIJ, &A, false);
-                    PreallocateMat(ctx, opt, MATAIJ, &P, true);
+                    PreallocateMat<Dimensions>(ctx, opt, MATAIJ, &A, opt.order, false);
+                    PreallocateMat<Dimensions>(ctx, opt, MATAIJ, &P, opt.order, true);
+
                     MatSetDM(A, mesh);
                     MatSetDM(P, mesh);
                     MatSetFromOptions(A);
@@ -254,28 +256,36 @@ namespace cafes
 
                     if (opt.strain_tensor)
                     {
-                        strain_tensor_assembling(dav, A, hu);
-                        strain_tensor_assembling(dav, P, hu);
+                        strain_tensor_assembling(dav, A, hu, opt.order);
+                        strain_tensor_assembling(dav, P, hu, opt.order);
                     }
                     else
                     {
-                        laplacian_assembling(dav, A, hu);
-                        laplacian_assembling(dav, P, hu);
+                        laplacian_assembling(dav, A, hu, opt.order);
+                        laplacian_assembling(dav, P, hu, opt.order);
                     }
 
-                    B_BT_assembling(mesh, A, hu);
-                    diagonal_assembling<Dimensions>(mesh, A, 0.); //0 à la place de 1e-8 (d'après H.)
-                    cafes::mass_assembling(mesh, P, hp);
+                    B_BT_assembling(mesh, A, hu, opt.order);
+
+                    diagonal_assembling<Dimensions>(mesh, A, 0); //0 à la place de 1e-8 (d'après H.)
+
+                    DMDALocalInfo info;
+                    DMDAGetLocalInfo(dav, &info);
+                    int dec = info.dof * info.gxm * info.gym * info.gzm;
+                    // cafes::mass_assembling(dap, A, hp, 1, dec, -1e-10);
+                    cafes::mass_assembling(dap, P, hp, 1, dec);
 
                     MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);
                     MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY);
                     MatAssemblyBegin(P, MAT_FINAL_ASSEMBLY);
                     MatAssemblyEnd(P, MAT_FINAL_ASSEMBLY);
 
+                    // MatView(A, PETSC_VIEWER_STDOUT_WORLD);
+
                     cafes::fem::SetDirichletOnMat(A, bc);
                     cafes::fem::SetDirichletOnMat(P, bc);
 
-                    CreatePressureNullSpace(mesh); 
+                    // CreatePressureNullSpace(mesh);
                 }
                 else
                 {
@@ -288,11 +298,11 @@ namespace cafes
                     DMSetMatType(dav, MATSHELL);
                     DMSetMatType(dap, MATSHELL);
 
-                    Ctx *slap = new Ctx{dav, hu, method, fem::diag_laplacian_mult};
+                    Ctx *slap = new Ctx{dav, hu, opt.order, method, fem::diag_laplacian_mult};
                     slap->set_dirichlet_bc(bc);
                     auto A11 = fem::make_matrix<Ctx>(slap);
 
-                    Ctx *smass = new Ctx{dap, hp, fem::mass_mult, fem::diag_mass_mult};
+                    Ctx *smass = new Ctx{dap, hp, 1, fem::mass_mult, fem::diag_mass_mult};
                     auto A22 = fem::make_matrix<Ctx>(smass);
 
                     Mat bA[2][2];
@@ -316,7 +326,7 @@ namespace cafes
 
                 if (rhsc_.has_condition())
                 {
-                    ierr = fem::set_rhs<Dimensions, 1>(ctx->dm, rhs, rhsc_, ctx->h);CHKERRQ(ierr);
+                    ierr = fem::set_rhs<Dimensions, 1>(ctx->dm, rhs, rhsc_, ctx->h, opt.order);CHKERRQ(ierr);
                 }
 
                 auto petsc_rhs = petsc::petsc_vec<Dimensions>(ctx->dm, rhs, 0);
@@ -377,22 +387,30 @@ namespace cafes
 
                 MatNullSpace nullSpacePres;
 
-                Vec tmp;
-                ierr = DMGetGlobalVector(mesh, &tmp);CHKERRQ(ierr);
-                ierr = VecSet(tmp, 0.);CHKERRQ(ierr);
+                // Vec tmp;
+                // ierr = DMGetGlobalVector(mesh, &tmp);
+                // CHKERRQ(ierr);
+                // ierr = VecSet(tmp, 0.);
+                // CHKERRQ(ierr);
 
-                auto lambda = [](const auto &dm, auto &v) {
-                    auto xpetsc = petsc::petsc_vec<Dimensions>(dm, v, 1, false);
-                    xpetsc.fill_global(1.);
-                };
+                // auto lambda = [](const auto &dm, auto &v) {
+                //     auto xpetsc = petsc::petsc_vec<Dimensions>(dm, v, 1, false);
 
-                lambda(mesh, tmp);
-                ierr = VecNormalize(tmp, NULL);CHKERRQ(ierr);
+                //     xpetsc.fill_global(1.);
+                // };
+
+                // lambda(mesh, tmp);
+                // ierr = VecNormalize(tmp, NULL);
+                // CHKERRQ(ierr);
+
+                // ierr = MatNullSpaceCreate(PetscObjectComm((PetscObject)mesh),
+                //                           PETSC_FALSE, 1, &tmp, &nullSpacePres);
 
                 ierr = MatNullSpaceCreate(PetscObjectComm((PetscObject)mesh),
-                                          PETSC_FALSE, 1, &tmp, &nullSpacePres);CHKERRQ(ierr);
-
-                ierr = MatSetNullSpace(A, nullSpacePres);CHKERRQ(ierr);
+                                          PETSC_TRUE, 0, PETSC_NULL, &nullSpacePres);
+                CHKERRQ(ierr);
+                ierr = MatSetNullSpace(A, nullSpacePres);
+                CHKERRQ(ierr);
                 PetscFunctionReturn(0);
             }
 

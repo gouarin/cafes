@@ -66,7 +66,7 @@ namespace cafes
             ierr = ypetsc.fill(0.);
             CHKERRQ(ierr);
 
-            ierr = ctx->apply(xpetsc, ypetsc, ctx->h);
+            ierr = ctx->apply(xpetsc, ypetsc, ctx->h, ctx->order);
             CHKERRQ(ierr);
 
             ierr = ypetsc.local_to_global(ADD_VALUES);
@@ -114,7 +114,7 @@ namespace cafes
                 ierr = ypetsc.fill(0.);
                 CHKERRQ(ierr);
 
-                ierr = ctx->apply(xpetsc, ypetsc, ctx->h[i]);
+                ierr = ctx->apply(xpetsc, ypetsc, ctx->h[i], ctx->order);
                 CHKERRQ(ierr);
 
                 ierr = ypetsc.local_to_global(ADD_VALUES);
@@ -143,7 +143,7 @@ namespace cafes
             ierr = xpetsc.fill(0.);
             CHKERRQ(ierr);
 
-            ierr = ctx->apply_diag(xpetsc, ctx->h);
+            ierr = ctx->apply_diag(xpetsc, ctx->h, ctx->order);
             CHKERRQ(ierr);
 
             ierr = xpetsc.fill_global(0.);
@@ -180,7 +180,7 @@ namespace cafes
                 ierr = xpetsc.fill(0.);
                 CHKERRQ(ierr);
 
-                ierr = ctx->apply_diag(xpetsc, ctx->h[i]);
+                ierr = ctx->apply_diag(xpetsc, ctx->h[i], ctx->order);
                 CHKERRQ(ierr);
 
                 ierr = xpetsc.fill_global(0.);
@@ -203,10 +203,8 @@ namespace cafes
             DM dav, dap;
             PetscFunctionBeginUser;
 
-            ierr = MatShellGetContext(A, (void **)&ctx);
-            CHKERRQ(ierr);
-            ierr = VecSet(y, 0.);
-            CHKERRQ(ierr);
+            ierr = MatShellGetContext(A, (void **)&ctx);CHKERRQ(ierr);
+            ierr = VecSet(y, 0.);CHKERRQ(ierr);
 
             using petsc_type = petsc::petsc_vec<Dimensions::value>;
 
@@ -218,28 +216,23 @@ namespace cafes
 
             for (std::size_t i = 0; i < xpetsc.size(); ++i)
             {
-                ierr = xpetsc[i].global_to_local(INSERT_VALUES);
-                CHKERRQ(ierr);
-                ierr = ypetsc[i].fill(0.);
-                CHKERRQ(ierr);
+                ierr = xpetsc[i].global_to_local(INSERT_VALUES);CHKERRQ(ierr);
+                ierr = ypetsc[i].fill(0.);CHKERRQ(ierr);
             }
 
-            ierr = ctx->apply(xpetsc[0], ypetsc[0], ctx->h);
-            CHKERRQ(ierr);
-            ierr = B_and_BT_mult(xpetsc[0], xpetsc[1], ypetsc[0], ypetsc[1],
-                                 ctx->h);
-            CHKERRQ(ierr);
+            ierr = ctx->apply(xpetsc[0], ypetsc[0], ctx->h, ctx->order);CHKERRQ(ierr);
+            ierr = B_and_BT_mult(xpetsc[0], xpetsc[1],
+                                 ypetsc[0], ypetsc[1],
+                                 ctx->h, ctx->order);CHKERRQ(ierr);
 
             for (std::size_t i = 0; i < xpetsc.size(); ++i)
             {
-                ierr = ypetsc[i].local_to_global(ADD_VALUES);
-                CHKERRQ(ierr);
+                ierr = ypetsc[i].local_to_global(ADD_VALUES);CHKERRQ(ierr);
             }
 
             if (ctx->set_bc_)
             {
-                ierr = SetDirichletOnVec(xpetsc[0], ypetsc[0], ctx->bc_);
-                CHKERRQ(ierr);
+                ierr = SetDirichletOnVec(xpetsc[0], ypetsc[0], ctx->bc_);CHKERRQ(ierr);
             }
 
             PetscFunctionReturn(0);
@@ -273,7 +266,7 @@ namespace cafes
         template<std::size_t Dimensions>
         PetscErrorCode
         apply_mass_matrix(DM dm, Vec x, Vec y,
-                          std::array<double, Dimensions> const &h)
+                          std::array<double, Dimensions> const &h, int order=1)
         {
             PetscErrorCode ierr;
             PetscFunctionBeginUser;
@@ -282,7 +275,7 @@ namespace cafes
             std::for_each(hp.begin(), hp.end(), [](auto x) { x *= 2; });
 
             using ctx = problem::context<Dimensions, 2>;
-            ctx s{dm, {{h, hp}}, mass_mult};
+            ctx s{dm, {{h, hp}}, order, mass_mult};
             Mat mass = make_matrix<ctx>(&s, diag_block_matrix<ctx>);
 
             ierr = MatMult(mass, x, y);

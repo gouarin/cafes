@@ -87,54 +87,49 @@ struct convergence_context2
             PetscErrorCode ierr;
             PetscFunctionBeginUser;
 
+
             Ctx *ctx;
-            ierr = MatShellGetContext(A, (void **)&ctx);
-            CHKERRQ(ierr);
+            ierr = MatShellGetContext(A, (void **)&ctx);CHKERRQ(ierr);
 
-            ierr = VecSet(ctx->problem.rhs, 0.);
-            CHKERRQ(ierr);
+            ierr = VecSet(ctx->problem.rhs, 0.);CHKERRQ(ierr);
+            
+            ierr = init_problem<Dimensions, Ctx>(*ctx, x);CHKERRQ(ierr);
+ 
+            ierr = ctx->problem.solve();CHKERRQ(ierr);
 
-            ierr = init_problem<Dimensions, Ctx>(*ctx, x);
-            CHKERRQ(ierr);
-
-            ierr = ctx->problem.solve();
-            // if (!ctx->compute_rhs)
-            // {
-            //     ierr = cafes::io::save_VTK("Resultats", "two_part_ug_rhs",
-            //                                 ctx->problem.rhs, ctx->problem.ctx->dm,
-            //                                 ctx->problem.ctx->h);
-            //     CHKERRQ(ierr);
-            //     ierr = cafes::io::save_VTK("Resultats", "two_part_ug_sol",
-            //                                 ctx->problem.sol, ctx->problem.ctx->dm,
-            //                                 ctx->problem.ctx->h);
-            //     CHKERRQ(ierr);
-            //     std::exit(0);
-            // }
-
-            ierr = VecCopy(ctx->problem.sol, ctx->sol_tmp);
-            CHKERRQ(ierr);
+ 
+            ierr = VecCopy(ctx->problem.sol, ctx->sol_tmp);CHKERRQ(ierr);
 
             std::vector<std::vector<geometry::vector<double, Dimensions>>> g;
             g.resize(ctx->particles.size());
-            for (std::size_t ipart = 0; ipart < ctx->surf_points.size();
-                 ++ipart)
+            for (std::size_t ipart = 0; ipart < ctx->surf_points.size(); ++ipart)
+            {
                 g[ipart].resize(ctx->surf_points[ipart].size());
+            }
 
             // interpolation
             ierr = interp_fluid_to_surf(*ctx, g, ctx->add_rigid_motion,
                                         ctx->compute_singularity);
             CHKERRQ(ierr);
 
-            ierr = SL_to_Rhs(*ctx, g);
-            CHKERRQ(ierr);
+            // for (std::size_t ipart = 0; ipart < ctx->surf_points.size(); ++ipart)
+            // {
+            //     for(auto e: g[ipart])
+            //     {
+            //         std::cout << "g " << e << "\n";
+            //     }
+            // }
 
-            ierr = ctx->problem.solve();
-            CHKERRQ(ierr);
+            ierr = SL_to_Rhs(*ctx, g);CHKERRQ(ierr);
 
-            ierr = compute_y<Dimensions, Ctx>(*ctx, y);
-            CHKERRQ(ierr);
-            // ierr = VecView(y, PETSC_VIEWER_STDOUT_WORLD);
-            // CHKERRQ(ierr);
+            // std::cout << "rhs\n";
+            // VecView(ctx->problem.rhs, PETSC_VIEWER_STDOUT_WORLD);
+
+            ierr = ctx->problem.solve();CHKERRQ(ierr);
+            ierr = VecScale(ctx->problem.sol, -1);CHKERRQ(ierr);
+
+            ierr = compute_y<Dimensions, Ctx>(*ctx, y);CHKERRQ(ierr);
+
 
             PetscFunctionReturn(0);
         }
@@ -165,7 +160,7 @@ struct convergence_context2
             KSP ksp;
             PetscInt kspiter;
             PetscReal kspresnorm;
-            std::size_t scale_ = 4;
+            std::size_t scale_ = 1;
             bool default_flags_ = true;
             bool use_sing = false;
 
@@ -221,6 +216,7 @@ struct convergence_context2
                 PetscFunctionReturn(0);
             }
 
+
 #undef __FUNCT__
 #define __FUNCT__ "setup_RHS"
             virtual PetscErrorCode setup_RHS() override
@@ -246,24 +242,6 @@ struct convergence_context2
 
                 ierr = VecCopy(sol_tmp, sol_rhs);
                 CHKERRQ(ierr);
-
-                // ierr = VecSet(rhs,0.);
-                // CHKERRQ(ierr);
-                // ierr = VecSet(sol_rhs,0.);
-                // CHKERRQ(ierr);
-
-                // ierr = cafes::io::save_VTK("Resultats", "two_part_u0", sol_tmp,
-                //                            problem_.ctx->dm, problem_.ctx->h);
-                // CHKERRQ(ierr);
-                // ierr = cafes::io::save_hdf5("Resultats", "two_part_w0",
-                //                            problem_.sol, problem_.ctx->dm,
-                //                            problem_.ctx->h);
-                // CHKERRQ(ierr);
-                // ierr = cafes::io::save_hdf5("Resultats", "two_part_w0_rhs",
-                //                            problem_.rhs, problem_.ctx->dm,
-                //                            problem_.ctx->h);
-                // CHKERRQ(ierr);
-
                 PetscFunctionReturn(0);
             }
 
@@ -531,6 +509,34 @@ static PetscErrorCode convergeTest2(KSP ksp, PetscInt it, PetscReal rnorm, KSPCo
             }
 
 #undef __FUNCT__
+#define __FUNCT__ "test"
+            PetscErrorCode test()
+            {
+                PetscErrorCode ierr;
+                PetscFunctionBegin;
+                // solve the problem with the right control
+
+                ierr = VecSet(ctx->problem.rhs, 0.);
+                CHKERRQ(ierr);
+
+                if (default_flags_)
+                {
+                    ctx->compute_rhs = true;
+                    ctx->add_rigid_motion = false;
+                    ctx->compute_singularity = false;
+                }
+
+                VecSet(sol, 0.);
+                ierr = init_problem<Dimensions, Ctx>(*ctx, sol);
+                CHKERRQ(ierr);
+
+                ierr = ctx->problem.solve();
+                CHKERRQ(ierr);
+                VecView(ctx->problem.sol, PETSC_VIEWER_STDOUT_WORLD);
+                PetscFunctionReturn(0);
+            }
+
+#undef __FUNCT__
 #define __FUNCT__ "solve_last_problem"
             PetscErrorCode solve_last_problem()
             {
@@ -543,45 +549,13 @@ static PetscErrorCode convergeTest2(KSP ksp, PetscInt it, PetscReal rnorm, KSPCo
 
                 if (default_flags_)
                 {
-                    ctx->compute_rhs = false;
-                    ctx->add_rigid_motion = false;
+                    ctx->compute_rhs = true;
+                    ctx->add_rigid_motion = true;
                     ctx->compute_singularity = false;
                 }
 
                 ierr = init_problem<Dimensions, Ctx>(*ctx, sol);
                 CHKERRQ(ierr);
-                // std::cout<<ctx->compute_rhs<<", "<<ctx->add_rigid_motion<<",
-                // "<<ctx->compute_singularity<<"\n"; ierr =
-                // cafes::io::save_hdf5("Resultats", "two_part_reg", sol,
-                // ctx->problem.ctx->dm, ctx->problem.ctx->h);CHKERRQ(ierr);
-
-                ierr = ctx->problem.solve();
-                CHKERRQ(ierr);
-                // ierr = cafes::io::save_hdf5("Resultats", "two_part_tilde_ug",
-                // problem_.sol, problem_.ctx->dm,
-                // problem_.ctx->h);CHKERRQ(ierr);
-
-                VecAXPY(problem_.sol, 1, sol_rhs);
-                // ierr = cafes::io::save_hdf5("Resultats", "two_part_new_u",
-                // problem_.sol, problem_.ctx->dm,
-                // problem_.ctx->h);CHKERRQ(ierr);
-
-                ierr = VecSet(ctx->problem.rhs, 0.);
-                CHKERRQ(ierr);
-
-                if (default_flags_)
-                {
-                    ctx->compute_rhs = true;
-                    ctx->add_rigid_motion = true;
-                    ctx->compute_singularity = true;
-                }
-
-                ierr = init_problem<Dimensions, Ctx>(*ctx, sol);
-                CHKERRQ(ierr);
-                // std::cout<<ctx->compute_rhs<<", "<<ctx->add_rigid_motion<<",
-                // "<<ctx->compute_singularity<<"\n"; ierr =
-                // cafes::io::save_hdf5("Resultats", "two_part_reg", sol,
-                // ctx->problem.ctx->dm, ctx->problem.ctx->h);CHKERRQ(ierr);
 
                 ierr = ctx->problem.solve();
                 CHKERRQ(ierr);
@@ -593,16 +567,13 @@ static PetscErrorCode convergeTest2(KSP ksp, PetscInt it, PetscReal rnorm, KSPCo
                 // problem_.sol, problem_.ctx->dm,
                 // problem_.ctx->h);CHKERRQ(ierr);
 
-                if (use_sing)
-                {
-                    ierr = singularity::add_singularity_to_last_sol<Dimensions,
-                                                                    Ctx>(
-                        *ctx, problem_.sol);
-                    CHKERRQ(ierr);
-                }
-                // ierr = cafes::io::save_hdf5("Resultats", "two_part_u",
-                // problem_.sol, problem_.ctx->dm,
-                // problem_.ctx->h);CHKERRQ(ierr);
+                // if (use_sing)
+                // {
+                //     ierr = singularity::add_singularity_to_last_sol<Dimensions,
+                //                                                     Ctx>(
+                //         *ctx, problem_.sol);
+                //     CHKERRQ(ierr);
+                // }
 
                 PetscFunctionReturn(0);
             }
@@ -620,27 +591,27 @@ static PetscErrorCode convergeTest2(KSP ksp, PetscInt it, PetscReal rnorm, KSPCo
                     ctx->add_rigid_motion = false;
                     ctx->compute_singularity = false;
                 }
-                //ierr = VecSet(sol, 0.1);
-                //CHKERRQ(ierr);
+                // ierr = VecSet(sol, 0.);
+                // CHKERRQ(ierr);
                 ierr = KSPSolve(ksp, rhs, sol);
                 CHKERRQ(ierr);
-                ierr = init_problem<Dimensions, Ctx>(*ctx, sol);
-                CHKERRQ(ierr);
-                ierr = ctx->problem.solve();
-                CHKERRQ(ierr);
-                ierr = VecCopy(ctx->problem.sol, sol_tmp);
-                CHKERRQ(ierr);
-                VecCopy(sol_tmp, sol_reg);
-                VecAXPY(sol_reg, 1., sol_rhs);
-                ierr = KSPGetIterationNumber(ksp, &kspiter);CHKERRQ(ierr);
-                ierr = KSPGetResidualNorm(ksp, &kspresnorm);CHKERRQ(ierr);
 
-                // if (default_flags_)
-                // {
-                //     std::cout << "Last Problem...\n";
-                //     ierr = solve_last_problem();
-                //     CHKERRQ(ierr);
-                // }
+                // ierr = init_problem<Dimensions, Ctx>(*ctx, sol);CHKERRQ(ierr);
+                // ierr = ctx->problem.solve();
+                // CHKERRQ(ierr);
+                // ierr = VecCopy(ctx->problem.sol, sol_tmp);
+                // CHKERRQ(ierr);
+                // VecCopy(sol_tmp, sol_reg);
+                // VecAXPY(sol_reg, 1., sol_rhs);
+                // ierr = KSPGetIterationNumber(ksp, &kspiter);CHKERRQ(ierr);
+                // ierr = KSPGetResidualNorm(ksp, &kspresnorm);CHKERRQ(ierr);
+
+                if (default_flags_)
+                {
+                    std::cout << "Last Problem...\n";
+                    ierr = solve_last_problem();
+                    CHKERRQ(ierr);
+                }
 
                 PetscFunctionReturn(0);
             }

@@ -46,10 +46,11 @@ namespace cafes
     namespace fem
     {
         auto const kernel_diag_block = [](auto const &x, auto &y,
-                                          auto const &matelem) {
-            auto const kernel_pos = [&](auto const &pos) {
-                auto const ielem = get_element(pos);
-                auto const nbasis = ielem.size();
+                                          auto const &matelem,
+                                          std::size_t order) {
+            auto const kernel_pos = [&, order](auto const &pos) {
+                auto const ielem = get_element(pos, order);
+                auto const nbasis = (order + 1)*(order + 1);
 
                 for (std::size_t k1 = 0; k1 < nbasis; ++k1)
                 {
@@ -59,7 +60,7 @@ namespace cafes
                         auto ux = x.at(ielem[k2]);
                         for (std::size_t d = 0; d < x.dof_; ++d)
                         {
-                            uy[d] += ux[d] * matelem[k1][k2];
+                            uy[d] += ux[d] * matelem[k1*nbasis + k2];
                         }
                     }
                 }
@@ -68,10 +69,11 @@ namespace cafes
         };
 
         auto const kernel_tensor_block = [](auto const &x, auto &y,
-                                            auto const &matelem) {
-            auto const kernel_pos = [&](auto const &pos) {
-                auto const ielem = get_element(pos);
-                auto const nbasis = ielem.size();
+                                            auto const &matelem,
+                                            std::size_t order) {
+            auto const kernel_pos = [&, order](auto const &pos) {
+                auto const ielem = get_element(pos, order);
+                auto const nbasis = (order + 1)*(order + 1);
 
                 for (std::size_t k1 = 0; k1 < nbasis; ++k1)
                 {
@@ -83,7 +85,7 @@ namespace cafes
                         {
                             for (std::size_t d2 = 0; d2 < x.dof_; ++d2)
                             {
-                                uy[d1] += ux[d2] * matelem[k1][k2][d1][d2];
+                                uy[d1] += ux[d2] * matelem[(k1 + d1*nbasis)*nbasis + k2 + d2*nbasis];
                             }
                         }
                     }
@@ -92,17 +94,17 @@ namespace cafes
             return kernel_pos;
         };
 
-        auto const kernel_diag_diag_block = [](auto &x, auto const &matelem) {
-            auto const kernel_pos = [&](auto const &pos) {
-                auto const ielem = get_element(pos);
-                auto const nbasis = ielem.size();
+        auto const kernel_diag_diag_block = [](auto &x, auto const &matelem, std::size_t order) {
+            auto const kernel_pos = [&, order](auto const &pos) {
+                auto const ielem = get_element(pos, order);
+                auto const nbasis = (order + 1)*(order + 1);
 
                 for (std::size_t ie = 0; ie < nbasis; ++ie)
                 {
                     auto u = x.at(ielem[ie]);
                     for (std::size_t d = 0; d < x.dof_; ++d)
                     {
-                        u[d] += matelem[ie][ie];
+                        u[d] += matelem[ie*nbasis + ie];
                     }
                 }
             };
@@ -113,8 +115,8 @@ namespace cafes
                                               auto &y1, auto &y2,
                                               auto const &matelem) {
             auto const kernel_pos = [&](auto const &pos) {
-                auto const ielem_p = get_element(pos);
-                auto const ielem_v = get_element_4Q1(pos);
+                auto const ielem_p = get_element(pos, 1);
+                auto const ielem_v = get_element(2*pos, 2);
                 auto const nbasis_p = ielem_p.size();
                 auto const nbasis_v = ielem_v.size();
 
@@ -128,8 +130,8 @@ namespace cafes
                         auto uyp = y2.at(ielem_p[ie_p]);
                         for (std::size_t d = 0; d < x1.dof_; ++d)
                         {
-                            uyp[0] += ux[d] * matelem[ie_p][ie_v][d];
-                            uy[d] -= uxp[0] * matelem[ie_p][ie_v][d];
+                            uyp[0] += ux[d] * matelem[ie_p*nbasis_v*x1.dof_ + ie_v + d*nbasis_v];
+                            uy[d] -= uxp[0] * matelem[ie_p*nbasis_v*x1.dof_ + ie_v + d*nbasis_v];
                         }
                     }
                 }
@@ -137,12 +139,13 @@ namespace cafes
             return kernel_pos;
         };
 
-#undef __FUNCT__
-#define __FUNCT__ "diag_block_mult"
+        #undef __FUNCT__
+        #define __FUNCT__ "diag_block_mult"
         template<typename MatElem, typename Function, std::size_t Dimensions>
         PetscErrorCode diag_block_mult(petsc::petsc_vec<Dimensions> &x,
                                        petsc::petsc_vec<Dimensions> &y,
                                        MatElem const &matelem,
+                                       std::size_t order,
                                        Function &&kernel)
         {
             PetscErrorCode ierr;
@@ -150,16 +153,17 @@ namespace cafes
 
             auto box = get_DM_bounds<Dimensions>(x.dm_);
 
-            algorithm::iterate(box, kernel(x, y, matelem));
+            algorithm::iterate(box, kernel(x, y, matelem, order), order);
 
             PetscFunctionReturn(0);
         }
 
-#undef __FUNCT__
-#define __FUNCT__ "diag_diag_block_mult"
+        #undef __FUNCT__
+        #define __FUNCT__ "diag_diag_block_mult"
         template<typename MatElem, typename Function, std::size_t Dimensions>
         PetscErrorCode diag_diag_block_mult(petsc::petsc_vec<Dimensions> &x,
                                             MatElem const &matelem,
+                                            std::size_t order,
                                             Function &&kernel)
         {
             PetscErrorCode ierr;
@@ -167,20 +171,21 @@ namespace cafes
 
             auto box = get_DM_bounds<Dimensions>(x.dm_);
 
-            algorithm::iterate(box, kernel(x, matelem));
+            algorithm::iterate(box, kernel(x, matelem, order), order);
 
             PetscFunctionReturn(0);
         }
 
-#undef __FUNCT__
-#define __FUNCT__ "off_diag_block_mult"
+        #undef __FUNCT__
+        #define __FUNCT__ "off_diag_block_mult"
         template<typename MatElem, typename Function, std::size_t Dimensions>
         PetscErrorCode
         off_diag_block_mult(petsc::petsc_vec<Dimensions> const &x1,
                             petsc::petsc_vec<Dimensions> const &x2,
                             petsc::petsc_vec<Dimensions> &y1,
                             petsc::petsc_vec<Dimensions> &y2,
-                            MatElem const &matelem, Function &&kernel)
+                            MatElem const &matelem,
+                            Function &&kernel)
         {
             PetscErrorCode ierr;
             PetscFunctionBeginUser;
@@ -192,103 +197,110 @@ namespace cafes
             PetscFunctionReturn(0);
         }
 
-#undef __FUNCT__
-#define __FUNCT__ "laplacian_mult"
+        #undef __FUNCT__
+        #define __FUNCT__ "laplacian_mult"
         template<std::size_t Dimensions>
         PetscErrorCode laplacian_mult(petsc::petsc_vec<Dimensions> &x,
                                       petsc::petsc_vec<Dimensions> &y,
-                                      std::array<double, Dimensions> const &h)
+                                      std::array<double, Dimensions> const &h,
+                                      std::size_t order)
         {
             PetscErrorCode ierr;
             PetscFunctionBeginUser;
 
-            ierr = diag_block_mult(x, y, getMatElemLaplacian(h),
+            ierr = diag_block_mult(x, y, getMatElemLaplacian(h, order), order,
                                    kernel_diag_block);
             CHKERRQ(ierr);
 
             PetscFunctionReturn(0);
         }
 
-#undef __FUNCT__
-#define __FUNCT__ "diag_laplacian_mult"
+        #undef __FUNCT__
+        #define __FUNCT__ "diag_laplacian_mult"
         template<std::size_t Dimensions>
         PetscErrorCode
         diag_laplacian_mult(petsc::petsc_vec<Dimensions> &x,
-                            std::array<double, Dimensions> const &h)
+                            std::array<double, Dimensions> const &h,
+                            std::size_t order)
         {
             PetscErrorCode ierr;
             PetscFunctionBeginUser;
 
-            ierr = diag_diag_block_mult(x, getMatElemLaplacian(h),
+            ierr = diag_diag_block_mult(x, getMatElemLaplacian(h, order), order,
                                         kernel_diag_diag_block);
             CHKERRQ(ierr);
 
             PetscFunctionReturn(0);
         }
 
-#undef __FUNCT__
-#define __FUNCT__ "mass_mult"
+        #undef __FUNCT__
+        #define __FUNCT__ "mass_mult"
         template<std::size_t Dimensions>
         PetscErrorCode mass_mult(petsc::petsc_vec<Dimensions> &x,
                                  petsc::petsc_vec<Dimensions> &y,
-                                 std::array<double, Dimensions> const &h)
+                                 std::array<double, Dimensions> const &h,
+                                 std::size_t order)
         {
             PetscErrorCode ierr;
             PetscFunctionBeginUser;
 
-            ierr = diag_block_mult(x, y, getMatElemMass(h), kernel_diag_block);
+            ierr = diag_block_mult(x, y, getMatElemMass(h, order), order, kernel_diag_block);
             CHKERRQ(ierr);
 
             PetscFunctionReturn(0);
         }
 
-#undef __FUNCT__
-#define __FUNCT__ "diag_mass_mult"
+        #undef __FUNCT__
+        #define __FUNCT__ "diag_mass_mult"
         template<std::size_t Dimensions>
         PetscErrorCode diag_mass_mult(petsc::petsc_vec<Dimensions> &x,
-                                      std::array<double, Dimensions> const &h)
+                                      std::array<double, Dimensions> const &h,
+                                      std::size_t order)
         {
             PetscErrorCode ierr;
             PetscFunctionBeginUser;
 
-            ierr = diag_diag_block_mult(x, getMatElemMass(h),
+            ierr = diag_diag_block_mult(x, getMatElemMass(h, order), order,
                                         kernel_diag_diag_block);
             CHKERRQ(ierr);
 
             PetscFunctionReturn(0);
         }
 
-#undef __FUNCT__
-#define __FUNCT__ "strain_tensor_mult"
+        #undef __FUNCT__
+        #define __FUNCT__ "strain_tensor_mult"
         template<std::size_t Dimensions>
         PetscErrorCode
         strain_tensor_mult(petsc::petsc_vec<Dimensions> &x,
                            petsc::petsc_vec<Dimensions> &y,
-                           std::array<double, Dimensions> const &h)
+                           std::array<double, Dimensions> const &h,
+                           std::size_t order)
         {
             PetscErrorCode ierr;
             PetscFunctionBeginUser;
 
-            ierr = diag_block_mult(x, y, getMatElemStrainTensor(h),
+            ierr = diag_block_mult(x, y, getMatElemStrainTensor(h, order), order,
                                    kernel_tensor_block);
             CHKERRQ(ierr);
 
             PetscFunctionReturn(0);
         }
 
-#undef __FUNCT__
-#define __FUNCT__ "B_and_BT_mult"
+        #undef __FUNCT__
+        #define __FUNCT__ "B_and_BT_mult"
         template<std::size_t Dimensions>
         PetscErrorCode B_and_BT_mult(petsc::petsc_vec<Dimensions> const &x1,
                                      petsc::petsc_vec<Dimensions> const &x2,
                                      petsc::petsc_vec<Dimensions> &y1,
                                      petsc::petsc_vec<Dimensions> &y2,
-                                     std::array<double, Dimensions> const &h)
+                                     std::array<double, Dimensions> const &h,
+                                     std::size_t order)
         {
             PetscErrorCode ierr;
             PetscFunctionBeginUser;
 
-            ierr = off_diag_block_mult(x1, x2, y1, y2, getMatElemPressure(h),
+            ierr = off_diag_block_mult(x1, x2, y1, y2,
+                                       getMatElemPressure(h, order),
                                        kernel_off_diag_block);
             CHKERRQ(ierr);
 

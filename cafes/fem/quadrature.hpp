@@ -31,6 +31,7 @@
 #define PARTICLE_FEM_POSITION_HPP_INCLUDED
 
 #include <particle/geometry/position.hpp>
+#include <tuple>
 
 namespace cafes
 {
@@ -45,6 +46,23 @@ namespace cafes
             that[1] = c * x[0] * (h[1] - x[1]);
             that[2] = c * (h[0] - x[0]) * x[1];
             that[3] = c * x[0] * x[1];
+            return that;
+        }
+
+        auto P2_integration(geometry::position<double, 2> const &x,
+                            std::array<double, 2> const &h)
+        {
+            std::array<double, 9> that;
+            double c = 1. / (h[0]*h[0]*h[1]*h[1]);
+            that[0] = .25*c*(-2*h[0] + x[0])*(-h[0] + x[0])*(-2*h[1] + x[1])*(-h[1] + x[1]);
+            that[1] = -.5*c*x[0]*(-2*h[0] + x[0])*(-2*h[1] + x[1])*(-h[1] + x[1]);
+            that[2] = .25*c*x[0]*(-h[0] + x[0])*(-2*h[1] + x[1])*(-h[1] + x[1]);
+            that[3] = -.5*c*x[1]*(-2*h[0] + x[0])*(-h[0] + x[0])*(-2*h[1] + x[1]);
+            that[4] =  c*x[0]*x[1]*(-2*h[0] + x[0])*(-2*h[1] + x[1]);
+            that[5] = -.5*c*x[0]*x[1]*(-h[0] + x[0])*(-2*h[1] + x[1]);
+            that[6] = .25*c*x[1]*(-2*h[0] + x[0])*(-h[0] + x[0])*(-h[1] + x[1]);
+            that[7] = -.5*c*x[0]*x[1]*(-2*h[0] + x[0])*(-h[1] + x[1]);
+            that[8] = .25*c*x[0]*x[1]*(-h[0] + x[0])*(-h[1] + x[1]);
             return that;
         }
 
@@ -112,14 +130,22 @@ namespace cafes
             return that;
         }
 
-        auto get_element(geometry::position<int, 2> const &ix)
+        auto get_element(geometry::position<int, 2> const &ix, std::size_t order, std::size_t step = 1)
         {
-            std::array<std::array<int, 2>, 4> that;
+            std::size_t size = order + 1;
+            std::vector<std::array<int, 2>> that(size*size);
 
-            that[0] = {ix[0], ix[1]};
-            that[1] = {ix[0] + 1, ix[1]};
-            that[2] = {ix[0], ix[1] + 1};
-            that[3] = {ix[0] + 1, ix[1] + 1};
+            std::size_t ind = 0;
+
+            for(int j=0; j<size; ++j)
+            {
+                for(int i=0; i<size; ++i)
+                {
+                    that[ind][0] = ix[0] + i*step;
+                    that[ind][1] = ix[1] + j*step;
+                    ind++;
+                }
+            }
             return that;
         }
 
@@ -129,30 +155,129 @@ namespace cafes
         }
 
         auto get_indices(DMDALocalInfo &info,
-                         geometry::position<int, 2> const &ix, int dof)
+                         geometry::position<int, 2> const &ix,
+                         int dof,
+                         std::size_t order)
         {
-            std::array<int, 4> that;
+            std::size_t size = order + 1;
+            std::vector<int> that(size*size);
 
-            that[0] = dof + DMDALocalIndex2D(info, ix[0], ix[1]);
-            that[1] = dof + DMDALocalIndex2D(info, ix[0] + 1, ix[1]);
-            that[2] = dof + DMDALocalIndex2D(info, ix[0], ix[1] + 1);
-            that[3] = dof + DMDALocalIndex2D(info, ix[0] + 1, ix[1] + 1);
+            int ind = 0;
+            for(int j=0; j<size; ++j)
+            {
+                for(int i=0; i<size; ++i)
+                {
+                    that[ind++] = dof + DMDALocalIndex2D(info, ix[0] + i, ix[1] + j);
+                }
+            }
+            return that;
+        }
+
+        auto get_range(const DMBoundaryType& bt, int i, int min, int max, int stencil_size)
+        {
+            return std::make_pair<int, int>(
+                (bt == DM_BOUNDARY_PERIODIC)? -stencil_size : PetscMax(-stencil_size, -i + min),
+                (bt == DM_BOUNDARY_PERIODIC)? stencil_size: PetscMin(stencil_size, max - i - 1)
+            );
+        }
+
+        auto get_col_indices(DMDALocalInfo &info,
+                             geometry::position<int, 2> const &ix,
+                             int dof,
+                             std::size_t order)
+        {
+            int istart, iend;
+            int jstart, jend;
+
+            std::tie(istart, iend) = get_range(info.bx, ix[0], 0, info.mx, order);
+            std::tie(jstart, jend) = get_range(info.by, ix[1], 0, info.my, order);
+
+            // std::cout << ix[0] << " " << ix[1] << " " << istart << " " << iend << " " << jstart << " " << jend << std::endl;
+            std::vector<int> that((iend - istart + 1)*(jend - jstart + 1));
+
+            int ind = 0;
+            for(int j = jstart; j < jend + 1; ++j)
+            {
+                for(int i = istart; i < iend + 1; ++i)
+                {
+                    that[ind++] = dof + DMDALocalIndex2D(info, ix[0] + i, ix[1] + j);
+                }
+            }
+            return that;
+        }
+
+        auto get_row_indices(DMDALocalInfo &info,
+                             geometry::position<int, 2> const &ix,
+                             int dof,
+                             std::size_t order)
+        {
+            return dof + DMDALocalIndex2D(info, ix[0], ix[1]);
+        }
+
+        auto get_row_indices_tensor(DMDALocalInfo &info,
+                                    geometry::position<int, 2> const &ix,
+                                    std::size_t order)
+        {
+            int dof = 2;
+            std::vector<int> that(dof);
+
+            std::size_t ind = 0;
+            for(std::size_t d = 0; d < dof; ++d)
+            {
+                that[ind++] = d + DMDALocalIndex2D(info, ix[0], ix[1]);
+            }
             return that;
         }
 
         auto get_indices_tensor(DMDALocalInfo &info,
-                                geometry::position<int, 2> const &ix)
+                                geometry::position<int, 2> const &ix,
+                                std::size_t order)
         {
-            std::array<int, 8> that;
+            std::size_t size = order + 1;
+            std::size_t dof = 2;
+            std::vector<int> that(dof*size*size);
 
-            that[0] = DMDALocalIndex2D(info, ix[0], ix[1]);
-            that[1] = DMDALocalIndex2D(info, ix[0] + 1, ix[1]);
-            that[2] = DMDALocalIndex2D(info, ix[0], ix[1] + 1);
-            that[3] = DMDALocalIndex2D(info, ix[0] + 1, ix[1] + 1);
-            that[4] = 1 + DMDALocalIndex2D(info, ix[0], ix[1]);
-            that[5] = 1 + DMDALocalIndex2D(info, ix[0] + 1, ix[1]);
-            that[6] = 1 + DMDALocalIndex2D(info, ix[0], ix[1] + 1);
-            that[7] = 1 + DMDALocalIndex2D(info, ix[0] + 1, ix[1] + 1);
+            std::size_t ind = 0;
+            for(std::size_t d = 0; d < dof; ++d)
+            {
+                for(int j=0; j<size; ++j)
+                {
+                    for(int i=0; i<size; ++i)
+                    {
+                        that[ind++] = d + DMDALocalIndex2D(info, ix[0] + i, ix[1] + j);
+                    }
+                }
+            }
+            return that;
+        }
+
+        auto get_col_indices_tensor(DMDALocalInfo &info,
+                             geometry::position<int, 2> const &ix,
+                             std::size_t order)
+        {
+            std::size_t dof = 2;
+
+            int istart, iend;
+            int jstart, jend;
+
+            std::tie(istart, iend) = get_range(info.bx, ix[0], 0, info.mx, order);
+            std::tie(jstart, jend) = get_range(info.by, ix[1], 0, info.my, order);
+
+            std::vector<int> that(dof*(iend - istart + 1)*(jend - jstart + 1));
+
+            int ind = 0;
+
+            for(int j = jstart; j < jend + 1; ++j)
+            {
+                for(int i = istart; i < iend + 1; ++i)
+                {
+                    auto index = DMDALocalIndex2D(info, ix[0] + i, ix[1] + j);
+                    for(std::size_t d=0; d<dof; ++d)
+                    {
+                        that[ind++] = d + index;
+                    }
+                }
+            }
             return that;
         }
 
@@ -194,24 +319,15 @@ namespace cafes
 
             for (std::size_t d = 0; d < 2; ++d)
             {
-                that[0 + d * 9] =
-                    d + DMDALocalIndex2D(info, 2 * ix[0], 2 * ix[1]);
-                that[1 + d * 9] =
-                    d + DMDALocalIndex2D(info, 2 * ix[0] + 1, 2 * ix[1]);
-                that[2 + d * 9] =
-                    d + DMDALocalIndex2D(info, 2 * ix[0] + 2, 2 * ix[1]);
-                that[3 + d * 9] =
-                    d + DMDALocalIndex2D(info, 2 * ix[0], 2 * ix[1] + 1);
-                that[4 + d * 9] =
-                    d + DMDALocalIndex2D(info, 2 * ix[0] + 1, 2 * ix[1] + 1);
-                that[5 + d * 9] =
-                    d + DMDALocalIndex2D(info, 2 * ix[0] + 2, 2 * ix[1] + 1);
-                that[6 + d * 9] =
-                    d + DMDALocalIndex2D(info, 2 * ix[0], 2 * ix[1] + 2);
-                that[7 + d * 9] =
-                    d + DMDALocalIndex2D(info, 2 * ix[0] + 1, 2 * ix[1] + 2);
-                that[8 + d * 9] =
-                    d + DMDALocalIndex2D(info, 2 * ix[0] + 2, 2 * ix[1] + 2);
+                that[0 + d * 9] = d + DMDALocalIndex2D(info, 2 * ix[0]    ,     2 * ix[1]);
+                that[1 + d * 9] = d + DMDALocalIndex2D(info, 2 * ix[0] + 1,     2 * ix[1]);
+                that[2 + d * 9] = d + DMDALocalIndex2D(info, 2 * ix[0] + 2,     2 * ix[1]);
+                that[3 + d * 9] = d + DMDALocalIndex2D(info, 2 * ix[0]    , 2 * ix[1] + 1);
+                that[4 + d * 9] = d + DMDALocalIndex2D(info, 2 * ix[0] + 1, 2 * ix[1] + 1);
+                that[5 + d * 9] = d + DMDALocalIndex2D(info, 2 * ix[0] + 2, 2 * ix[1] + 1);
+                that[6 + d * 9] = d + DMDALocalIndex2D(info, 2 * ix[0]    , 2 * ix[1] + 2);
+                that[7 + d * 9] = d + DMDALocalIndex2D(info, 2 * ix[0] + 1, 2 * ix[1] + 2);
+                that[8 + d * 9] = d + DMDALocalIndex2D(info, 2 * ix[0] + 2, 2 * ix[1] + 2);
             }
             return that;
         }

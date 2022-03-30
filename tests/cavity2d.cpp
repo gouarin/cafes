@@ -19,13 +19,10 @@ int main(int argc, char **argv)
     ierr = PetscInitialize(&argc, &argv, (char *)0, (char *)0);CHKERRQ(ierr);
 
     auto bc = cafes::make_bc<dim>({
-        {{zeros, zeros}} // left
-        ,
-        {{zeros, zeros}} // right
-        ,
-        {{zeros, zeros}} // bottom
-        ,
-        {{ones, zeros}} // top
+        {{zeros, zeros}}, // left
+        {{zeros, zeros}}, // right
+        {{zeros, zeros}}, // bottom
+        {{ones, zeros}}, // top
     });
 
     auto rhs = cafes::make_rhs<dim>({{zeros, zeros}});
@@ -35,8 +32,13 @@ int main(int argc, char **argv)
     st.setup_KSP();
     st.solve();
 
-    ierr = cafes::io::save_hdf5("Resultats", "test", st.sol, st.ctx->dm, st.ctx->h);CHKERRQ(ierr);
-    ierr = PetscFinalize();CHKERRQ(ierr);
+    int const mx = st.opt.mx[0] - 1;
+    std::string stout0 = "cavity_";
+    stout0.append(std::to_string(mx));
+    ierr = cafes::io::save_hdf5("Resultats", stout0.c_str(), st.sol, st.ctx->dm, st.ctx->h);
+    CHKERRQ(ierr);
+    ierr = PetscFinalize();
+    CHKERRQ(ierr);
 
     return 0;
 }

@@ -127,6 +127,40 @@ namespace cafes
   }
 
   template<typename Shape>
+  auto find_FE_insides( particle<Shape> const& p, cafes::geometry::box<int, 2> const& b, std::array<double, 2> const& h)
+  {
+      std::vector<geometry::position<int, 2>> that;
+      that.reserve(b.length());
+
+      double x, y;
+      std::size_t ix, iy;
+      for(y=b.bottom_left[1]*h[1], iy=b.bottom_left[1]; iy<b.upper_right[1]; y+=h[1], ++iy)
+      {
+          for(x=b.bottom_left[0]*h[0], ix=b.bottom_left[0]; ix<b.upper_right[0]; x+=h[0], ++ix)
+          {
+              // bool found = true;
+              // for(std::size_t i=0; i<2; ++i)
+              // {
+              //   for(std::size_t j=0; j<2; ++j)
+              //   {
+              //     cafes::geometry::position<double, 2> pt {x + i*h[0], y + j*h[1]};
+              //     if(!p.contains(pt))
+              //     {
+              //         found = false;
+              //         break;
+              //     }
+              //   }
+              // }
+              // if (found)
+              // {
+                that.push_back({ix, iy});
+              // }
+          }
+      }
+      return that;
+  }
+
+  template<typename Shape>
   auto find_fluid_points_insides( particle<Shape> const& p, cafes::geometry::box<int, 3> const& b, std::array<double, 3> const& h)
   {
     std::vector<geometry::position<int, 3>> that;
@@ -145,12 +179,52 @@ namespace cafes
     return that;
   }
 
+  template<typename Shape>
+  auto find_FE_insides( particle<Shape> const& p, cafes::geometry::box<int, 3> const& b, std::array<double, 3> const& h)
+  {
+      std::vector<geometry::position<int, 2>> that;
+      that.reserve(b.length());
+
+      double x, y, z;
+      std::size_t ix, iy, iz;
+      for(z=b.bottom_left[2]*h[2], iz=b.bottom_left[2]; iz<b.upper_right[2]; z+=h[2], ++iz)
+      {
+        for(y=b.bottom_left[1]*h[1], iy=b.bottom_left[1]; iy<b.upper_right[1]; y+=h[1], ++iy)
+        {
+            for(x=b.bottom_left[0]*h[0], ix=b.bottom_left[0]; ix<b.upper_right[0]; x+=h[0], ++ix)
+            {
+                bool found = true;
+                for(std::size_t i=0; i<2; ++i)
+                {
+                    for(std::size_t j=0; j<2; ++j)
+                    {
+                        for(std::size_t k=0; k<2; ++k)
+                        {
+                            cafes::geometry::position<double, 3> pt {x + i*h[0], y + j*h[1], z + k*h[2]};
+                            if(!p.contains(pt))
+                            {
+                                found = false;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (found)
+                {
+                    that.push_back({ix, iy});
+                }
+            }
+        }
+      }
+      return that;
+  }
+
   template<std::size_t Dimensions>
   auto find_surf_points_insides( std::vector<geometry::position<double, Dimensions>> const& surf_p, cafes::geometry::box<int, Dimensions> const& b, std::array<double, Dimensions> const& h)
   {
     std::vector<std::pair<geometry::position<int, Dimensions>, geometry::position<double, Dimensions>>> that;
     that.reserve(surf_p.size());
-
+    
     for(std::size_t i=0; i<surf_p.size(); ++i){
         auto surf_pi = static_cast<geometry::position<int, Dimensions>>(surf_p[i]/h);
         if (cafes::geometry::point_inside(b, surf_pi)){
@@ -261,14 +335,20 @@ namespace cafes
     std::size_t size = 0;
     std::size_t ipart = 0;
 
-    std::array<double, Dimensions> hs;
-    for(std::size_t d=0; d<Dimensions; ++d)
-      hs[d] = h[d]/scale;
-
     geometry::position<std::size_t, Dimensions> p1, p2;
     p1.fill(0);
     p2.fill(scale);
     geometry::box<std::size_t, Dimensions> box_scale{ p1, p2};
+
+    std::array<double, Dimensions> hp;
+    for(std::size_t i = 0; i<h.size(); ++i)
+    {
+      hp[i] = 2*h[i];
+    }
+
+    std::array<double, Dimensions> hs;
+    for(std::size_t d=0; d<Dimensions; ++d)
+      hs[d] = hp[d]/scale;
 
     for(auto& p: parts){
       auto pbox = p.bounding_box(h);
@@ -277,16 +357,29 @@ namespace cafes
         auto pts = find_fluid_points_insides(p, new_box, h);
         size += pts.size();
 
-        auto spts = p.surface(dpart);
-        auto spts_valid = find_surf_points_insides(spts, new_box, h);
-        surf_points[ipart].assign(spts_valid.begin(), spts_valid.end());
-        nb_surf_points[ipart] = surf_points[ipart].size();
-        
-        auto radial_valid = find_radial_surf_points_insides(spts, new_box, h, p.center_);
-        radial_vec[ipart].assign(radial_valid.begin(), radial_valid.end());
+        // auto spts = p.surface(dpart);
+        // auto spts = p.surface(hs[0]);
+        // auto spts_valid = find_surf_points_insides(spts, new_box, hp);
+        // surf_points[ipart].assign(spts_valid.begin(), spts_valid.end());
+        // nb_surf_points[ipart] = surf_points[ipart].size();
+
+        // auto radial_valid = find_radial_surf_points_insides(spts, new_box, h, p.center_);
+        // radial_vec[ipart].assign(radial_valid.begin(), radial_valid.end());
         
         algorithm::iterate(new_box, kernel_num_count(p, h, hs, box_scale, num[ipart]));
 
+      }
+      
+      pbox = p.bounding_box(hp);
+      if (geometry::intersect(box, pbox)){
+        auto new_box = geometry::box_inside(box, pbox);
+        auto spts = p.surface(hs[0]);
+        auto spts_valid = find_surf_points_insides(spts, new_box, hp);
+        surf_points[ipart].assign(spts_valid.begin(), spts_valid.end());
+        nb_surf_points[ipart] = surf_points[ipart].size();
+
+        auto radial_valid = find_radial_surf_points_insides(spts, new_box, hp, p.center_);
+        radial_vec[ipart].assign(radial_valid.begin(), radial_valid.end());
       }
       ipart++;
     }
