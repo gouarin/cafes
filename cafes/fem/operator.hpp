@@ -130,8 +130,8 @@ namespace cafes
                         auto uyp = y2.at(ielem_p[ie_p]);
                         for (std::size_t d = 0; d < x1.dof_; ++d)
                         {
-                            uyp[0] += ux[d] * matelem[ie_p*nbasis_v + ie_v + d*nbasis_p*nbasis_v];
-                            uy[d] -= uxp[0] * matelem[ie_p*nbasis_v + ie_v + d*nbasis_p*nbasis_v];
+                            uyp[0] += ux[d] * matelem[ie_p*nbasis_v*x1.dof_ + ie_v + d*nbasis_v];
+                            uy[d] -= uxp[0] * matelem[ie_p*nbasis_v*x1.dof_ + ie_v + d*nbasis_v];
                         }
                     }
                 }
@@ -184,7 +184,8 @@ namespace cafes
                             petsc::petsc_vec<Dimensions> const &x2,
                             petsc::petsc_vec<Dimensions> &y1,
                             petsc::petsc_vec<Dimensions> &y2,
-                            MatElem const &matelem, Function &&kernel)
+                            MatElem const &matelem,
+                            Function &&kernel)
         {
             PetscErrorCode ierr;
             PetscFunctionBeginUser;
@@ -298,7 +299,8 @@ namespace cafes
             PetscErrorCode ierr;
             PetscFunctionBeginUser;
 
-            ierr = off_diag_block_mult(x1, x2, y1, y2, getMatElemPressure(h, order),
+            ierr = off_diag_block_mult(x1, x2, y1, y2,
+                                       getMatElemPressure(h, order),
                                        kernel_off_diag_block);
             CHKERRQ(ierr);
 

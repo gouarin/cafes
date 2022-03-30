@@ -31,6 +31,7 @@
 #define PARTICLE_FEM_POSITION_HPP_INCLUDED
 
 #include <particle/geometry/position.hpp>
+#include <tuple>
 
 namespace cafes
 {
@@ -172,6 +173,62 @@ namespace cafes
             return that;
         }
 
+        auto get_range(const DMBoundaryType& bt, int i, int min, int max, int stencil_size)
+        {
+            return std::make_pair<int, int>(
+                (bt == DM_BOUNDARY_PERIODIC)? -stencil_size : PetscMax(-stencil_size, -i + min),
+                (bt == DM_BOUNDARY_PERIODIC)? stencil_size: PetscMin(stencil_size, max - i - 1)
+            );
+        }
+
+        auto get_col_indices(DMDALocalInfo &info,
+                             geometry::position<int, 2> const &ix,
+                             int dof,
+                             std::size_t order)
+        {
+            int istart, iend;
+            int jstart, jend;
+
+            std::tie(istart, iend) = get_range(info.bx, ix[0], 0, info.mx, order);
+            std::tie(jstart, jend) = get_range(info.by, ix[1], 0, info.my, order);
+
+            // std::cout << ix[0] << " " << ix[1] << " " << istart << " " << iend << " " << jstart << " " << jend << std::endl;
+            std::vector<int> that((iend - istart + 1)*(jend - jstart + 1));
+
+            int ind = 0;
+            for(int j = jstart; j < jend + 1; ++j)
+            {
+                for(int i = istart; i < iend + 1; ++i)
+                {
+                    that[ind++] = dof + DMDALocalIndex2D(info, ix[0] + i, ix[1] + j);
+                }
+            }
+            return that;
+        }
+
+        auto get_row_indices(DMDALocalInfo &info,
+                             geometry::position<int, 2> const &ix,
+                             int dof,
+                             std::size_t order)
+        {
+            return dof + DMDALocalIndex2D(info, ix[0], ix[1]);
+        }
+
+        auto get_row_indices_tensor(DMDALocalInfo &info,
+                                    geometry::position<int, 2> const &ix,
+                                    std::size_t order)
+        {
+            int dof = 2;
+            std::vector<int> that(dof);
+
+            std::size_t ind = 0;
+            for(std::size_t d = 0; d < dof; ++d)
+            {
+                that[ind++] = d + DMDALocalIndex2D(info, ix[0], ix[1]);
+            }
+            return that;
+        }
+
         auto get_indices_tensor(DMDALocalInfo &info,
                                 geometry::position<int, 2> const &ix,
                                 std::size_t order)
@@ -181,13 +238,43 @@ namespace cafes
             std::vector<int> that(dof*size*size);
 
             std::size_t ind = 0;
-            for(std::size_t d=0; d<dof; ++d)
+            for(std::size_t d = 0; d < dof; ++d)
             {
                 for(int j=0; j<size; ++j)
                 {
                     for(int i=0; i<size; ++i)
                     {
                         that[ind++] = d + DMDALocalIndex2D(info, ix[0] + i, ix[1] + j);
+                    }
+                }
+            }
+            return that;
+        }
+
+        auto get_col_indices_tensor(DMDALocalInfo &info,
+                             geometry::position<int, 2> const &ix,
+                             std::size_t order)
+        {
+            std::size_t dof = 2;
+
+            int istart, iend;
+            int jstart, jend;
+
+            std::tie(istart, iend) = get_range(info.bx, ix[0], 0, info.mx, order);
+            std::tie(jstart, jend) = get_range(info.by, ix[1], 0, info.my, order);
+
+            std::vector<int> that(dof*(iend - istart + 1)*(jend - jstart + 1));
+
+            int ind = 0;
+
+            for(int j = jstart; j < jend + 1; ++j)
+            {
+                for(int i = istart; i < iend + 1; ++i)
+                {
+                    auto index = DMDALocalIndex2D(info, ix[0] + i, ix[1] + j);
+                    for(std::size_t d=0; d<dof; ++d)
+                    {
+                        that[ind++] = d + index;
                     }
                 }
             }

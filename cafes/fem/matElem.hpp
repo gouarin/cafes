@@ -228,13 +228,13 @@ auto getMatElemPressure(std::array<double, 2> const &h, std::size_t order)
 
     auto pdxu = matElem2d_pdxu(order);
     auto pdyu = matElem2d_pdyu(order);
-    
+
     for (std::size_t i = 0; i < 4; ++i)
     {
         for (std::size_t j = 0; j < 9; ++j)
         {
-            MatElem[i*2*9 + j] = -h[1] * pdxu[i*9 + j];
-            MatElem[i*2*9 + j + 9] = -h[0] * pdyu[i*9 + j];
+            MatElem[i*2*9 + j] = h[1] * pdxu[i*9 + j];
+            MatElem[i*2*9 + j + 9] = h[0] * pdyu[i*9 + j];
         }
     }
 
@@ -247,7 +247,7 @@ auto getMatElemPressureT(std::array<double, 2> const &h, std::size_t order)
 
     auto pdxu = matElem2d_pdxu(order);
     auto pdyu = matElem2d_pdyu(order);
-    
+
     for (std::size_t i = 0; i < 9; ++i)
     {
         for (std::size_t j = 0; j < 4; ++j)
@@ -266,7 +266,7 @@ auto getMatElemMass(std::array<double, 2> const &h, std::size_t order)
     std::vector<double> MatElem(size*size);
 
     auto mass = matElemMass2d(order);
-    
+
     for (std::size_t i = 0; i < size; ++i)
     {
         for (std::size_t j = 0; j < size; ++j)
@@ -283,7 +283,7 @@ auto getMatElemMassP2U(std::array<double, 2> const &h, std::size_t order)
     std::vector<double> MatElem(4*9);
 
     auto mass = matElemMass_pu_2d(order);
-    
+
     for (std::size_t i = 0; i < 9; ++i)
     {
         for (std::size_t j = 0; j < 4; ++j)

@@ -1,10 +1,10 @@
 // Copyright (c) 2016, Loic Gouarin <loic.gouarin@math.u-psud.fr>
 // All rights reserved.
 
-// Redistribution and use in source and binary forms, with or without modification, 
+// Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //
-// 1. Redistributions of source code must retain the above copyright notice, 
+// 1. Redistributions of source code must retain the above copyright notice,
 //    this list of conditions and the following disclaimer.
 //
 // 2. Redistributions in binary form must reproduce the above copyright notice,
@@ -50,7 +50,7 @@ namespace cafes
     {
       DMDALocalInfo info;
       DMDAGetLocalInfo(dm, &info);
-      
+
       geometry::box<int, 2> box{ { info.xs          , info.ys           },
                                  { info.xs + info.xm, info.ys + info.ym }
                                 };
@@ -74,7 +74,7 @@ namespace cafes
       geometry::box<int, 3> box{ { info.xs          , info.ys          , info.zs           },
                                  { info.xs + info.xm, info.ys + info.ym, info.zs + info.zm }
                                 };
-      
+
       // For the not periodic boundary condition.
       if (remove_final_points)
       {
@@ -192,10 +192,10 @@ namespace cafes
 
     #undef __FUNCT__
     #define __FUNCT__ "createDMDA"
-    PetscErrorCode createDMDA(DM& dm, 
-                              std::array<int, 2> const& mpres, 
-                              std::array<int, 2> const& mvel, 
-                              std::array<DMBoundaryType, 2> const& b_type, 
+    PetscErrorCode createDMDA(DM& dm,
+                              std::array<int, 2> const& mpres,
+                              std::array<int, 2> const& mvel,
+                              std::array<DMBoundaryType, 2> const& b_type,
                               std::array<PetscBool, 2> const& period)
     {
         PetscErrorCode   ierr;
@@ -223,11 +223,11 @@ namespace cafes
         /* set velocity grid*/
         ierr = DMDACreate2d(PETSC_COMM_WORLD, b_type[0], b_type[1], DMDA_STENCIL_BOX,
                             mvel[0], mvel[1], npx, npy,
-                            2, 1, lxu, lyu, &DAVelocity);CHKERRQ(ierr);
+                            2, 2, lxu, lyu, &DAVelocity);CHKERRQ(ierr);
         ierr = DMSetUp(DAVelocity);CHKERRQ(ierr);
         ierr = DMDASetFieldName(DAVelocity, 0, "u");CHKERRQ(ierr);
         ierr = DMDASetFieldName(DAVelocity, 1, "v");CHKERRQ(ierr);
-        
+
         ierr = DMCompositeAddDM(dm, DAVelocity);CHKERRQ(ierr);
         ierr = DMCompositeAddDM(dm, DAPressure);CHKERRQ(ierr);
         ierr = DMSetFromOptions(dm);CHKERRQ(ierr);
@@ -241,9 +241,9 @@ namespace cafes
 
     #undef __FUNCT__
     #define __FUNCT__ "createDMDA"
-    PetscErrorCode createDMDA(DM& dm, 
-                              std::array<int, 2> const& mvel, 
-                              std::array<DMBoundaryType, 2> const& b_type, 
+    PetscErrorCode createDMDA(DM& dm,
+                              std::array<int, 2> const& mvel,
+                              std::array<DMBoundaryType, 2> const& b_type,
                               std::array<PetscBool, 2> const& period)
     {
         PetscErrorCode   ierr;
@@ -258,10 +258,10 @@ namespace cafes
 
     #undef __FUNCT__
     #define __FUNCT__ "createDMDA"
-    PetscErrorCode createDMDA(DM& dm, 
-                              std::array<int, 3> const& mpres, 
-                              std::array<int, 3> const& mvel, 
-                              std::array<DMBoundaryType, 3> const& b_type, 
+    PetscErrorCode createDMDA(DM& dm,
+                              std::array<int, 3> const& mpres,
+                              std::array<int, 3> const& mvel,
+                              std::array<DMBoundaryType, 3> const& b_type,
                               std::array<PetscBool, 3> const& period)
     {
         PetscErrorCode   ierr;
@@ -289,12 +289,12 @@ namespace cafes
         /* set velocity grid*/
         ierr = DMDACreate3d(PETSC_COMM_WORLD, b_type[0], b_type[1], b_type[2], DMDA_STENCIL_BOX,
                             mvel[0], mvel[1], mvel[2], npx, npy, npz,
-                            3, 1, lxu, lyu, lzu, &DAVelocity);CHKERRQ(ierr);
+                            3, 2, lxu, lyu, lzu, &DAVelocity);CHKERRQ(ierr);
         ierr = DMDASetFieldName(DAVelocity, 0, "u");CHKERRQ(ierr);
         ierr = DMDASetFieldName(DAVelocity, 1, "v");CHKERRQ(ierr);
         ierr = DMDASetFieldName(DAVelocity, 2, "w");CHKERRQ(ierr);
 
-        
+
         ierr = DMCompositeAddDM(dm, DAVelocity);CHKERRQ(ierr);
         ierr = DMCompositeAddDM(dm, DAPressure);CHKERRQ(ierr);
         ierr = DMSetFromOptions(dm);CHKERRQ(ierr);
@@ -308,9 +308,9 @@ namespace cafes
 
     #undef __FUNCT__
     #define __FUNCT__ "createDMDA"
-    PetscErrorCode createDMDA(DM& dm, 
-                              std::array<int, 3> const& mvel, 
-                              std::array<DMBoundaryType, 3> const& b_type, 
+    PetscErrorCode createDMDA(DM& dm,
+                              std::array<int, 3> const& mvel,
+                              std::array<DMBoundaryType, 3> const& b_type,
                               std::array<PetscBool, 3> const& period)
     {
         PetscErrorCode   ierr;

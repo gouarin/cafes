@@ -75,7 +75,7 @@ namespace cafes
 
             auto mg_h = ctx_->h;
             std::for_each(mg_h.begin(), mg_h.end(), [&](auto &x) {x *= (1 << level);});
-            
+
             auto *mg_ctx = new CTX{dm, mg_h, ctx_->order, ctx_->apply, ctx_->apply_diag};
             mg_ctx->set_dirichlet_bc(ctx_->bc_);
 
@@ -248,6 +248,7 @@ namespace cafes
                 {
                     PreallocateMat<Dimensions>(ctx, opt, MATAIJ, &A, opt.order, false);
                     PreallocateMat<Dimensions>(ctx, opt, MATAIJ, &P, opt.order, true);
+
                     MatSetDM(A, mesh);
                     MatSetDM(P, mesh);
                     MatSetFromOptions(A);
@@ -265,11 +266,13 @@ namespace cafes
                     }
 
                     B_BT_assembling(mesh, A, hu, opt.order);
-                    // diagonal_assembling<Dimensions>(mesh, A, 0); //0 à la place de 1e-8 (d'après H.)
+
+                    diagonal_assembling<Dimensions>(mesh, A, 0); //0 à la place de 1e-8 (d'après H.)
+
                     DMDALocalInfo info;
                     DMDAGetLocalInfo(dav, &info);
                     int dec = info.dof * info.gxm * info.gym * info.gzm;
-                    cafes::mass_assembling(dap, A, hp, 1, dec, -1e-10);
+                    // cafes::mass_assembling(dap, A, hp, 1, dec, -1e-10);
                     cafes::mass_assembling(dap, P, hp, 1, dec);
 
                     MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);
@@ -277,10 +280,12 @@ namespace cafes
                     MatAssemblyBegin(P, MAT_FINAL_ASSEMBLY);
                     MatAssemblyEnd(P, MAT_FINAL_ASSEMBLY);
 
+                    // MatView(A, PETSC_VIEWER_STDOUT_WORLD);
+
                     cafes::fem::SetDirichletOnMat(A, bc);
                     cafes::fem::SetDirichletOnMat(P, bc);
 
-                    // CreatePressureNullSpace(mesh); 
+                    // CreatePressureNullSpace(mesh);
                 }
                 else
                 {

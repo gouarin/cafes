@@ -203,10 +203,8 @@ namespace cafes
             DM dav, dap;
             PetscFunctionBeginUser;
 
-            ierr = MatShellGetContext(A, (void **)&ctx);
-            CHKERRQ(ierr);
-            ierr = VecSet(y, 0.);
-            CHKERRQ(ierr);
+            ierr = MatShellGetContext(A, (void **)&ctx);CHKERRQ(ierr);
+            ierr = VecSet(y, 0.);CHKERRQ(ierr);
 
             using petsc_type = petsc::petsc_vec<Dimensions::value>;
 
@@ -218,28 +216,23 @@ namespace cafes
 
             for (std::size_t i = 0; i < xpetsc.size(); ++i)
             {
-                ierr = xpetsc[i].global_to_local(INSERT_VALUES);
-                CHKERRQ(ierr);
-                ierr = ypetsc[i].fill(0.);
-                CHKERRQ(ierr);
+                ierr = xpetsc[i].global_to_local(INSERT_VALUES);CHKERRQ(ierr);
+                ierr = ypetsc[i].fill(0.);CHKERRQ(ierr);
             }
 
-            ierr = ctx->apply(xpetsc[0], ypetsc[0], ctx->h, ctx->order);
-            CHKERRQ(ierr);
-            ierr = B_and_BT_mult(xpetsc[0], xpetsc[1], ypetsc[0], ypetsc[1],
-                                 ctx->h, ctx->order);
-            CHKERRQ(ierr);
+            ierr = ctx->apply(xpetsc[0], ypetsc[0], ctx->h, ctx->order);CHKERRQ(ierr);
+            ierr = B_and_BT_mult(xpetsc[0], xpetsc[1],
+                                 ypetsc[0], ypetsc[1],
+                                 ctx->h, ctx->order);CHKERRQ(ierr);
 
             for (std::size_t i = 0; i < xpetsc.size(); ++i)
             {
-                ierr = ypetsc[i].local_to_global(ADD_VALUES);
-                CHKERRQ(ierr);
+                ierr = ypetsc[i].local_to_global(ADD_VALUES);CHKERRQ(ierr);
             }
 
             if (ctx->set_bc_)
             {
-                ierr = SetDirichletOnVec(xpetsc[0], ypetsc[0], ctx->bc_);
-                CHKERRQ(ierr);
+                ierr = SetDirichletOnVec(xpetsc[0], ypetsc[0], ctx->bc_);CHKERRQ(ierr);
             }
 
             PetscFunctionReturn(0);
