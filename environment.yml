@@ -1,4 +1,4 @@
-name: cafes-dev-2
+name: cafes-dev
 channels:
   - conda-forge
 dependencies:
