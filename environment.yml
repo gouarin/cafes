@@ -1,9 +1,8 @@
-name: cafes-dev
+name: cafes-dev-2
 channels:
-  - gouarin
   - conda-forge
 dependencies:
-  - hdf5=1.10.6=mpi*
   - petsc
   - cmake
-  - compilers
+  - cxx-compiler
+  - pkg-config
