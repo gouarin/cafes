@@ -1,10 +1,10 @@
 // Copyright (c) 2016, Loic Gouarin <loic.gouarin@math.u-psud.fr>
 // All rights reserved.
 
-// Redistribution and use in source and binary forms, with or without modification, 
+// Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //
-// 1. Redistributions of source code must retain the above copyright notice, 
+// 1. Redistributions of source code must retain the above copyright notice,
 //    this list of conditions and the following disclaimer.
 //
 // 2. Redistributions in binary form must reproduce the above copyright notice,
@@ -65,6 +65,7 @@ namespace cafes
         for(std::size_t dof=0; dof<y.dof_; ++dof)
           if (bc_conditions[dof])
             uy[dof] = ux[dof];
+        PetscFunctionReturn(0);
       };
       return kernel_pos;
     };
@@ -75,6 +76,7 @@ namespace cafes
         for(std::size_t dof=0; dof<y.dof_; ++dof)
           if (bc_conditions[dof])
             uy[dof] = x;
+        PetscFunctionReturn(0);
       };
       return kernel_pos;
     };
@@ -90,6 +92,7 @@ namespace cafes
         for(std::size_t dof=0; dof<y.dof_; ++dof)
           if (bc_conditions[dof])
             bc_conditions[dof](coord, &uy[dof]);
+        PetscFunctionReturn(0);
       };
       return kernel_pos;
     };
@@ -97,7 +100,7 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "set_dirichlet_impl"
     template<std::size_t Dimensions, typename Function, typename x_type, typename h_type>
-    PetscErrorCode set_dirichlet_impl(x_type&& x, 
+    PetscErrorCode set_dirichlet_impl(x_type&& x,
                                       petsc::petsc_vec<Dimensions>& y,
                                       dirichlet_conditions<Dimensions> bc,
                                       h_type&& h,
@@ -136,7 +139,7 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "SetDirichletOnVec"
     template<std::size_t Dimensions>
-    PetscErrorCode SetDirichletOnVec(petsc::petsc_vec<Dimensions>& x, 
+    PetscErrorCode SetDirichletOnVec(petsc::petsc_vec<Dimensions>& x,
                                      petsc::petsc_vec<Dimensions>& y,
                                      dirichlet_conditions<Dimensions> bc)
     {

@@ -93,58 +93,49 @@ PetscErrorCode PreallocateMat(Context *user, Options opt, const MatType mtype,
     {
         auto box = cafes::fem::get_DM_bounds<Dimensions>(dav, false);
 
-        auto const kernel = [&]()
+        auto kernel = [&](auto const &pos)
         {
-            auto const kernel_pos = [&](auto const &pos)
-            {
-                auto row = cafes::fem::get_row_indices_tensor(infov, pos, order);
-                auto col = cafes::fem::get_col_indices_tensor(infov, pos, order);
-                MatPreallocateSetLocal(ltog, row.size(), row.data(), ltog, col.size(), col.data(), dnz, onz);
-            };
-            return kernel_pos;
+            auto row = cafes::fem::get_row_indices_tensor(infov, pos, order);
+            auto col = cafes::fem::get_col_indices_tensor(infov, pos, order);
+            MatPreallocateSetLocal(ltog, row.size(), row.data(), ltog, col.size(), col.data(), dnz, onz);
+            PetscFunctionReturn(0);
         };
 
-        cafes::algorithm::iterate(box, kernel(), order);
+        cafes::algorithm::iterate(box, kernel, order);
 
     }
     else
     {
         auto box = cafes::fem::get_DM_bounds<Dimensions>(dav, false);
 
-        auto kernel = [&]()
+        auto kernel = [&](auto const &pos)
         {
-            auto const kernel_pos = [&](auto const &pos)
+            PetscErrorCode ierr;
+            for (std::size_t d = 0; d < infov.dof; ++d)
             {
-                for (std::size_t d = 0; d < infov.dof; ++d)
-                {
-                    auto row = cafes::fem::get_row_indices(infov, pos, d, order);
-                    auto col = cafes::fem::get_col_indices(infov, pos, d, order);
+                int row = cafes::fem::get_row_indices(infov, pos, d, order);
+                auto col = cafes::fem::get_col_indices(infov, pos, d, order);
 
-                    MatPreallocateSetLocal(ltog, 1, &row, ltog, col.size(), col.data(), dnz, onz);
-                }
-            };
-            return kernel_pos;
+                ierr = MatPreallocateSetLocal(ltog, 1, &row, ltog, col.size(), col.data(), dnz, onz);CHKERRQ(ierr);
+            }
+            PetscFunctionReturn(0);
         };
 
-        cafes::algorithm::iterate(box, kernel(), 1);
+        cafes::algorithm::iterate(box, kernel, 1);
     }
 
     {
         // preallocation of the pressure -> block (2, 2)
         auto box = cafes::fem::get_DM_bounds<Dimensions>(dap, false);
 
-        auto kernel = [&]()
+        auto kernel = [&](auto const &pos)
         {
-
-            auto const kernel_pos = [&](auto const &pos)
-            {
-                auto row = cafes::fem::get_row_indices(infop, pos, dec, 1);
-                auto col = cafes::fem::get_col_indices(infop, pos, dec, 1);
-                MatPreallocateSetLocal(ltog, 1, &row, ltog, col.size(), col.data(), dnz, onz);
-            };
-            return kernel_pos;
+            auto row = cafes::fem::get_row_indices(infop, pos, dec, 1);
+            auto col = cafes::fem::get_col_indices(infop, pos, dec, 1);
+            MatPreallocateSetLocal(ltog, 1, &row, ltog, col.size(), col.data(), dnz, onz);
+            PetscFunctionReturn(0);
         };
-        cafes::algorithm::iterate(box, kernel());
+        cafes::algorithm::iterate(box, kernel);
     }
 
     if (!precond)
@@ -154,32 +145,26 @@ PetscErrorCode PreallocateMat(Context *user, Options opt, const MatType mtype,
         auto box_p = cafes::fem::get_DM_bounds<Dimensions>(dap, false);
         auto box_u = cafes::fem::get_DM_bounds<Dimensions>(dav, false);
 
-        auto kernel_p = [&]()
+        auto kernel_p = [&](auto const &pos)
         {
-            auto const kernel_pos = [&](auto const &pos)
-            {
-                auto row = cafes::fem::get_row_indices(infop, pos, dec, 1);
-                auto col = cafes::fem::get_col_indices_tensor(infov, 2*pos, 2);
+            auto row = cafes::fem::get_row_indices(infop, pos, dec, 1);
+            auto col = cafes::fem::get_col_indices_tensor(infov, 2*pos, 2);
 
-                MatPreallocateSetLocal(ltog, 1, &row, ltog,
-                                       col.size(), col.data(), dnz, onz);
-            };
-            return kernel_pos;
+            MatPreallocateSetLocal(ltog, 1, &row, ltog,
+                                    col.size(), col.data(), dnz, onz);
+            PetscFunctionReturn(0);
         };
-        cafes::algorithm::iterate(box_p, kernel_p());
+        cafes::algorithm::iterate(box_p, kernel_p);
 
-        auto kernel_u = [&]()
+        auto kernel_u = [&](auto const &pos)
         {
-            auto const kernel_pos = [&](auto const &pos)
-            {
-                auto col_p = cafes::fem::get_col_indices(infop, pos/2, dec, 1);
-                auto row_u = cafes::fem::get_row_indices_tensor(infov, pos, 2);
-                MatPreallocateSetLocal(ltog, row_u.size(), row_u.data(), ltog,
-                                       col_p.size(), col_p.data(), dnz, onz);
-            };
-            return kernel_pos;
+            auto col_p = cafes::fem::get_col_indices(infop, pos/2, dec, 1);
+            auto row_u = cafes::fem::get_row_indices_tensor(infov, pos, 2);
+            MatPreallocateSetLocal(ltog, row_u.size(), row_u.data(), ltog,
+                                    col_p.size(), col_p.data(), dnz, onz);
+            PetscFunctionReturn(0);
         };
-        cafes::algorithm::iterate(box_u, kernel_u());
+        cafes::algorithm::iterate(box_u, kernel_u);
     }
 
     // Preallocation
@@ -205,6 +190,7 @@ namespace cafes
                 MatSetValuesLocal(A, ielem.size(), ielem.data(), ielem.size(),
                                   ielem.data(), matelem.data(), ADD_VALUES);
             }
+            PetscFunctionReturn(0);
         };
         return kernel_pos;
     };
@@ -254,6 +240,8 @@ namespace cafes
             auto ielem = fem::get_indices_tensor(info, pos, order);
             MatSetValuesLocal(A, ielem.size(), ielem.data(), ielem.size(),
                               ielem.data(), matelem.data(), ADD_VALUES);
+            PetscFunctionReturn(0);
+
         };
         return kernel_pos;
     };
@@ -304,6 +292,7 @@ namespace cafes
                               ielem_v.data(), matelemB.data(), ADD_VALUES);
             MatSetValuesLocal(A, ielem_v.size(), ielem_v.data(), ielem_p.size(),
                               ielem_p.data(), matelemBT.data(), ADD_VALUES);
+            PetscFunctionReturn(0);
         };
         return kernel_pos;
     };

@@ -1,10 +1,10 @@
 // Copyright (c) 2016, Loic Gouarin <loic.gouarin@math.u-psud.fr>
 // All rights reserved.
 
-// Redistribution and use in source and binary forms, with or without modification, 
+// Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //
-// 1. Redistributions of source code must retain the above copyright notice, 
+// 1. Redistributions of source code must retain the above copyright notice,
 //    this list of conditions and the following disclaimer.
 //
 // 2. Redistributions in binary form must reproduce the above copyright notice,
@@ -62,6 +62,7 @@ namespace cafes
         for(std::size_t dof=0; dof<x.dof_; ++dof)
           if (rhs_conditions.conditions_[dof])
             rhs_conditions.conditions_[dof](coord, &u[dof]);
+        PetscFunctionReturn(0);
       };
       return kernel_pos;
     };
@@ -92,7 +93,7 @@ namespace cafes
     {
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
-    
+
       Vec tmp;
       ierr = DMGetGlobalVector(dm, &tmp);CHKERRQ(ierr);
       ierr = VecSet(tmp, 0.);CHKERRQ(ierr);
