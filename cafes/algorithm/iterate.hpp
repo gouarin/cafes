@@ -39,28 +39,34 @@ namespace cafes
     {
 
         template<typename Box, typename Function, typename Position>
-        void iterate_impl(Box const &b, Function &&f, Position &p, std::size_t step,
+        PetscErrorCode iterate_impl(Box const &b, Function &&f, Position &p, std::size_t step,
                           std::integral_constant<std::size_t, 0> const &)
         {
-            std::forward<Function>(f)(p);
+            PetscErrorCode ierr;
+            ierr = std::forward<Function>(f)(p);CHKERRQ(ierr);
+            PetscFunctionReturn(0);
         }
 
         template<typename Box, typename Function, typename Position, typename Index>
-        void iterate_impl(Box const &b, Function &&f, Position &p, std::size_t step, Index const &)
+        PetscErrorCode iterate_impl(Box const &b, Function &&f, Position &p, std::size_t step, Index const &)
         {
+            PetscErrorCode ierr;
             static constexpr std::size_t n = Index::value - 1;
 
             for (p[n] = b.bottom_left[n]; p[n] < b.upper_right[n]; p[n] += step)
             {
-                iterate_impl(b, std::forward<Function>(f), p, step, std::integral_constant<std::size_t, n>{});
+                ierr = iterate_impl(b, std::forward<Function>(f), p, step, std::integral_constant<std::size_t, n>{});CHKERRQ(ierr);
             }
+            PetscFunctionReturn(0);
         }
 
         template<typename Box, typename Function>
-        void iterate(Box const &b, Function &&f, std::size_t step=1)
+        PetscErrorCode iterate(Box const &b, Function &&f, std::size_t step=1)
         {
+            PetscErrorCode ierr;
             typename Box::position_type pos;
-            iterate_impl(b, f, pos, step, std::integral_constant<std::size_t, Box::dimensions>{});
+            ierr = iterate_impl(b, f, pos, step, std::integral_constant<std::size_t, Box::dimensions>{});CHKERRQ(ierr);
+            PetscFunctionReturn(0);
         }
     } // namespace algorithm
 } // namespace cafes

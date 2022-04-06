@@ -64,6 +64,7 @@ namespace cafes
                         }
                     }
                 }
+                PetscFunctionReturn(0);
             };
             return kernel_pos;
         };
@@ -90,6 +91,7 @@ namespace cafes
                         }
                     }
                 }
+                PetscFunctionReturn(0);
             };
             return kernel_pos;
         };
@@ -107,6 +109,7 @@ namespace cafes
                         u[d] += matelem[ie*nbasis + ie];
                     }
                 }
+                PetscFunctionReturn(0);
             };
             return kernel_pos;
         };
@@ -135,6 +138,7 @@ namespace cafes
                         }
                     }
                 }
+                PetscFunctionReturn(0);
             };
             return kernel_pos;
         };
