@@ -5,17 +5,14 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_MODULE_PATH})
 
 include_directories(cafes external_packages/qhull)
 
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 set (CMAKE_CXX_STANDARD 14)
 
-FIND_PACKAGE(PETSc REQUIRED)
-FIND_PACKAGE(MPI)
-#FIND_PACKAGE(VTK REQUIRED)
-Find_package(HDF5)
-# find_package(HighFive REQUIRED)
+include(FindPkgConfig)
+pkg_check_modules(PETSC PETSc)
 
-#INCLUDE (${VTK_USE_FILE})
-#include_directories(${HDF5_C_INCLUDE_DIR} ${PETSC_INCLUDE_CONF} ${PETSC_INCLUDE_DIR} ${MPI_INCLUDE_PATH})
+FIND_PACKAGE(MPI)
+Find_package(HDF5)
+
 include_directories(${PETSC_INCLUDE_DIRS} ${MPI_INCLUDE_PATH} ${HDF5_INCLUDE_DIRS})
 link_directories(${PETSC_LIBRARY_DIRS})
 
