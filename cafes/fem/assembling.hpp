@@ -113,7 +113,7 @@ PetscErrorCode PreallocateMat(Context *user, Options opt, const MatType mtype,
             PetscErrorCode ierr;
             for (std::size_t d = 0; d < infov.dof; ++d)
             {
-                int row = cafes::fem::get_row_indices(infov, pos, d, order);
+                auto row = cafes::fem::get_row_indices(infov, pos, d, order);
                 auto col = cafes::fem::get_col_indices(infov, pos, d, order);
 
                 ierr = MatPreallocateSetLocal(ltog, 1, &row, ltog, col.size(), col.data(), dnz, onz);CHKERRQ(ierr);
@@ -148,7 +148,7 @@ PetscErrorCode PreallocateMat(Context *user, Options opt, const MatType mtype,
         auto kernel_p = [&](auto const &pos)
         {
             auto row = cafes::fem::get_row_indices(infop, pos, dec, 1);
-            auto col = cafes::fem::get_col_indices_tensor(infov, 2*pos, 2);
+            auto col = cafes::fem::get_col_indices_tensor(infov, PetscInt(2)*pos, 2);
 
             MatPreallocateSetLocal(ltog, 1, &row, ltog,
                                     col.size(), col.data(), dnz, onz);
@@ -158,7 +158,7 @@ PetscErrorCode PreallocateMat(Context *user, Options opt, const MatType mtype,
 
         auto kernel_u = [&](auto const &pos)
         {
-            auto col_p = cafes::fem::get_col_indices(infop, pos/2, dec, 1);
+            auto col_p = cafes::fem::get_col_indices(infop, pos/PetscInt(2), dec, 1);
             auto row_u = cafes::fem::get_row_indices_tensor(infov, pos, 2);
             MatPreallocateSetLocal(ltog, row_u.size(), row_u.data(), ltog,
                                     col_p.size(), col_p.data(), dnz, onz);
@@ -286,7 +286,7 @@ namespace cafes
                                             const auto &matelemBT) {
         auto const kernel_pos = [&](auto const &pos) {
             auto ielem_p = fem::get_indices(infop, pos, dec, 1);
-            auto ielem_v = fem::get_indices_tensor(infov, 2*pos, 2);
+            auto ielem_v = fem::get_indices_tensor(infov, PetscInt(2)*pos, 2);
 
             MatSetValuesLocal(A, ielem_p.size(), ielem_p.data(), ielem_v.size(),
                               ielem_v.data(), matelemB.data(), ADD_VALUES);

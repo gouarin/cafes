@@ -119,7 +119,7 @@ namespace cafes
                                               auto const &matelem) {
             auto const kernel_pos = [&](auto const &pos) {
                 auto const ielem_p = get_element(pos, 1);
-                auto const ielem_v = get_element(2*pos, 2);
+                auto const ielem_v = get_element(PetscInt(2)*pos, 2);
                 auto const nbasis_p = ielem_p.size();
                 auto const nbasis_v = ielem_v.size();
 

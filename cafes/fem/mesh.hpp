@@ -51,7 +51,7 @@ namespace cafes
       DMDALocalInfo info;
       DMDAGetLocalInfo(dm, &info);
 
-      geometry::box<int, 2> box{ { info.xs          , info.ys           },
+      geometry::box<PetscInt, 2> box{ { info.xs          , info.ys           },
                                  { info.xs + info.xm, info.ys + info.ym }
                                 };
 
@@ -71,7 +71,7 @@ namespace cafes
       DMDALocalInfo info;
       DMDAGetLocalInfo(dm, &info);
 
-      geometry::box<int, 3> box{ { info.xs          , info.ys          , info.zs           },
+      geometry::box<PetscInt, 3> box{ { info.xs          , info.ys          , info.zs           },
                                  { info.xs + info.xm, info.ys + info.ym, info.zs + info.zm }
                                 };
 
@@ -97,21 +97,21 @@ namespace cafes
     template<int Dimensions>
     auto get_DM_bounds(DM const& dm, int i, bool remove_final_points=true)
     {
-      int ndm;
+      PetscInt ndm;
       DMCompositeGetNumberDM(dm, &ndm);
       DM dmc[ndm];
       DMCompositeGetEntriesArray(dm, dmc);
       return get_DM_bounds_(dmc[i], std::integral_constant<int, Dimensions>{}, remove_final_points);
     }
 
-    std::array<int, 2> get_global_bounds_(DM const& dm, std::integral_constant<int, 2>)
+    std::array<PetscInt, 2> get_global_bounds_(DM const& dm, std::integral_constant<int, 2>)
     {
       DMDALocalInfo info;
       DMDAGetLocalInfo(dm, &info);
       return {{info.mx, info.my}};
     }
 
-    std::array<int, 3> get_global_bounds_(DM const& dm, std::integral_constant<int, 3>)
+    std::array<PetscInt, 3> get_global_bounds_(DM const& dm, std::integral_constant<int, 3>)
     {
       DMDALocalInfo info;
       DMDAGetLocalInfo(dm, &info);
@@ -158,7 +158,7 @@ namespace cafes
 
         ierr = PetscObjectTypeCompare((PetscObject)dm, DMCOMPOSITE, &dm_composite);CHKERRQ(ierr);
         if (dm_composite){
-            int ndm;
+            PetscInt ndm;
             ierr = DMCompositeGetNumberDM(dm, &ndm);CHKERRQ(ierr);
 
             DM dmc[ndm];
@@ -193,8 +193,8 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "createDMDA"
     PetscErrorCode createDMDA(DM& dm,
-                              std::array<int, 2> const& mpres,
-                              std::array<int, 2> const& mvel,
+                              std::array<PetscInt, 2> const& mpres,
+                              std::array<PetscInt, 2> const& mvel,
                               std::array<DMBoundaryType, 2> const& b_type,
                               std::array<PetscBool, 2> const& period)
     {
@@ -242,7 +242,7 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "createDMDA"
     PetscErrorCode createDMDA(DM& dm,
-                              std::array<int, 2> const& mvel,
+                              std::array<PetscInt, 2> const& mvel,
                               std::array<DMBoundaryType, 2> const& b_type,
                               std::array<PetscBool, 2> const& period)
     {
@@ -259,8 +259,8 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "createDMDA"
     PetscErrorCode createDMDA(DM& dm,
-                              std::array<int, 3> const& mpres,
-                              std::array<int, 3> const& mvel,
+                              std::array<PetscInt, 3> const& mpres,
+                              std::array<PetscInt, 3> const& mvel,
                               std::array<DMBoundaryType, 3> const& b_type,
                               std::array<PetscBool, 3> const& period)
     {
@@ -309,7 +309,7 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "createDMDA"
     PetscErrorCode createDMDA(DM& dm,
-                              std::array<int, 3> const& mvel,
+                              std::array<PetscInt, 3> const& mvel,
                               std::array<DMBoundaryType, 3> const& b_type,
                               std::array<PetscBool, 3> const& period)
     {
@@ -326,7 +326,7 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "createMesh"
     template<int Dimensions>
-    PetscErrorCode createMesh(DM& dm, std::array<int, Dimensions> const& npoints, std::array<PetscBool, Dimensions> const& period)
+    PetscErrorCode createMesh(DM& dm, std::array<PetscInt, Dimensions> const& npoints, std::array<PetscBool, Dimensions> const& period)
     {
         PetscErrorCode   ierr;
         auto mpres = npoints;
@@ -353,7 +353,7 @@ namespace cafes
     #undef __FUNCT__
     #define __FUNCT__ "createLaplacianMesh"
     template<int Dimensions>
-    PetscErrorCode createLaplacianMesh(DM& dm, std::array<int, Dimensions> const& npoints, std::array<PetscBool, Dimensions> const& period)
+    PetscErrorCode createLaplacianMesh(DM& dm, std::array<PetscInt, Dimensions> const& npoints, std::array<PetscBool, Dimensions> const& period)
     {
         PetscErrorCode   ierr;
         auto mvel = npoints;

@@ -188,7 +188,8 @@ namespace cafes
       PetscErrorCode ierr;
       PetscFunctionBeginUser;
 
-      PetscInt       i, j, d, ind, nx, ny, size;
+      PetscInt       i, j, d, ind, nx, ny;
+      int size;
       PetscInt       local_id, nbcs;
       PetscInt       *bc_id1, *bc_id2;
       DMDALocalInfo  info;

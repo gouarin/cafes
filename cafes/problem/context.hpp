@@ -1,10 +1,10 @@
 // Copyright (c) 2016, Loic Gouarin <loic.gouarin@math.u-psud.fr>
 // All rights reserved.
 
-// Redistribution and use in source and binary forms, with or without modification, 
+// Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //
-// 1. Redistributions of source code must retain the above copyright notice, 
+// 1. Redistributions of source code must retain the above copyright notice,
 //    this list of conditions and the following disclaimer.
 //
 // 2. Redistributions in binary form must reproduce the above copyright notice,
@@ -56,7 +56,7 @@ namespace cafes
       using array1d = std::array<double, Dimensions>;
       using array2d = std::array<std::array<double, Dimensions>, Ndm>;
       typename std::conditional<Ndm == 1, array1d, array2d>::type h;
-      int order;
+      PetscInt order;
       PetscErrorCode(*apply)(petsc::petsc_vec<Dimensions>&,
                              petsc::petsc_vec<Dimensions>&,
                              std::array<double, Dimensions> const&,
@@ -83,7 +83,7 @@ namespace cafes
     struct particle_context{
       template<std::size_t N> using int_ = std::integral_constant<std::size_t, N>;
       using dimension_type = int_<Dimensions>;
- 
+
       using position_type   = geometry::position<double, Dimensions>;
       using position_type_i = geometry::position<int, Dimensions>;
       using force_type   = physics::force<Dimensions>;

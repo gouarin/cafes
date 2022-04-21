@@ -130,10 +130,10 @@ namespace cafes
             return that;
         }
 
-        auto get_element(geometry::position<int, 2> const &ix, std::size_t order, std::size_t step = 1)
+        auto get_element(geometry::position<PetscInt, 2> const &ix, std::size_t order, std::size_t step = 1)
         {
             std::size_t size = order + 1;
-            std::vector<std::array<int, 2>> that(size*size);
+            std::vector<std::array<PetscInt, 2>> that(size*size);
 
             std::size_t ind = 0;
 
@@ -155,12 +155,12 @@ namespace cafes
         }
 
         auto get_indices(DMDALocalInfo &info,
-                         geometry::position<int, 2> const &ix,
+                         geometry::position<PetscInt, 2> const &ix,
                          int dof,
                          std::size_t order)
         {
             std::size_t size = order + 1;
-            std::vector<int> that(size*size);
+            std::vector<PetscInt> that(size*size);
 
             int ind = 0;
             for(int j=0; j<size; ++j)
@@ -175,14 +175,14 @@ namespace cafes
 
         auto get_range(const DMBoundaryType& bt, int i, int min, int max, int stencil_size)
         {
-            return std::make_pair<int, int>(
+            return std::make_pair<PetscInt, int>(
                 (bt == DM_BOUNDARY_PERIODIC)? -stencil_size : PetscMax(-stencil_size, -i + min),
                 (bt == DM_BOUNDARY_PERIODIC)? stencil_size: PetscMin(stencil_size, max - i - 1)
             );
         }
 
         auto get_col_indices(DMDALocalInfo &info,
-                             geometry::position<int, 2> const &ix,
+                             geometry::position<PetscInt, 2> const &ix,
                              int dof,
                              std::size_t order)
         {
@@ -193,7 +193,7 @@ namespace cafes
             std::tie(jstart, jend) = get_range(info.by, ix[1], 0, info.my, order);
 
             // std::cout << ix[0] << " " << ix[1] << " " << istart << " " << iend << " " << jstart << " " << jend << std::endl;
-            std::vector<int> that((iend - istart + 1)*(jend - jstart + 1));
+            std::vector<PetscInt> that((iend - istart + 1)*(jend - jstart + 1));
 
             int ind = 0;
             for(int j = jstart; j < jend + 1; ++j)
@@ -207,7 +207,7 @@ namespace cafes
         }
 
         auto get_row_indices(DMDALocalInfo &info,
-                             geometry::position<int, 2> const &ix,
+                             geometry::position<PetscInt, 2> const &ix,
                              int dof,
                              std::size_t order)
         {
@@ -215,11 +215,11 @@ namespace cafes
         }
 
         auto get_row_indices_tensor(DMDALocalInfo &info,
-                                    geometry::position<int, 2> const &ix,
+                                    geometry::position<PetscInt, 2> const &ix,
                                     std::size_t order)
         {
             int dof = 2;
-            std::vector<int> that(dof);
+            std::vector<PetscInt> that(dof);
 
             std::size_t ind = 0;
             for(std::size_t d = 0; d < dof; ++d)
@@ -230,12 +230,12 @@ namespace cafes
         }
 
         auto get_indices_tensor(DMDALocalInfo &info,
-                                geometry::position<int, 2> const &ix,
+                                geometry::position<PetscInt, 2> const &ix,
                                 std::size_t order)
         {
             std::size_t size = order + 1;
             std::size_t dof = 2;
-            std::vector<int> that(dof*size*size);
+            std::vector<PetscInt> that(dof*size*size);
 
             std::size_t ind = 0;
             for(std::size_t d = 0; d < dof; ++d)
@@ -252,7 +252,7 @@ namespace cafes
         }
 
         auto get_col_indices_tensor(DMDALocalInfo &info,
-                             geometry::position<int, 2> const &ix,
+                             geometry::position<PetscInt, 2> const &ix,
                              std::size_t order)
         {
             std::size_t dof = 2;
@@ -263,7 +263,7 @@ namespace cafes
             std::tie(istart, iend) = get_range(info.bx, ix[0], 0, info.mx, order);
             std::tie(jstart, jend) = get_range(info.by, ix[1], 0, info.my, order);
 
-            std::vector<int> that(dof*(iend - istart + 1)*(jend - jstart + 1));
+            std::vector<PetscInt> that(dof*(iend - istart + 1)*(jend - jstart + 1));
 
             int ind = 0;
 
@@ -281,9 +281,9 @@ namespace cafes
             return that;
         }
 
-        auto get_element(geometry::position<int, 3> const &ix)
+        auto get_element(geometry::position<PetscInt, 3> const &ix)
         {
-            std::array<std::array<int, 3>, 8> that;
+            std::array<std::array<PetscInt, 3>, 8> that;
 
             that[0] = {ix[0], ix[1], ix[2]};
             that[1] = {ix[0] + 1, ix[1], ix[2]};
@@ -296,9 +296,9 @@ namespace cafes
             return that;
         }
 
-        auto get_element_4Q1(geometry::position<int, 2> const &ix)
+        auto get_element_4Q1(geometry::position<PetscInt, 2> const &ix)
         {
-            std::array<std::array<int, 2>, 9> that;
+            std::array<std::array<PetscInt, 2>, 9> that;
 
             that[0] = {2 * ix[0], 2 * ix[1]};
             that[1] = {2 * ix[0] + 1, 2 * ix[1]};
@@ -313,9 +313,9 @@ namespace cafes
         }
 
         auto get_indices_4Q1(DMDALocalInfo &info,
-                             geometry::position<int, 2> const &ix)
+                             geometry::position<PetscInt, 2> const &ix)
         {
-            std::array<int, 18> that;
+            std::array<PetscInt, 18> that;
 
             for (std::size_t d = 0; d < 2; ++d)
             {
@@ -332,9 +332,9 @@ namespace cafes
             return that;
         }
 
-        auto get_element_4Q1(geometry::position<int, 3> const &ix)
+        auto get_element_4Q1(geometry::position<PetscInt, 3> const &ix)
         {
-            std::array<std::array<int, 3>, 27> that;
+            std::array<std::array<PetscInt, 3>, 27> that;
 
             that[0] = {2 * ix[0], 2 * ix[1], 2 * ix[2]};
             that[1] = {2 * ix[0] + 1, 2 * ix[1], 2 * ix[2]};

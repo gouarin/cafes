@@ -1,10 +1,10 @@
 // Copyright (c) 2016, Loic Gouarin <loic.gouarin@math.u-psud.fr>
 // All rights reserved.
 
-// Redistribution and use in source and binary forms, with or without modification, 
+// Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //
-// 1. Redistributions of source code must retain the above copyright notice, 
+// 1. Redistributions of source code must retain the above copyright notice,
 //    this list of conditions and the following disclaimer.
 //
 // 2. Redistributions in binary form must reproduce the above copyright notice,
@@ -58,7 +58,7 @@ namespace cafes
   	#undef __FUNCT__
     #define __FUNCT__ "linear_interpolation"
     // --------------------------------------------------------------------------
-    // Linear interpolation of the solution of a Stokes problem on a refined mesh                                                
+    // Linear interpolation of the solution of a Stokes problem on a refined mesh
     // --------------------------------------------------------------------------
     //
     //                                    DM dm :   mesh of the solution
@@ -81,7 +81,7 @@ namespace cafes
 
       PetscFunctionBeginUser;
 
-      PetscInt rank;
+      int rank;
       ierr=MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRQ(ierr);
 
       /*
@@ -96,7 +96,7 @@ namespace cafes
       std::cout << "View dap_refine" << std::endl;
       DMView(dap_refine, PETSC_VIEWER_STDOUT_WORLD);
 
-      
+
 
       ierr = DMDAGetInfo(dap_refine, NULL, &mpx, &mpy, NULL, &npx, &npy, NULL, NULL, NULL, NULL, NULL, NULL, NULL);CHKERRQ(ierr);
       ierr = DMDAGetOwnershipRanges(dap_refine, &lx, &ly, 0);CHKERRQ(ierr);
@@ -117,7 +117,7 @@ namespace cafes
       DMView(dav_refine, PETSC_VIEWER_STDOUT_WORLD);
       ierr = DMDASetFieldName(dav_refine, 0, "u");CHKERRQ(ierr);
       ierr = DMDASetFieldName(dav_refine, 1, "v");CHKERRQ(ierr);
-      
+
       ierr = DMCompositeCreate(PETSC_COMM_WORLD, &dm_refine);CHKERRQ(ierr);
       ierr = DMCompositeAddDM(dm_refine, dav_refine);CHKERRQ(ierr);
       ierr = DMCompositeAddDM(dm_refine, dap_refine);CHKERRQ(ierr);
@@ -128,9 +128,9 @@ namespace cafes
       // ierr = PetscFree2(lxu, lyu);CHKERRQ(ierr);
 
       */
-      
 
-      
+
+
     	DMCompositeGetEntries(dm, &dav, &dap);
       DMClone(dav, &dav_refine);
       DMClone(dap, &dap_refine);
@@ -141,7 +141,7 @@ namespace cafes
       DMCompositeCreate(PETSC_COMM_WORLD, &dm_refine);
       DMCompositeAddDM(dm_refine, dav_refine);
       DMCompositeAddDM(dm_refine, dap_refine);
-      
+
 
     	ierr = DMCreateGlobalVector(dm_refine, &sol_refine);CHKERRQ(ierr);
     	auto solv = petsc::petsc_vec<Dimensions>(dm, sol, 0);
@@ -240,12 +240,12 @@ namespace cafes
       ierr = solv_ref.local_to_global(INSERT_VALUES);CHKERRQ(ierr);
       ierr = solp_ref.local_to_global(INSERT_VALUES);CHKERRQ(ierr);
 
-      
+
 
       PetscFunctionReturn(0);
     }
 
   }
- 
+
 }
 #endif
