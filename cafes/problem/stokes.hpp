@@ -37,6 +37,7 @@
 #include <fem/rhs.hpp>
 #include <iostream>
 #include <petsc.h>
+#include <petsc.h>
 #include <problem/context.hpp>
 #include <problem/options.hpp>
 #include <problem/problem.hpp>
@@ -59,33 +60,35 @@ namespace cafes
             DM dm;
             ierr = KSPGetDM(ksp, &dm);CHKERRQ(ierr);
 
-            int localsize, totalsize;
-            int localsize_0, totalsize_0;
-            ierr = fem::get_DM_sizes(dm, localsize, totalsize);CHKERRQ(ierr);
-            ierr = fem::get_DM_sizes(ctx_->dm, localsize_0, totalsize_0);CHKERRQ(ierr);
+            // DMView(dm, PETSC_VIEWER_STDOUT_WORLD);
 
-            int nx_0 = sqrt(totalsize_0/2), nx = sqrt(totalsize/2);
-            int level = 0;
-            // find the level in MG
-            while(nx_0 != nx)
+            auto bounds = fem::get_global_bounds<Dim>(dm);
+            auto *mg_ctx = new CTX(*ctx_);
+            mg_ctx->dm = dm;
+            for(std::size_t d = 0; d < Dim; ++d)
             {
-                level++;
-                nx_0 = (nx_0+1)/Dim;
+                mg_ctx->h[d] = mg_ctx->domain_length[d]/(bounds[d] - 1);
             }
 
-            auto mg_h = ctx_->h;
-            std::for_each(mg_h.begin(), mg_h.end(), [&](auto &x) {x *= (1 << level);});
+            PetscBool is_shell;
+            MatType Atype;
+            ierr = MatGetType(Alevel, &Atype);CHKERRQ(ierr);
+            ierr = PetscStrcmp(Atype, MATSHELL, &is_shell);CHKERRQ(ierr);
 
-            auto *mg_ctx = new CTX{dm, mg_h, ctx_->order, ctx_->apply, ctx_->apply_diag};
-            mg_ctx->set_dirichlet_bc(ctx_->bc_);
-
-            ierr = MatSetSizes(Alevel, localsize, localsize, totalsize, totalsize);CHKERRQ(ierr);
-            ierr = MatSetType(Alevel, MATSHELL);CHKERRQ(ierr);
-            ierr = MatShellSetContext(Alevel, mg_ctx);CHKERRQ(ierr);
-            ierr = MatShellSetOperation(Alevel, MATOP_MULT, (void (*)())fem::diag_block_matrix<CTX>);CHKERRQ(ierr);
-            ierr = MatShellSetOperation(Alevel, MATOP_GET_DIAGONAL,(void (*)())fem::diag_diag_block_matrix<CTX>);CHKERRQ(ierr);
-            ierr = MatSetDM(Alevel, dm);CHKERRQ(ierr);
-            ierr = MatSetFromOptions(Alevel);CHKERRQ(ierr);
+            // std::cout << Atype << std::endl;
+            if (is_shell)
+            {
+                ierr = MatShellSetContext(Alevel, mg_ctx);CHKERRQ(ierr);
+                ierr = MatShellSetOperation(Alevel, MATOP_MULT, (void (*)())fem::diag_block_matrix<CTX>);CHKERRQ(ierr);
+                ierr = MatShellSetOperation(Alevel, MATOP_GET_DIAGONAL,(void (*)())fem::diag_diag_block_matrix<CTX>);CHKERRQ(ierr);
+            }
+            else
+            {
+                ierr = laplacian_assembling(dm, Alevel, mg_ctx->h, mg_ctx->order);CHKERRQ(ierr);
+                ierr = MatAssemblyBegin(Alevel, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+                ierr = MatAssemblyEnd(Alevel, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+                ierr = cafes::fem::SetDirichletOnMat(Alevel, mg_ctx->bc_);CHKERRQ(ierr);
+            }
 
             PetscFunctionReturn(0);
         }
@@ -96,7 +99,6 @@ namespace cafes
         PetscErrorCode setPMMSolver(KSP ksp, DM dm, Ctx *ctx)
         {
             PetscErrorCode ierr;
-            PetscFunctionBeginUser;
             PC pc, pc_i;
             KSP *sub_ksp;
             PetscInt MGlevels;
@@ -115,73 +117,167 @@ namespace cafes
             ierr = PCFieldSplitSetSchurPre(pc, PC_FIELDSPLIT_SCHUR_PRE_USER, PETSC_NULL);CHKERRQ(ierr);
 
             ierr = DMCompositeGetEntries(dm, &dav, &dap);CHKERRQ(ierr);
-            auto *mg_ctx = new Ctx{dav, ctx->h, ctx->order, ctx->apply, fem::diag_laplacian_mult};
-            mg_ctx->set_dirichlet_bc(ctx->bc_);
+            // auto *mg_ctx = new Ctx{dav, ctx->h, ctx->order, ctx->apply, fem::diag_laplacian_mult};
+            // mg_ctx->set_dirichlet_bc(ctx->bc_);
+            auto *mg_ctx = new Ctx(*ctx);
+            mg_ctx->dm = dav;
+            mg_ctx->scale = 0.5;
+            mg_ctx->apply_diag = fem::diag_laplacian_mult;
+
             ierr = DMKSPSetComputeOperators(dav, createLevelMatrices<Ctx, Dim>, (void *)mg_ctx);CHKERRQ(ierr);
 
-            ierr = PCSetUp(pc);CHKERRQ(ierr);
+            // ierr = PCSetUp(pc);CHKERRQ(ierr);
 
-            ierr = PCFieldSplitGetSubKSP(pc, nullptr, &sub_ksp);CHKERRQ(ierr);
+            // ierr = PCFieldSplitGetSubKSP(pc, nullptr, &sub_ksp);CHKERRQ(ierr);
 
-            /* Set MG solver on velocity field*/
-            ierr = KSPGetPC(sub_ksp[0], &pc_i);CHKERRQ(ierr);
-            ierr = KSPSetDM(sub_ksp[0], dav);CHKERRQ(ierr);
-            ierr = KSPSetDMActive(sub_ksp[0], PETSC_FALSE);CHKERRQ(ierr);
-
-            ierr = KSPSetType(sub_ksp[0], KSPGCR);CHKERRQ(ierr);
-            ierr = KSPSetTolerances(sub_ksp[0], 1e-2, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);CHKERRQ(ierr);
-            ierr = PCSetType(pc_i, PCMG);CHKERRQ(ierr);
-
-            ierr = DMDAGetLocalInfo(dav, &info);CHKERRQ(ierr);
-            auto i = (info.mx < info.my) ? info.mx : info.my;
-            i = (info.mz == 1 || i < info.mz) ? i : info.mz;
-
-            MGlevels = 1;
-            while (i > 8)
-            {
-                i >>= 1;
-                MGlevels++;
-            }
-
-            ierr = PCMGSetLevels(pc_i, MGlevels, PETSC_NULL);CHKERRQ(ierr);
-
-            for (std::size_t i = 0; i < MGlevels; ++i)
-            {
-                KSP smoother;
-                PC pcsmoother;
-                ierr = PCMGGetSmoother(pc_i, i, &smoother);CHKERRQ(ierr);
-                ierr = KSPSetType(smoother, KSPCG);CHKERRQ(ierr);
-                ierr = KSPGetPC(smoother, &pcsmoother);CHKERRQ(ierr);
-                ierr = PCSetType(pcsmoother, PCJACOBI);CHKERRQ(ierr);
-            }
-
-            /* Set Jacobi preconditionner on pressure field*/
-            ierr = KSPSetType(sub_ksp[1], KSPPREONLY);CHKERRQ(ierr);
-            ierr = KSPSetTolerances(sub_ksp[1], 1e-1, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);CHKERRQ(ierr);
-            ierr = KSPGetPC(sub_ksp[1], &pc_i);CHKERRQ(ierr);
-            ierr = PCSetType(pc_i, PCJACOBI);CHKERRQ(ierr);
-
-            // /* Set MG solver on pressure field*/
-            // ierr = KSPGetPC(sub_ksp[1], &pc_i);CHKERRQ(ierr);
+            // // /* Set MG solver on velocity field*/
+            // ierr = KSPGetPC(sub_ksp[0], &pc_i);CHKERRQ(ierr);
             // ierr = KSPSetDM(sub_ksp[0], dav);CHKERRQ(ierr);
             // ierr = KSPSetDMActive(sub_ksp[0], PETSC_FALSE);CHKERRQ(ierr);
 
-            // ierr = KSPSetType(sub_ksp[1], KSPFGMRES);CHKERRQ(ierr);
-            // ierr = KSPSetTolerances(sub_ksp[1], 1e-10, 1e-14, PETSC_DEFAULT,
-            // PETSC_DEFAULT);CHKERRQ(ierr); ierr = PCSetType(pc_i,
-            // PCMG);CHKERRQ(ierr);
+            // ierr = KSPSetType(sub_ksp[0], KSPGCR);CHKERRQ(ierr);
+            // ierr = KSPSetComputeOperators(sub_ksp[0], createLevelMatrices<Ctx, Dim>, (void *)mg_ctx);CHKERRQ(ierr);
 
-            // ierr = DMDAGetLocalInfo(dap, &info);CHKERRQ(ierr);
-            // i = (info.mx<info.my)? info.mx: info.my;
-            // i = (info.mz == 1 || i<info.mz)? i: info.mz;
+            // ierr = KSPSetTolerances(sub_ksp[0], 1e-2, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);CHKERRQ(ierr);
+            // ierr = PCSetType(pc_i, PCMG);CHKERRQ(ierr);
 
-            // MGlevels = 1;
-            // while(i > 8){
-            //   i >>= 1;
-            //   MGlevels++;
-            // }
+            // ierr = DMDAGetLocalInfo(dav, &info);CHKERRQ(ierr);
+            // auto i = (info.mx < info.my) ? info.mx : info.my;
+            // i = (info.mz == 1 || i < info.mz) ? i : info.mz;
+
+            // // MGlevels = 1;
+            // // while (i > 8)
+            // // {
+            // //     i >>= 1;
+            // //     MGlevels++;
+            // // }
+            // // loic: to remove
+            // MGlevels = 3;
 
             // ierr = PCMGSetLevels(pc_i, MGlevels, PETSC_NULL);CHKERRQ(ierr);
+
+            // for (std::size_t i = 0; i < MGlevels; ++i)
+            // {
+            //     KSP smoother;
+            //     PC pcsmoother;
+            //     ierr = PCMGGetSmoother(pc_i, i, &smoother);CHKERRQ(ierr);
+            //     ierr = KSPSetType(smoother, KSPCG);CHKERRQ(ierr);
+            //     ierr = KSPGetPC(smoother, &pcsmoother);CHKERRQ(ierr);
+            //     ierr = PCSetType(pcsmoother, PCJACOBI);CHKERRQ(ierr);
+            // }
+
+            // PCSetUp(pc_i);
+            // KSP coarse;
+            // ierr = PCMGGetCoarseSolve(pc_i, &coarse);CHKERRQ(ierr);
+
+            // PC pc_coarse;
+            // ierr = KSPGetPC(coarse, &pc_coarse);CHKERRQ(ierr);
+            // ierr = PCSetType(pc_coarse, PCTELESCOPE);CHKERRQ(ierr);
+            // // ierr = PCTelescopeSetReductionFactor(pc_coarse, 4);CHKERRQ(ierr);
+
+            // PCSetUp(pc_coarse);
+            // KSP kspt;
+            // PC pct;
+            // ierr = PCTelescopeGetKSP(pc_coarse, &kspt);CHKERRQ(ierr);
+            // // // ierr = KSPSetType(kspt, KSPCG);
+            // ierr = KSPGetPC(kspt, &pct);
+            // PCSetType(pct, PCLU);
+            // // PCSetType(pct, PCMG);
+            // // ierr = PCMGSetLevels(pct, 3, PETSC_NULL);CHKERRQ(ierr);
+            // // ierr = KSPSetDM(kspt, dav);CHKERRQ(ierr);
+
+            // // for (std::size_t i = 0; i < 2; ++i)
+            // // {
+            // //     KSP smoother;
+            // //     PC pcsmoother;
+            // //     ierr = PCMGGetSmoother(pct, i, &smoother);CHKERRQ(ierr);
+            // //     ierr = KSPSetType(smoother, KSPCG);CHKERRQ(ierr);
+            // //     ierr = KSPGetPC(smoother, &pcsmoother);CHKERRQ(ierr);
+            // //     ierr = PCSetType(pcsmoother, PCJACOBI);CHKERRQ(ierr);
+            // // }
+
+            // // ierr = PCMGGetCoarseSolve(pct, &coarse);CHKERRQ(ierr);
+
+
+            // // PCView(pct, PETSC_VIEWER_STDOUT_WORLD);
+            // // Mat At, Pt, newAt;
+            // // PCGetOperators(pct, &At, &Pt);
+
+            // // DM dmc;
+            // // MatGetDM(At, &dmc);
+            // // auto bounds = fem::get_global_bounds<Dim>(dmc);
+            // // auto *telescope_ctx = new Ctx(*ctx);
+            // // telescope_ctx->dm = dmc;
+            // // for(std::size_t d = 0; d < Dim; ++d)
+            // // {
+            // //     telescope_ctx->h[d] = ctx->domain_length[d]/(bounds[d] - 1);
+            // // }
+
+            // // {
+            // //     int localsize, totalsize;
+
+            // //     fem::get_DM_sizes(dmc, localsize, totalsize);
+            // //     MatCreateShell(PETSC_COMM_WORLD, localsize, localsize, totalsize,
+            // //                    totalsize, telescope_ctx, &newAt);
+            // //     ierr = MatShellSetContext(newAt, telescope_ctx);CHKERRQ(ierr);
+            // //     ierr = MatShellSetOperation(newAt, MATOP_MULT, (void (*)())fem::diag_block_matrix<Ctx>);CHKERRQ(ierr);
+            // //     ierr = MatShellSetOperation(newAt, MATOP_GET_DIAGONAL,(void (*)())fem::diag_diag_block_matrix<Ctx>);CHKERRQ(ierr);
+            // // }
+
+            // // // PCSetOperators(pct, newAt, newAt);
+            // // // // DMView(dmc, PETSC_VIEWER_STDOUT_WORLD);
+
+            // // laplacian_assembling(dmc, At, telescope_ctx->h, telescope_ctx->order);
+            // // MatAssemblyBegin(Pt, MAT_FINAL_ASSEMBLY);
+            // // MatAssemblyEnd(Pt, MAT_FINAL_ASSEMBLY);
+            // // MatCopy(At, Pt, SAME_NONZERO_PATTERN);
+            // // MatView(Pt, PETSC_VIEWER_STDOUT_WORLD);
+            // // cafes::fem::SetDirichletOnMat(At, ctx->bc_);
+
+
+            // // DM dmc;
+            // // KSPGetDM(coarse, &dmc);
+            // // // DMView(dm, PETSC_VIEWER_STDOUT_WORLD);
+            // // ierr = DMKSPSetComputeOperators(dmc, createLevelMatrices<Ctx, Dim>, (void *)mg_ctx);CHKERRQ(ierr);
+            // // KSPSetUp(coarse);
+
+            // // KSPView(coarse, PETSC_VIEWER_STDOUT_WORLD);
+            // // DM dm;
+            // // KSPGetDM(coarse, &dm);
+            // // DMView(dm, PETSC_VIEWER_STDOUT_WORLD);
+            // // Mat At, Pt;
+            // // KSPGetOperators(coarse, &At, &Pt);
+            // // MatSetType(At, MATSHELL);
+            // // MatSetType(Pt, MATSHELL);
+            //     // MatView(At, PETSC_VIEWER_STDERR_WORLD);
+
+            // /* Set Jacobi preconditionner on pressure field*/
+            // ierr = KSPSetType(sub_ksp[1], KSPPREONLY);CHKERRQ(ierr);
+            // ierr = KSPSetTolerances(sub_ksp[1], 1e-1, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);CHKERRQ(ierr);
+            // ierr = KSPGetPC(sub_ksp[1], &pc_i);CHKERRQ(ierr);
+            // ierr = PCSetType(pc_i, PCJACOBI);CHKERRQ(ierr);
+
+            // // /* Set MG solver on pressure field*/
+            // // ierr = KSPGetPC(sub_ksp[1], &pc_i);CHKERRQ(ierr);
+            // // ierr = KSPSetDM(sub_ksp[0], dav);CHKERRQ(ierr);
+            // // ierr = KSPSetDMActive(sub_ksp[0], PETSC_FALSE);CHKERRQ(ierr);
+
+            // // ierr = KSPSetType(sub_ksp[1], KSPFGMRES);CHKERRQ(ierr);
+            // // ierr = KSPSetTolerances(sub_ksp[1], 1e-10, 1e-14, PETSC_DEFAULT,
+            // // PETSC_DEFAULT);CHKERRQ(ierr); ierr = PCSetType(pc_i,
+            // // PCMG);CHKERRQ(ierr);
+
+            // // ierr = DMDAGetLocalInfo(dap, &info);CHKERRQ(ierr);
+            // // i = (info.mx<info.my)? info.mx: info.my;
+            // // i = (info.mz == 1 || i<info.mz)? i: info.mz;
+
+            // // MGlevels = 1;
+            // // while(i > 8){
+            // //   i >>= 1;
+            // //   MGlevels++;
+            // // }
+
+            // // ierr = PCMGSetLevels(pc_i, MGlevels, PETSC_NULL);CHKERRQ(ierr);
             PetscFunctionReturn(0);
         }
 
@@ -235,7 +331,7 @@ namespace cafes
                 else
                     method = fem::laplacian_mult;
 
-                ctx = new Ctx{mesh, hu, opt.order, method};
+                ctx = new Ctx{mesh, opt.lx, 1., hu, opt.order, method};
                 ctx->set_dirichlet_bc(bc);
 
                 DM dav, dap;
@@ -293,16 +389,15 @@ namespace cafes
                     A = fem::make_matrix<Ctx>(ctx, fem::stokes_matrix<Ctx>);
                     MatSetDM(A, mesh);
                     MatSetFromOptions(A);
-
                     // set preconditionner of Stokes matrix
                     DMSetMatType(dav, MATSHELL);
                     DMSetMatType(dap, MATSHELL);
 
-                    Ctx *slap = new Ctx{dav, hu, opt.order, method, fem::diag_laplacian_mult};
+                    Ctx *slap = new Ctx{dav, opt.lx, 0.5, hu, opt.order, method, fem::diag_laplacian_mult};
                     slap->set_dirichlet_bc(bc);
                     auto A11 = fem::make_matrix<Ctx>(slap);
 
-                    Ctx *smass = new Ctx{dap, hp, 1, fem::mass_mult, fem::diag_mass_mult};
+                    Ctx *smass = new Ctx{dap, opt.lx, 1, hp, 1, fem::mass_mult, fem::diag_mass_mult};
                     auto A22 = fem::make_matrix<Ctx>(smass);
 
                     Mat bA[2][2];
@@ -366,6 +461,10 @@ namespace cafes
                     {
                         ierr = KSPSetOperators(ksp, A, A);CHKERRQ(ierr);
                         ierr = PCFactorSetShiftType(pc, MAT_SHIFT_NONZERO);CHKERRQ(ierr);
+                    }
+                    if (opt.pmm)
+                    {
+                        ierr = setPMMSolver<Ctx, Dim>(ksp, ctx->dm, ctx);CHKERRQ(ierr);
                     }
                 }
                 else

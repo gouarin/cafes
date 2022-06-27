@@ -195,10 +195,14 @@ namespace cafes
       IS is;
 
       // warning: we assume that both u and v on a border have a Dirichlet condition
-      DM dm, dmcomposite;
-      ierr = MatGetDM(A, &dmcomposite);CHKERRQ(ierr);
-      ierr = DMCompositeGetEntries(dmcomposite, &dm, PETSC_NULL);CHKERRQ(ierr);
-
+      DM dm;
+      PetscBool is_composite;
+      ierr = MatGetDM(A, &dm);CHKERRQ(ierr);
+      ierr = PetscObjectTypeCompare((PetscObject)dm, DMCOMPOSITE, &is_composite);CHKERRQ(ierr);
+      if (is_composite)
+      {
+        ierr = DMCompositeGetEntries(dm, &dm, PETSC_NULL);CHKERRQ(ierr);
+      }
       auto bd_type = get_boundary_type<2>(dm);
 
       ierr = DMDAGetLocalInfo(dm, &info);CHKERRQ(ierr);

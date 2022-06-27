@@ -184,11 +184,12 @@ namespace cafes
                                       const int order,
                                       const int dec = 0) {
         auto const kernel_pos = [&, order, dec](auto const &pos) {
+            PetscErrorCode ierr;
             for (std::size_t d = 0; d < info.dof; ++d)
             {
                 auto ielem = fem::get_indices(info, pos, d + dec, order);
-                MatSetValuesLocal(A, ielem.size(), ielem.data(), ielem.size(),
-                                  ielem.data(), matelem.data(), ADD_VALUES);
+                ierr = MatSetValuesLocal(A, ielem.size(), ielem.data(), ielem.size(),
+                                  ielem.data(), matelem.data(), ADD_VALUES);CHKERRQ(ierr);
             }
             PetscFunctionReturn(0);
         };
@@ -201,7 +202,7 @@ namespace cafes
         PetscErrorCode ierr;
 
         DMDALocalInfo info;
-        DMDAGetLocalInfo(dv, &info);
+        ierr = DMDAGetLocalInfo(dv, &info);CHKERRQ(ierr);
 
         auto box = fem::get_DM_bounds<Dimensions>(dv);
 

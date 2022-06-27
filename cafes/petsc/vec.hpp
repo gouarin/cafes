@@ -1,10 +1,10 @@
 // Copyright (c) 2016, Loic Gouarin <loic.gouarin@math.u-psud.fr>
 // All rights reserved.
 
-// Redistribution and use in source and binary forms, with or without modification, 
+// Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //
-// 1. Redistributions of source code must retain the above copyright notice, 
+// 1. Redistributions of source code must retain the above copyright notice,
 //    this list of conditions and the following disclaimer.
 //
 // 2. Redistributions in binary form must reproduce the above copyright notice,
@@ -117,54 +117,54 @@ namespace cafes
         }
       }
 
-      double* at(std::array<int, 2> indices){
+      inline double* at(std::array<int, 2> indices){
         return pv_[indices[1]][indices[0]];
       }
 
-      double* at(std::array<int, 3> indices){
+      inline double* at(std::array<int, 3> indices){
         return pv_[indices[2]][indices[1]][indices[0]];
       }
 
-      double const* at(std::array<int, 2> indices) const{
+      inline double const* at(std::array<int, 2> indices) const{
         return pv_[indices[1]][indices[0]];
       }
 
-      double const* at(std::array<int, 3> indices) const{
+      inline double const* at(std::array<int, 3> indices) const{
         return pv_[indices[2]][indices[1]][indices[0]];
       }
 
-      double* at(geometry::position<int, 2> indices){
+      inline double* at(geometry::position<int, 2> indices){
         return pv_[indices[1]][indices[0]];
       }
 
-      double* at(geometry::position<int, 3> indices){
+      inline double* at(geometry::position<int, 3> indices){
         return pv_[indices[2]][indices[1]][indices[0]];
       }
 
-      double const* at(geometry::position<int, 2> indices) const{
+      inline double const* at(geometry::position<int, 2> indices) const{
         return pv_[indices[1]][indices[0]];
       }
 
-      double const* at(geometry::position<int, 3> indices) const{
+      inline double const* at(geometry::position<int, 3> indices) const{
         return pv_[indices[2]][indices[1]][indices[0]];
       }
 
-      double* at_g(geometry::position<int, 2> indices){
+      inline double* at_g(geometry::position<int, 2> indices){
         return pvg_[indices[1]][indices[0]];
       }
 
-      double* at_g(geometry::position<int, 3> indices){
+      inline double* at_g(geometry::position<int, 3> indices){
         return pvg_[indices[2]][indices[1]][indices[0]];
       }
 
-      double const* at_g(geometry::position<int, 2> indices) const{
+      inline double const* at_g(geometry::position<int, 2> indices) const{
         return pvg_[indices[1]][indices[0]];
       }
 
-      double const* at_g(geometry::position<int, 3> indices) const{
+      inline double const* at_g(geometry::position<int, 3> indices) const{
         return pvg_[indices[2]][indices[1]][indices[0]];
       }
-      
+
       #undef __FUNCT__
       #define __FUNCT__ "local_to_global"
       PetscErrorCode local_to_global(InsertMode iora)
@@ -225,7 +225,7 @@ namespace cafes
         if (iscomposite)
         {
           retore_Vec(dm_global_, v_global_, v_entry_, entry_);
-        } 
+        }
       }
     };
   }

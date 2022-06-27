@@ -1,5 +1,8 @@
 #include <cafes.hpp>
 #include <petsc.h>
+#include <petscsys.h>
+#include <petsctime.h>
+#include <petscerror.h>
 
 void zeros(const PetscReal x[], PetscScalar *u)
 {
@@ -30,7 +33,21 @@ int main(int argc, char **argv)
 
     st.setup_RHS();
     st.setup_KSP();
+
+    double t1, t2;
+
+
+    PetscLogEvent  USER_EVENT;
+    PetscClassId   classid;
+
+    PetscLogEventRegister("stokes: solve",classid,&USER_EVENT);
+    PetscLogEventBegin(USER_EVENT,0,0,0,0);
+    t1 = MPI_Wtime();
     st.solve();
+    t2 = MPI_Wtime();
+    PetscLogEventEnd(USER_EVENT,0,0,0,0);
+
+    printf("Code took %f CPU seconds\n", t2-t1);
 
     int const mx = st.opt.mx[0] - 1;
     std::string stout0 = "cavity_";

@@ -74,7 +74,7 @@ namespace cafes
                       "AttributeType=\"Scalar\" Center=\"Node\">\n";
             myfile << "        <DataItem DataType=\"Float\" Precision=\"8\" "
                       "Format=\"HDF\" Dimensions=\""
-                   << info.mx / 2 << " " << info.my / 2 << "\">\n";
+                   << info.mx / 2 + 1 << " " << info.my / 2 + 1 << "\">\n";
             myfile << "          " << output_h5.str() << ":/pressure\n";
             myfile << "        </DataItem>\n";
             myfile << "      </Attribute>\n";
